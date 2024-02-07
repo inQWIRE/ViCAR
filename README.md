@@ -4,11 +4,14 @@ Verified Categorical String Diagrams in Roq
 
 ## Building ViCaR
 
-Tested with Coq 8.14-8.16.
+Tested with Coq 8.14-8.18.
 
 To build ViCaR, run `make vicar`
 
-For examples to compile, do the following.
+
+## Examples
+
+For examples to compile, do the following. Note: Examples only compile on coq >= 8.16
 
 First, install [QuantumLib](https://github.com/inQWIRE/QuantumLib) through opam.
 
