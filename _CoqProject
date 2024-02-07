@@ -1,0 +1,2 @@
+-R _build/default/examples/ Examples
+-R _build/default/ViCaR ViCaR
