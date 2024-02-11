@@ -31,7 +31,7 @@ opam pin -y coq-voqc https://github.com/inQWIRE/SQIR.git
 Then install [VyZX](https://github.com/inQWIRE/VyZX)
 
 ```bash
-opam pin -y coq-vicar https://github.com/inQWIRE/VyZX.git
+opam pin -y coq-vyzx https://github.com/inQWIRE/VyZX.git#category-abstraction
 ```
 
 Then install [ViCaR](https://github.com/inQWIRE/ViCaR) while in the directory by running
