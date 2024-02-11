@@ -257,16 +257,11 @@ Lemma n_top_to_bottom_split : forall {n m o o'} prf1 prf2 prf3 prf4,
     ⟷ cast (n + m + o) o' prf1 prf2 (n_wire m ↕ n_top_to_bottom n o)
     ∝ cast (n + m + o) o' prf3 prf4 (n_top_to_bottom n (m + o)).
 Proof.
-    intros. unfold n_top_to_bottom. subst.
-    apply prop_of_equal_perm.
-    all: auto with zxperm_db.
-    cleanup_perm_of_zx; auto with zxperm_db.
-    rewrite stack_perms_idn_f.
-    unfold Basics.compose, rotr.
-    apply functional_extensionality; intros.
-    bdestruct_all; simpl in *; try lia.
-    all: solve_simple_mod_eqns.
-Admitted.
+    intros. unfold n_top_to_bottom. 
+    prop_perm_eq.
+    1: auto 10 with zxperm_db.
+    solve_modular_permutation_equalities.
+Qed.
 
 Lemma hexagon_lemma_1 : forall {n m o}, 
     (zx_braiding ↕ n_wire o) ⟷ zx_associator ⟷ (n_wire m ↕ zx_braiding)
@@ -294,15 +289,8 @@ Lemma n_bottom_to_top_split : forall {n m o o'} prf1 prf2 prf3 prf4,
     ∝ cast (n + m + o) o' prf3 prf4 (n_bottom_to_top (m + o) n).
 Proof.
     intros. unfold n_bottom_to_top. subst.
-    apply prop_of_equal_perm.
-    all: auto with zxperm_db.
-    cleanup_perm_of_zx. 
-    rewrite stack_perms_idn_f.
-    unfold Basics.compose, rotl.
-    apply functional_extensionality; intros.
-    bdestruct_all; simpl in *; try lia.
-    all: solve_simple_mod_eqns.
-    auto with zxperm_db.
+    prop_perm_eq.
+    solve_modular_permutation_equalities.
 Qed.
 
 Lemma hexagon_lemma_2 : forall {n m o},
@@ -311,6 +299,10 @@ Lemma hexagon_lemma_2 : forall {n m o},
 Proof.
     intros.
     unfold zx_inv_braiding. unfold zx_associator.
+    (* alternate proof:
+    unfold n_bottom_to_top; prop_perm_eq;
+     solve_modular_permutation_equalities.
+    *)
     simpl_casts.
     rewrite cast_compose_l. simpl_casts.
     rewrite compose_assoc.
@@ -321,7 +313,7 @@ Proof.
     rewrite cast_compose_l. simpl_casts.
     rewrite (cast_compose_r _ _ _ (n_wire (m + o + n))).
     cleanup_zx. simpl_casts.
-    rewrite n_bottom_to_top_split.
+    rewrite n_bottom_to_top_split. 
     reflexivity.
 Qed.
 
@@ -338,6 +330,12 @@ Qed.
 Lemma n_top_to_bottom_is_bottom_to_top : forall {n m},
     n_top_to_bottom n m ∝ n_bottom_to_top m n.
 Proof.
+    (* alternate proof:
+    unfold n_bottom_to_top, n_top_to_bottom;
+    intros;
+    prop_perm_eq;
+    solve_modular_permutation_equalities;
+    rewrite rotr_eq_rotl_sub.*)
     unfold n_bottom_to_top. 
     unfold bottom_to_top.
     unfold n_top_to_bottom.
