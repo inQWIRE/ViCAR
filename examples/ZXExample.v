@@ -1,29 +1,42 @@
+Require Import Setoid.
+
 From VyZX Require Import CoreData.
 From VyZX Require Import CoreRules.
 From VyZX Require Import PermutationRules.
 From ViCaR Require Export CategoryTypeclass.
 
+Lemma proportional_equiv {n m : nat} : equivalence (ZX n m) proportional.
+Proof.
+    constructor.
+    unfold reflexive; apply proportional_refl.
+    unfold transitive; apply proportional_trans.
+    unfold symmetric; apply proportional_symm.
+Qed.
+
+Lemma equality_equiv : equivalence nat eq.
+Proof. 
+    constructor. 
+    unfold reflexive; easy.
+    unfold transitive; apply eq_trans.
+    unfold symmetric; apply eq_sym.
+Qed.
+
 #[export] Instance ZXCategory : Category nat := {
     morphism := ZX;
 
     equiv := @proportional;
-    equiv_symm := @proportional_symm;
-    equiv_trans := @proportional_trans;
-    equiv_refl := @proportional_refl;
+    equiv_rel := @proportional_equiv;
 
     obj_equiv := eq;
-    obj_equiv_symm := @eq_sym nat;
-    obj_equiv_trans := @eq_trans nat;
-    obj_equiv_refl := @eq_refl nat;
-
-    c_identity n := n_wire n;
+    obj_equiv_rel := equality_equiv;
 
     compose := @Compose;
     compose_compat := @Proportional.compose_compat;
+    assoc := @ComposeRules.compose_assoc;
 
+    c_identity n := n_wire n;
     left_unit _ _ := nwire_removal_l;
     right_unit _ _ := nwire_removal_r;
-    assoc := @ComposeRules.compose_assoc;
 }.
 
 Definition zx_associator {n m o} :=
@@ -266,7 +279,7 @@ Proof.
     apply functional_extensionality; intros.
     bdestruct_all; simpl in *; try lia.
     all: solve_simple_mod_eqns.
-Admitted.
+Qed.
 
 Lemma hexagon_lemma_1 : forall {n m o}, 
     (zx_braiding ↕ n_wire o) ⟷ zx_associator ⟷ (n_wire m ↕ zx_braiding)

@@ -8,43 +8,19 @@ Reserved Notation "A ~> B" (at level 50).
 Reserved Notation "f ≃ g" (at level 60).
 Reserved Notation "A ≅ B" (at level 60).
 
-(* 
-    Might use these to abstract out the equality relations.
-        
-    Definition relation (A : Type) := A -> A -> Prop.
-    Definition reflexive {A : Type} (R : relation A) :=
-        forall a : A, R a a.
-    Definition transitive {A: Type} (R: relation A) :=
-        forall a b c : A, (R a b) -> (R b c) -> (R a c).
-    Definition symmetric {A: Type} (R: relation A) :=
-        forall a b : A, (R a b) -> (R b a).
-    Definition equivalence {A : Type} (R : relation A) := 
-        (reflexive R) /\ (symmetric R) /\ (transitive R). 
-*)
-
 Class Category (C : Type) : Type := {
     morphism : C -> C -> Type
         where "A ~> B" := (morphism A B);
 
-    equiv {A B : C} (f g : A ~> B) : Prop 
+    (* Morphism equivalence *)
+    equiv {A B : C} : relation (A ~> B)
         where "f ≃ g" := (equiv f g) : Cat_scope;
-    equiv_symm {A B : C} {f g : A ~> B} : 
-        f ≃ g -> g ≃ f;
-    equiv_trans {A B : C} {f g h : A ~> B} :
-        f ≃ g -> g ≃ h -> f ≃ h;
-    equiv_refl {A B : C} {f : A ~> B} :
-        f ≃ f;
+    equiv_rel {A B : C} : equivalence (A ~> B) equiv;
 
-    obj_equiv (A B : C) : Prop 
-        where "A ≅ B" := (obj_equiv A B);
-    obj_equiv_symm {A B : C} : 
-        A ≅ B -> B ≅ A;
-    obj_equiv_trans {A B M : C} :
-        A ≅ B -> B ≅ M -> A ≅ M;
-    obj_equiv_refl {A : C} :
-        A ≅ A;
-
-    c_identity (A : C) : A ~> A;
+    (* Object equivalence *)
+    obj_equiv : relation C
+        where "A ≅ B" := (obj_equiv A B) : Cat_scope;
+    obj_equiv_rel : equivalence C obj_equiv;
 
     compose {A B M : C} : 
         (A ~> B) -> (B ~> M) -> (A ~> M);
@@ -52,29 +28,29 @@ Class Category (C : Type) : Type := {
         forall (f g : A ~> B), f ≃ g ->
         forall (h j : B ~> M), h ≃ j ->
         compose f h ≃ compose g j;
-
-    left_unit {A B : C} {f : A ~> B} : compose (c_identity A) f ≃ f;
-    right_unit {A B : C} {f : A ~> B} : compose f (c_identity B) ≃ f;
     assoc {A B M N : C}
         {f : A ~> B} {g : B ~> M} {h : M ~> N} : 
         compose (compose f g) h ≃ compose f (compose g h);
+
+    c_identity (A : C) : A ~> A;
+    left_unit {A B : C} {f : A ~> B} : compose (c_identity A) f ≃ f;
+    right_unit {A B : C} {f : A ~> B} : compose f (c_identity B) ≃ f;
 }.
-
-Add Parametric Relation {C : Type} {Cat : Category C} 
-    (n m : C) : (morphism n m) (equiv)
-  reflexivity proved by (@equiv_refl C Cat n m)
-  symmetry proved by (@equiv_symm C Cat n m)
-  transitivity proved by (@equiv_trans C Cat n m)
-  as prop_equiv_rel.
-
-Add Parametric Morphism {C : Type} {Cat : Category C} (n o m : C) : compose
-  with signature (@equiv C Cat n m) ==> (@equiv C Cat m o) ==> 
-                 equiv as compose_mor.
-Proof. apply compose_compat; assumption. Qed.
 
 Notation "A ~> B" := (morphism A B) : Cat_scope.
 Notation "f ≃ g" := (equiv f g) : Cat_scope. (* \simeq *)
 Notation "A ≅ B" := (obj_equiv A B) : Cat_scope. (* \cong *)
 Infix "∘" := compose (at level 40, left associativity) : Cat_scope. (* \circ *)
+
+Add Parametric Relation {C : Type} {Cat : Category C} 
+    (A B : C) : (A ~> B) equiv
+  reflexivity proved by (equiv_refl (A ~> B) equiv equiv_rel)
+  symmetry proved by (equiv_sym (A ~> B) equiv equiv_rel)
+  transitivity proved by (equiv_trans (A ~> B) equiv equiv_rel)
+  as prop_equiv_rel.
+
+Add Parametric Morphism {C : Type} {Cat : Category C} (n o m : C) : compose
+  with signature (@equiv C Cat n m) ==> (@equiv C Cat m o) ==> equiv as compose_mor.
+Proof. apply compose_compat; assumption. Qed.
 
 Local Close Scope Cat.
