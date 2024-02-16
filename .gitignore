@@ -160,3 +160,4 @@ $RECYCLE.BIN/
 _build
 
 settings.json
+.lia.cache
