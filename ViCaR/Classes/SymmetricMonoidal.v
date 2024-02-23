@@ -5,7 +5,7 @@ Require Import BraidedMonoidal.
 Local Open Scope Cat.
 
 Class SymmetricMonoidalCategory (C : Type) `{BraidedMonoidalCategory C} : Type := {
-    symmetry {A B : C} : (@braiding C H H0 H1 A B) ≃ inv_braiding;
+    symmetry {A B : C} : B_ A,B ≃ (B_ B,A)^-1;
 }.
 
 Local Close Scope Cat.

@@ -15,11 +15,11 @@ Class CompactClosedCategory (C : Type) `{SymmetricMonoidalCategory C} : Type := 
     counit {A : C} : A × A ★ ~> I;
 
     triangle_1 {A : C} : 
-        inv_right_unitor ∘ (c_identity A ⊗ unit) ∘ inv_associator 
+        right_unitor^-1 ∘ (c_identity A ⊗ unit) ∘ associator^-1
         ∘ (counit ⊗ c_identity A) ∘ left_unitor ≃ c_identity A;
 
     triangle_2 {A : C} : 
-        inv_left_unitor ∘ (unit ⊗ c_identity A ★) ∘ associator 
+        left_unitor^-1 ∘ (unit ⊗ c_identity A ★) ∘ associator 
         ∘ (c_identity A ★ ⊗ counit) ∘ right_unitor ≃ c_identity A ★;
 }.
 
