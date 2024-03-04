@@ -10,7 +10,7 @@ Notation CommuteBifunctor' F := ({|
   id2_map := ltac:(intros; apply id2_map);
   compose2_map := ltac:(intros; apply compose2_map);
   morphism2_compat := ltac:(intros; apply morphism2_compat; easy);
-|}).
+|}) (only parsing).
 
 
 

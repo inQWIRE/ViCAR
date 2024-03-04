@@ -374,4 +374,24 @@ Definition Bifunctor_of_ProductCategoryFunctor {C1 C2 D : Type} `{cC1 : Category
     morphism2_compat := ltac:(intros; apply morphism_compat; constructor; easy);
 |}.
 
+Lemma equiv_of_iso_compose_l {C : Type} `{cC : Category C} {A A' B : C}
+  (I : Isomorphism A A') (f g : A' ~> B) (H : I ∘ f ≃ I ∘ g) :
+  f ≃ g. 
+Proof.
+  rewrite <- (left_unit (f:=f)), <- (left_unit (f:=g)).
+  rewrite <- I.(id_B), 2!assoc, H.
+  easy.
+Qed.
+
+Lemma equiv_of_iso_compose_r {C : Type} `{cC : Category C} {A B' B : C}
+  (I : Isomorphism B' B) (f g : A ~> B') (H : f ∘ I ≃ g ∘ I) :
+  f ≃ g. 
+Proof.
+  rewrite <- (right_unit (f:=f)), <- (right_unit (f:=g)).
+  rewrite <- I.(id_A), <- 2!assoc, H.
+  easy.
+Qed.
+
+
+
 Local Close Scope Cat.
