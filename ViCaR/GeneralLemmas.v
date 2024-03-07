@@ -34,8 +34,8 @@ Proof.
   easy.
 Qed.
 
-Local Notation "A ⊗ B" := (morphism2_map (Bifunctor:=tensor) A B) (only printing).
-Notation "'id_' A" := (c_identity A) (at level 10, no associativity).
+(* Local Notation "A ⨂ B" := (morphism2_map (Bifunctor:=tensor) A B) (only printing). *)
+
 
 Lemma stack_distr_pushout_r_bot : forall {C : Type}
   `{Cat : Category C} `{MonCat : MonoidalCategory C}

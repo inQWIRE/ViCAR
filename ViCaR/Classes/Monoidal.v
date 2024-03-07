@@ -1,7 +1,7 @@
 Require Import Category.
 Require Import Setoid.
 
-Local Open Scope Cat.
+Local Open Scope Cat_scope.
 
 Reserved Notation "x × y" (at level 40, left associativity). (* \times *)
 Reserved Notation "x ⊗ y" (at level 40, left associativity). (* \otimes *) 
@@ -100,12 +100,16 @@ Class MonoidalCategory (C : Type) `{cC : Category C} : Type := {
 *)
 }.
 Infix "×" := tensor (at level 40, left associativity) : Cat_scope. (* \times *)
-Infix "⊗" := tensor.(morphism2_map) (at level 40, left associativity) : Cat_scope. (* \otimes *)  
+Infix "⊗" := tensor.(morphism2_map) (at level 40, left associativity) (* : Cat_scope *) . (* \otimes *)  
 Notation "'λ_' x" := (@left_unitor x) (at level 30, no associativity). (* \lambda *) 
 Notation "'ρ_' x" := (@right_unitor x) (at level 30, no associativity). (* \rho *) 
 
+(* TODO: Conflicts with VyZX, I think. Or maybe QuantumLib.
+Notation "A '⨂' B" := (@morphism2_map _ _ _ _ _ _ (tensor) _ _ _ _ A B)
+  (at level 40, only printing). *)
+
 Add Parametric Morphism {C : Type}
-  {Cat : Category C} (MonCat : MonoidalCategory C)
+  `{Cat : Category C, MonCat: !MonoidalCategory C}
   (n0 m0 n1 m1 : C) : tensor.(morphism2_map)
   with signature 
   (@Category.equiv C Cat n0 m0) ==> 
@@ -113,8 +117,9 @@ Add Parametric Morphism {C : Type}
   Category.equiv as stack_equiv_mor.
 Proof. intros. apply morphism2_compat; assumption. Qed.
 
+
 Add Parametric Morphism {C : Type}
-  {Cat : Category C} (MonCat : MonoidalCategory C) : tensor.(obj2_map)
+  `{Cat : Category C, MonCat : !MonoidalCategory C} : tensor.(obj2_map)
   with signature 
   (@isomorphic C Cat) ==> 
   (@isomorphic C Cat) ==> 
@@ -124,5 +129,92 @@ Proof. intros A B [fAB [fBA [HfAB HfBA]]] M N [fMN [fNM [HfMN HfNM]]].
   rewrite <- 2!compose2_map, HfAB, HfBA, HfMN, HfNM.
   rewrite 2!id2_map; easy.
 Qed.
+
+Fixpoint n_times_r {C} `{MonoidalCategory C} (n : nat) (A : C) : C :=
+  match n with 
+  | O => I
+  | S n' => A × (n_times_r n' A)
+  end.
+
+Fixpoint n_times_l {C} `{MonoidalCategory C} (n : nat) (A : C) : C :=
+  match n with 
+  | O => I
+  | S n' => (n_times_l n' A) × A
+  end.
+
+Fixpoint n_tensor_r {C} `{MonoidalCategory C} {A B : C} (n : nat) (f : A ~> B) 
+  : (n_times_r n A ~> n_times_r n B) :=
+  match n with
+  | O => id_ I
+  | S n' => f ⊗ (n_tensor_r n' f)
+  end.
+
+Fixpoint n_tensor_l {C} `{MonoidalCategory C} {A B : C} (n : nat) (f : A ~> B) 
+  : (n_times_l n A ~> n_times_l n B) :=
+  match n with
+  | O => id_ I
+  | S n' => (n_tensor_l n' f) ⊗ f
+  end.
+
+Add Parametric Morphism {C : Type} 
+  `{cC : Category C, cMonC : !MonoidalCategory C} : (@n_times_r C cC cMonC)
+  with signature 
+  (@eq nat) ==> (@isomorphic C cC) ==> (@isomorphic C cC) 
+  as n_times_r_isomorphic_mor.
+Proof.
+  intros n A B [fAB [fBA HAB]].
+  exists (n_tensor_r n fAB); exists (n_tensor_r n fBA).
+  induction n; simpl.
+  - rewrite left_unit; split; easy.
+  - rewrite <- 2!compose2_map, (proj1 HAB), (proj2 HAB),
+      (proj1 IHn), (proj2 IHn), 2!id2_map.
+    split; easy.
+Qed.
+
+Add Parametric Morphism {C : Type} 
+  `{cC : Category C, cMonC : !MonoidalCategory C} : (@n_times_l C cC cMonC)
+  with signature 
+  (@eq nat) ==> (@isomorphic C cC) ==> (@isomorphic C cC) 
+  as n_times_l_isomorphic_mor.
+Proof.
+  intros n A B [fAB [fBA HAB]].
+  exists (n_tensor_l n fAB); exists (n_tensor_l n fBA).
+  induction n; simpl.
+  - rewrite left_unit; split; easy.
+  - rewrite <- 2!compose2_map, (proj1 HAB), (proj2 HAB),
+      (proj1 IHn), (proj2 IHn), 2!id2_map.
+    split; easy.
+Qed.
+
+Add Parametric Morphism {C : Type} 
+  `{cC : Category C, cMonC : !MonoidalCategory C} {A B : C} {n : nat} : 
+  (@n_tensor_r C cC cMonC A B n) 
+  with signature 
+  (@Category.equiv C cC A B) 
+    ==> (@Category.equiv C cC (n_times_r n A) (n_times_r n B))
+  as n_tensor_r_equiv_mor.
+Proof.
+  intros f g Hfg.
+  induction n.
+  - easy.
+  - apply morphism2_compat; assumption.
+Qed.
+
+Add Parametric Morphism {C : Type} 
+  `{cC : Category C, cMonC : !MonoidalCategory C} {A B : C} {n : nat} : 
+  (@n_tensor_l C cC cMonC A B n) 
+  with signature 
+  (@Category.equiv C cC A B) 
+    ==> (@Category.equiv C cC (n_times_l n A) (n_times_l n B))
+  as n_tensor_l_equiv_mor.
+Proof.
+  intros f g Hfg.
+  induction n.
+  - easy.
+  - apply morphism2_compat; assumption.
+Qed.
+
+
+
 
 Local Close Scope Cat.

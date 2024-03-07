@@ -161,7 +161,7 @@ Ltac bdestruct_one_new :=
   end;
   simpl_bools.
 
-Ltac bdestruct_one ::= bdestruct_one_new || bdestruct_one_old.
+Ltac bdestruct_one' := bdestruct_one_new || bdestruct_one_old.
 
 Ltac bdestructΩ'simp :=
   let tryeasylia := try easy; try lca; try lia in

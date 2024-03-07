@@ -5,6 +5,8 @@ From VyZX Require Import CoreRules.
 From VyZX Require Import PermutationRules.
 From ViCaR Require Export CategoryTypeclass.
 
+Local Open Scope matrix_scope.
+
 Lemma Msum_transpose : forall n m p f,
   (big_sum (G:=Matrix n m) f p) ⊤ = 
   big_sum (G:=Matrix n m) (fun i => (f i) ⊤) p.
@@ -357,7 +359,7 @@ Proof.
   - rewrite (Nat.div_small i m),
   (Nat.mod_small i m), Nat.eqb_refl, andb_true_r, andb_true_l by easy.
   replace ((j / o =? k) && (j / o <? n)) with (j / o =? k) by bdestructΩ'.
-  bdestruct_one; [|easy].
+  ExamplesAutomation.bdestruct_one_old; [|easy].
   rewrite mod_eq_sub; f_equal;
   lia.
   - bdestructΩ'.
@@ -378,7 +380,7 @@ Proof.
   - rewrite (Nat.div_small j o),
   (Nat.mod_small j o), Nat.eqb_refl, andb_true_r, andb_true_l by easy.
   replace ((i / m =? k) && (i / m <? n)) with (i / m =? k) by bdestructΩ'.
-  bdestruct_one; [|easy].
+  ExamplesAutomation.bdestruct_one_old; [|easy].
   rewrite mod_eq_sub; f_equal;
   lia.
   - bdestructΩ'.
@@ -399,7 +401,7 @@ Proof.
   - rewrite (Nat.div_small i m), Nat.eqb_refl, andb_true_r, andb_true_l by easy.
   rewrite Nat.mod_small by easy.
   replace ((j / o =? k) && (j / o <? n)) with ((k * o <=? j) && (j <? S k * o)).
-  + do 2 bdestruct_one; simpl; try easy.
+  + do 2 ExamplesAutomation.bdestruct_one_old; simpl; try easy.
     destruct o; [lia|].
     f_equal.
     rewrite mod_eq_sub, Nat.mul_comm.
@@ -432,7 +434,7 @@ Proof.
   - rewrite (Nat.div_small j o), Nat.eqb_refl, andb_true_r, andb_true_l by easy.
   rewrite (Nat.mod_small j o) by easy.
   replace ((i / m =? k) && (i / m <? n)) with ((k * m <=? i) && (i <? S k * m)).
-  + do 2 bdestruct_one; simpl; try easy.
+  + do 2 ExamplesAutomation.bdestruct_one_old; simpl; try easy.
     destruct m; [lia|].
     f_equal.
     rewrite mod_eq_sub, Nat.mul_comm.
@@ -499,7 +501,7 @@ Proof.
   [| rewrite Nat.mul_eq_0; lia].
   unfold Matrix.I.
   rewrite <- 2!andb_if.
-  bdestruct_one; [
+  ExamplesAutomation.bdestruct_one_old; [
   rewrite 2!andb_true_r, andb_true_l | rewrite 4!andb_false_r; easy
   ].
   easy.
@@ -526,7 +528,7 @@ Proof.
   simpl.
   replace (i / n <? m) with true by (
   symmetry; rewrite Nat.ltb_lt; apply Nat.div_lt_upper_bound; lia).
-  bdestruct_one; [bdestruct_one|]; simpl; symmetry; [
+  ExamplesAutomation.bdestruct_one_old; [ExamplesAutomation.bdestruct_one_old|]; simpl; symmetry; [
   apply big_sum_unique;
   exists (j / m)%nat;
   split; [ apply Nat.div_lt_upper_bound; lia | ];

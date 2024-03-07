@@ -121,22 +121,25 @@ Definition MxDirectSumBiFunctor : Bifunctor MxCategory MxCategory MxCategory := 
   associator := fun n m o => {|
   forward := (I (n + m + o) : Matrix (n + m + o) (n + (m +o)));
   reverse := (I (n + m + o) : Matrix (n + (m +o)) (n + m + o));
-  id_A := ltac:(simpl; rewrite Nat.add_assoc, Mmult_1_r_mat_eq; easy);
-  id_B := ltac:(simpl; rewrite Nat.add_assoc, Mmult_1_r_mat_eq; easy);
+  isomorphism_inverse := ltac:(simpl; rewrite Nat.add_assoc, Mmult_1_r_mat_eq; easy);
+  (* id_A := ltac:(simpl; rewrite Nat.add_assoc, Mmult_1_r_mat_eq; easy);
+  id_B := ltac:(simpl; rewrite Nat.add_assoc, Mmult_1_r_mat_eq; easy); *)
   |};
 
   left_unitor := fun n => {|
   forward := (I n : Matrix (0 + n) n);
   reverse := (I n : Matrix n (0 + n));
-  id_A := ltac:(simpl; rewrite Mmult_1_r_mat_eq; easy);
-  id_B := ltac:(simpl; rewrite Mmult_1_r_mat_eq; easy);
+  isomorphism_inverse := ltac:(split; simpl; rewrite Mmult_1_r_mat_eq; easy);
+  (* id_A := ltac:(simpl; rewrite Mmult_1_r_mat_eq; easy);
+  id_B := ltac:(simpl; rewrite Mmult_1_r_mat_eq; easy); *)
   |};
 
   right_unitor := fun n => {|
   forward := (I n : Matrix (n + 0) n);
   reverse := (I n : Matrix n (n + 0));
-  id_A := ltac:(rewrite Nat.add_0_r, Mmult_1_r_mat_eq; easy);
-  id_B := ltac:(rewrite Nat.add_0_r, Mmult_1_r_mat_eq; easy);
+  isomorphism_inverse := ltac:(split; rewrite Nat.add_0_r, Mmult_1_r_mat_eq; easy);
+  (* id_A := ltac:(rewrite Nat.add_0_r, Mmult_1_r_mat_eq; easy);
+  id_B := ltac:(rewrite Nat.add_0_r, Mmult_1_r_mat_eq; easy); *)
   |};
 
   associator_cohere := ltac:(intros; simpl in *; 
@@ -235,7 +238,7 @@ Definition MxBraidingIsomorphism : forall n m,
   Isomorphism (MxDirectSumBiFunctor n m) ((CommuteBifunctor MxDirectSumBiFunctor) n m) :=
   fun n m => Build_Isomorphism nat MxCategory (n+m)%nat (m+n)%nat
     (mx_braiding n m) (mx_braiding m n)
-    (mx_braiding_compose_inv n m) (mx_braiding_compose_inv m n).
+    (conj (mx_braiding_compose_inv n m) (mx_braiding_compose_inv m n)).
 
 #[export] Instance MxBraidingBiIsomorphism : 
   NaturalBiIsomorphism MxDirectSumBiFunctor (CommuteBifunctor MxDirectSumBiFunctor) := {|
@@ -621,9 +624,11 @@ Qed.
 
 #[export] Instance MxDaggerCategory : DaggerCategory nat := {
   adjoint := @adjoint;
-  involutive := ltac:(intros; rewrite adjoint_involutive; easy);
-  preserves_id := ltac:(intros; rewrite id_adjoint_eq; easy);
-  contravariant := ltac:(intros; rewrite Mmult_adjoint; easy);
+  adjoint_involutive := ltac:(intros; rewrite adjoint_involutive; easy);
+  adjoint_id := ltac:(intros; rewrite id_adjoint_eq; easy);
+  adjoint_contravariant := ltac:(intros; rewrite Mmult_adjoint; easy);
+  adjoint_compat := ltac:(intros m n f g Hfg; unfold adjoint; simpl in *;
+    intros i j Hi Hj; rewrite Hfg; easy);
 }.
 
 
@@ -641,24 +646,24 @@ Qed.
 #[export] Instance MxDaggerMonoidalCategory : DaggerMonoidalCategory nat := {
   dagger_compat := ltac: (intros; apply direct_sum'_adjoint);
 
-  associator_unitary_r := ltac:(intros; simpl in *;
+  associator_unitary := ltac:(intros; unfold unitary; simpl in *;
     rewrite Nat.add_assoc, id_adjoint_eq, Mmult_1_r by auto with wf_db;
     easy);
-  associator_unitary_l := ltac:(intros; simpl in *;
+  (* associator_unitary_l := ltac:(intros; simpl in *;
     rewrite Nat.add_assoc, id_adjoint_eq, Mmult_1_r by auto with wf_db;
-    easy);
-  left_unitor_unitary_r := ltac:(intros; simpl in *;
+    easy); *)
+  left_unitor_unitary := ltac:(intros; unfold unitary; simpl in *;
     rewrite id_adjoint_eq, Mmult_1_r by auto with wf_db;
     easy);
-  left_unitor_unitary_l := ltac:(intros; simpl in *;
+  (* left_unitor_unitary_l := ltac:(intros; simpl in *;
     rewrite id_adjoint_eq, Mmult_1_r by auto with wf_db;
-    easy);
-  right_unitor_unitary_r := ltac:(intros;  simpl in *;
+    easy); *)
+  right_unitor_unitary := ltac:(intros; unfold unitary; simpl in *;
     rewrite Nat.add_0_r, id_adjoint_eq, Mmult_1_r by auto with wf_db;
     easy);
-  right_unitor_unitary_l := ltac:(intros; simpl in *;
+  (* right_unitor_unitary_l := ltac:(intros; simpl in *;
     rewrite Nat.add_0_r, id_adjoint_eq, Mmult_1_r by auto with wf_db;
-    easy);
+    easy); *)
 }.
 
 #[export] Instance MxDaggerBraidedMonoidalCategory : DaggerBraidedMonoidalCategory nat := {}.

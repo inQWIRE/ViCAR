@@ -39,22 +39,25 @@ Definition MxKronBiFunctor : Bifunctor MxCategory MxCategory MxCategory := {|
   associator := fun n m o => {|
   forward := (I (n * m * o) : Matrix (n * m * o) (n * (m * o)));
   reverse := (I (n * m * o) : Matrix (n * (m * o)) (n * m * o));
-  id_A := ltac:(simpl; rewrite Nat.mul_assoc, Mmult_1_r_mat_eq; easy);
-  id_B := ltac:(simpl; rewrite Nat.mul_assoc, Mmult_1_r_mat_eq; easy);
+  isomorphism_inverse := ltac:(split; simpl; rewrite Nat.mul_assoc, Mmult_1_r_mat_eq; easy);
+  (* id_A := ltac:(simpl; rewrite Nat.mul_assoc, Mmult_1_r_mat_eq; easy);
+  id_B := ltac:(simpl; rewrite Nat.mul_assoc, Mmult_1_r_mat_eq; easy); *)
   |};
 
   left_unitor := fun n => {|
   forward := (I n : Matrix (1 * n) n);
   reverse := (I n : Matrix n (1 * n));
-  id_A := ltac:(rewrite Nat.mul_1_l, Mmult_1_r_mat_eq; easy);
-  id_B := ltac:(rewrite Nat.mul_1_l, Mmult_1_r_mat_eq; easy);
+  isomorphism_inverse := ltac:(split; rewrite Nat.mul_1_l, Mmult_1_r_mat_eq; easy);
+  (* id_A := ltac:(rewrite Nat.mul_1_l, Mmult_1_r_mat_eq; easy);
+  id_B := ltac:(rewrite Nat.mul_1_l, Mmult_1_r_mat_eq; easy); *)
   |};
 
   right_unitor := fun n => {|
   forward := (I n : Matrix (n * 1) n);
   reverse := (I n : Matrix n (n * 1));
-  id_A := ltac:(rewrite Nat.mul_1_r, Mmult_1_r_mat_eq; easy);
-  id_B := ltac:(rewrite Nat.mul_1_r, Mmult_1_r_mat_eq; easy);
+  isomorphism_inverse := ltac:(split; rewrite Nat.mul_1_r, Mmult_1_r_mat_eq; easy);
+  (* id_A := ltac:(rewrite Nat.mul_1_r, Mmult_1_r_mat_eq; easy);
+  id_B := ltac:(rewrite Nat.mul_1_r, Mmult_1_r_mat_eq; easy); *)
   |};
 
   associator_cohere := ltac:(intros; simpl in *; 
@@ -86,10 +89,9 @@ Definition MxKronBraidingIsomorphism : forall n m,
   Isomorphism (MxKronBiFunctor n m) ((CommuteBifunctor MxKronBiFunctor) n m) :=
   fun n m => Build_Isomorphism nat MxCategory (n*m)%nat (m*n)%nat
     (kron_comm n m) (kron_comm m n)
-    ltac:(intros; simpl; 
-    rewrite (Nat.mul_comm m n), (kron_comm_mul_inv n m); easy)
-    ltac:(intros; simpl; 
-    rewrite (Nat.mul_comm n m), (kron_comm_mul_inv m n); easy).
+    ltac:(intros; simpl; split; 
+    [rewrite (Nat.mul_comm m n), (kron_comm_mul_inv n m)
+    | rewrite (Nat.mul_comm n m), (kron_comm_mul_inv m n)]; easy).
 
 
 

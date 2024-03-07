@@ -197,22 +197,25 @@ Definition ZXTensorBiFunctor : Bifunctor ZXCategory ZXCategory ZXCategory := {|
   associator := fun n m o => {|
   forward := @zx_associator n m o;
   reverse := @zx_inv_associator n m o;
-  id_A := @zx_associator_inv_compose n m o;
-  id_B := @zx_inv_associator_compose n m o;
+  isomorphism_inverse := conj (@zx_associator_inv_compose n m o) (@zx_inv_associator_compose n m o)
+  (* id_A := @zx_associator_inv_compose n m o;
+  id_B := @zx_inv_associator_compose n m o; *)
   |};
 
   left_unitor := fun n => {|
   forward := @zx_left_unitor n;
   reverse := @zx_inv_left_unitor n;
-  id_A := @zx_left_inv_compose n;
-  id_B := @zx_inv_left_compose n;
+  isomorphism_inverse := conj (@zx_left_inv_compose n) (@zx_inv_left_compose n)
+  (* id_A := @zx_left_inv_compose n;
+  id_B := @zx_inv_left_compose n; *)
   |};
 
   right_unitor := fun n => {|
   forward := @zx_right_unitor n;
   reverse := @zx_inv_right_unitor n;
-  id_A := @zx_right_inv_compose n;
-  id_B := @zx_inv_right_compose n;
+  isomorphism_inverse := conj (@zx_right_inv_compose n) (@zx_inv_right_compose n)
+  (* id_A := @zx_right_inv_compose n;
+  id_B := @zx_inv_right_compose n; *)
   |};
 
   associator_cohere := @zx_associator_cohere;
@@ -384,6 +387,7 @@ Proof.
 Qed.
 
 Require Export KronComm_orig.
+(* Search "cast_" -ZXperm -Box -Z -X -n_box. *)
 
 
 
@@ -439,8 +443,10 @@ Definition ZXBraidingIsomorphism : forall n m,
   fun n m => Build_Isomorphism nat ZXCategory _ _
     ((* forward := *) @zx_braiding n m)
     ((* reverse := *) @zx_inv_braiding n m)
-    ((* id_A := *) @zx_braiding_inv_compose n m)
-    ((* id_B := *) @zx_inv_braiding_compose n m).
+    ((* isomorphism_inverse := *) 
+      conj (@zx_braiding_inv_compose n m) (@zx_inv_braiding_compose n m))
+    (* ((* id_A := *) @zx_braiding_inv_compose n m)
+    ((* id_B := *) @zx_inv_braiding_compose n m) *).
 
 #[export] Instance ZXBraidingBiIsomorphism : 
   NaturalBiIsomorphism ZXTensorBiFunctor (CommuteBifunctor ZXTensorBiFunctor) := {|
@@ -550,9 +556,10 @@ Qed.
 
 #[export] Instance ZXDaggerCategory : DaggerCategory nat := {
   adjoint := @ZXCore.adjoint;
-  involutive := @Proportional.adjoint_involutive;
-  preserves_id := nwire_adjoint;
-  contravariant := @compose_adjoint;
+  adjoint_involutive := @Proportional.adjoint_involutive;
+  adjoint_id := nwire_adjoint;
+  adjoint_contravariant := @compose_adjoint;
+  adjoint_compat := Proportional.adjoint_compat;
 }.
 
 Lemma zx_dagger_compat : forall {n n' m m'} 
@@ -891,8 +898,8 @@ Qed.
 
 
 Lemma swap_2cup_transport : 
-  ⟦ n_cup_unswapped 2 ⟧ × (swap ⊗ (Matrix.I (2^2))) 
-  = ⟦ n_cup_unswapped 2 ⟧ × ((Matrix.I (2^2)) ⊗ swap).
+  ⟦ n_cup_unswapped 2 ⟧ × (kron swap (Matrix.I (2^2)))
+  = ⟦ n_cup_unswapped 2 ⟧ × (kron (Matrix.I (2^2)) swap).
 Proof.
   apply mat_equiv_eq; auto with wf_db.
   rewrite sem_n_cup_unswapped_2.
@@ -1263,7 +1270,7 @@ Proof.
   prop_perm_eq.
   solve_modular_permutation_equalities.
   Unshelve.
-  all: lia.
+  all: try lia.
 Qed.
 
 
@@ -1570,12 +1577,15 @@ Qed.
 #[export] Instance ZXDaggerMonoidalCategory : DaggerMonoidalCategory nat := {
   dagger_compat := @zx_dagger_compat;
 
-  associator_unitary_r := @zx_associator_unitary_r;
-  associator_unitary_l := @zx_associator_unitary_l;
-  left_unitor_unitary_r := @zx_left_unitor_unitary_r;
-  left_unitor_unitary_l := @zx_left_unitor_unitary_l;
-  right_unitor_unitary_r := @zx_right_unitor_unitary_r;
-  right_unitor_unitary_l := @zx_right_unitor_unitary_l;
+  associator_unitary := fun A B M => 
+    conj (@zx_associator_unitary_r A B M) (@zx_associator_unitary_l A B M);
+  (* associator_unitary_l := @zx_associator_unitary_l; *)
+  left_unitor_unitary := fun A => 
+    conj (@zx_left_unitor_unitary_r A) (@zx_left_unitor_unitary_l A);
+  (* left_unitor_unitary_l := @zx_left_unitor_unitary_l; *)
+  right_unitor_unitary := fun A => 
+    conj (@zx_right_unitor_unitary_r A) (@zx_right_unitor_unitary_l A);
+  (* right_unitor_unitary_l := @zx_right_unitor_unitary_l; *)
 }.
 
 #[export] Instance ZXDaggerBraidedMonoidalCategory : DaggerBraidedMonoidalCategory nat := {}.

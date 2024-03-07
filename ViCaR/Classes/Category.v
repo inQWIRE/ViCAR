@@ -37,27 +37,40 @@ Class Category (C : Type) : Type := {
     right_unit {A B : C} {f : A ~> B} : compose f (c_identity B) ≃ f;
 }.
 
-
+Notation "'id_' A" := (c_identity A) (at level 10, no associativity).
 Notation "A ~> B" := (morphism A B) : Cat_scope.
 Notation "f ≃ g" := (equiv f g) : Cat_scope. (* \simeq *)
 Infix "∘" := compose (at level 40, left associativity) : Cat_scope. (* \circ *)
 
-Add Parametric Relation {C : Type} {Cat : Category C} 
+Add Parametric Relation {C : Type} `{Cat : Category C} 
     (A B : C) : (A ~> B) equiv
   reflexivity proved by (equiv_refl (A ~> B) equiv equiv_rel)
   symmetry proved by (equiv_sym (A ~> B) equiv equiv_rel)
   transitivity proved by (equiv_trans (A ~> B) equiv equiv_rel)
   as prop_equiv_rel.
 
-Add Parametric Morphism {C : Type} {Cat : Category C} (n o m : C) : compose
+Add Parametric Morphism {C : Type} `{Cat : Category C} (n o m : C) : compose
   with signature (@equiv C Cat n m) ==> (@equiv C Cat m o) ==> equiv as compose_mor.
 Proof. apply compose_compat; assumption. Qed.
 
 
+
+Notation is_inverse f g :=
+  (f ∘ g ≃ id_ _ /\ g ∘ f ≃ id_ _).
+
+Lemma inverse_unique {C} `{Category C} {A B : C} 
+  {f : A ~> B} {g g' : B ~> A} (Hg : is_inverse f g) (Hg' : is_inverse f g') :
+  g ≃ g'.
+Proof.
+  rewrite <- (right_unit (f:=g)).
+  rewrite <- (proj1 Hg'), <- assoc, (proj2 Hg), left_unit.
+  easy.
+Qed.
+
 (** Isomorphism of objects in a category, and equivalent typeclass, with
     parametric equivalence *)
 Definition isomorphism {C : Type} `{Category C} {A B : C} (f : A ~> B) :=
-  exists (g : B ~> A), f ∘ g ≃ c_identity A /\ g ∘ f ≃ c_identity B.
+  exists (g : B ~> A), is_inverse f g.
 
 Definition isomorphic {C : Type} `{Category C} (A B : C) :=
   exists (f : A ~> B), isomorphism f.
@@ -65,9 +78,10 @@ Definition isomorphic {C : Type} `{Category C} (A B : C) :=
 Class Isomorphism {C : Type} `{Category C} (A B : C) := {
   forward : A ~> B;
   reverse : B ~> A;
-  id_A : forward ∘ reverse ≃ c_identity A;
-  id_B : reverse ∘ forward ≃ c_identity B;
+  isomorphism_inverse : is_inverse forward reverse;
 }.
+Notation id_A I := (proj1 I.(isomorphism_inverse)).
+Notation id_B I := (proj2 I.(isomorphism_inverse)).
 Coercion forward : Isomorphism >-> morphism.
 Notation "f '^-1'" := (f.(reverse)) (at level 30) : Cat_scope.
 
@@ -80,9 +94,9 @@ Proof.
   split.
   - intros [f [g [Hfg Hgf]]].
     eexists.
-    + eapply Build_Isomorphism; eassumption.
+    + eapply Build_Isomorphism; split; eassumption.
     + apply I.
-  - intros [[f g Hfg Hgf] _].
+  - intros [[f g [Hfg Hgf]] _].
     exists f; exists g; auto.
 Qed.
 
@@ -127,7 +141,7 @@ Add Parametric Relation {C : Type} `{Cat : Category C} : C (@isomorphic C Cat)
 Class Functor {C D : Type} (cC: Category C) (cD : Category D) : Type := {
   obj_map : C -> D;
   morphism_map {A B : C} : (A ~> B) -> (obj_map A ~> obj_map B);
-  id_map (A : C) : morphism_map (c_identity A) ≃ c_identity (obj_map A);
+  id_map (A : C) : morphism_map (id_ A) ≃ id_ (obj_map A);
   compose_map {A B M : C} (f : A ~> B) (g : B ~> M) :
     morphism_map (f ∘ g) ≃ morphism_map f ∘ morphism_map g;
   morphism_compat {A B : C} (f g : A ~> B) : f ≃ g -> (morphism_map f) ≃ (morphism_map g);
@@ -150,13 +164,14 @@ Proof.
   split; apply id_map.
 Qed.
 
+(* TODO: replace "2_map" with "bimap" *)
 Reserved Notation " F '@@' X , Y " (at level 39, no associativity).
 Class Bifunctor {C1 C2 D : Type} (cC1: Category C1) (cC2 : Category C2) (cD : Category D) := {
   obj2_map : C1 -> C2 -> D;
   morphism2_map {A1 B1 : C1} {A2 B2 : C2} : (A1 ~> B1) -> (A2 ~> B2) ->
     (obj2_map A1 A2) ~> (obj2_map B1 B2);
   id2_map {A1 : C1} {A2 : C2} :
-    (morphism2_map (c_identity A1) (c_identity A2)) ≃ c_identity (obj2_map A1 A2);
+    (morphism2_map (id_ A1) (id_ A2)) ≃ id_ (obj2_map A1 A2);
   compose2_map {A1 B1 M1 : C1} {A2 B2 M2 : C2}
     (f1 : A1 ~> B1) (g1 : B1 ~> M1) (f2 : A2 ~> B2) (g2 : B2 ~> M2) :
     morphism2_map (f1 ∘ g1) (f2 ∘ g2) ≃ morphism2_map f1 f2 ∘ morphism2_map g1 g2;
@@ -166,14 +181,17 @@ Class Bifunctor {C1 C2 D : Type} (cC1: Category C1) (cC2 : Category C2) (cD : Ca
 Coercion obj2_map : Bifunctor >-> Funclass.
 Notation " F '@@' X , Y " := (F.(morphism2_map) X Y) (at level 39, no associativity).
 
-Add Parametric Morphism {C1 C2 D : Type} {cC1 : Category C1} {cC2 : Category C2} {cD : Category D}
+Add Parametric Morphism {C1 C2 D : Type} 
+  {cC1 : Category C1} {cC2 : Category C2} {cD : Category D}
   (F : Bifunctor cC1 cC2 cD) (A1 B1 : C1) (A2 B2 : C2) : F.(morphism2_map)
-  with signature (@equiv C1 cC1 A1 B1) ==> (@equiv C2 cC2 A2 B2) ==> (@equiv D cD (F A1 A2) (F B1 B2)) as bifunctor_equiv_mor.
+  with signature (@equiv C1 cC1 A1 B1) ==> (@equiv C2 cC2 A2 B2) 
+    ==> (@equiv D cD (F A1 A2) (F B1 B2)) as bifunctor_equiv_mor.
 Proof. intros. apply morphism2_compat; easy. Qed.
 
 Add Parametric Morphism {C1 C2 D : Type} `{cC1 : Category C1} `{cC2 : Category C2}
  `{cD : Category D} (F : Bifunctor cC1 cC2 cD) : F.(obj2_map)
-  with signature (@isomorphic C1 cC1) ==> (@isomorphic C2 cC2) ==> (@isomorphic D cD) as bifunctor_isometric_mor.
+  with signature (@isomorphic C1 cC1) ==> (@isomorphic C2 cC2) 
+    ==> (@isomorphic D cD) as bifunctor_isometric_mor.
 Proof. 
   intros A1 B1 [fAB1 [fBA1 [HfABA1 HfBAB1]]] A2 B2 [fAB2 [fBA2 [HfABA2 HfBAB2]]].
   exists (F @@ fAB1, fAB2); exists (F @@ fBA1, fBA2).
@@ -210,7 +228,7 @@ Class NaturalIsomorphism {C D : Type} `{cC: Category C} `{cD : Category D}
   component_iso_natural (A B : C) (f : A ~> B) :
     F@f ∘ component_iso B ≃ component_iso A ∘ G@f;
 }.
-Coercion component_iso : NaturalIsomorphism >-> Funclass.
+Coercion component_iso : NaturalIsomorphism >-> Funclass. (* TODO: is this sensible? I think not *)
 
 Definition NaturalTransformation_of_NaturalIsomorphism {C D : Type} 
   `{cC : Category C} `{cD : Category D} {F G : Functor cC cD}
@@ -218,7 +236,8 @@ Definition NaturalTransformation_of_NaturalIsomorphism {C D : Type}
   component_map := component_iso;
   component_map_natural := ltac:(intros; apply component_iso_natural);
 |}.
-Coercion NaturalTransformation_of_NaturalIsomorphism : NaturalIsomorphism >-> NaturalTransformation.
+Coercion NaturalTransformation_of_NaturalIsomorphism : 
+  NaturalIsomorphism >-> NaturalTransformation.
 
 
 Reserved Notation "'β_' X , Y" (at level 20). (* \beta *)
@@ -267,8 +286,64 @@ Definition OppositeCategory {C : Type} (cC : Category C) : Category C := {|
 
 Notation "C '^op'" := (OppositeCategory C) (at level 40, left associativity).
 
+Class ContraFunctor {C D : Type} (cC: Category C) (cD : Category D) : Type := {
+  obj_contramap : C -> D;
+  morphism_contramap {A B : C} : (A ~> B) -> 
+    (obj_contramap B ~> obj_contramap A);
+  id_contramap (A : C) : morphism_contramap (id_ A) ≃ id_ (obj_contramap A);
+  compose_contramap {A B M : C} (f : A ~> B) (g : B ~> M) :
+    morphism_contramap (f ∘ g) ≃ morphism_contramap g ∘ morphism_contramap f;
+  morphism_contracompat {A B : C} (f g : A ~> B) : f ≃ g -> 
+    (morphism_contramap f) ≃ (morphism_contramap g);
+}.
+Coercion obj_contramap : ContraFunctor >-> Funclass.
+Notation "F @' X" := (F.(morphism_contramap) X) (at level 39, no associativity).
+
+Add Parametric Morphism {C D : Type} {cC : Category C} {cD : Category D}
+  (F : ContraFunctor cC cD) (A B : C): F.(morphism_contramap)
+  with signature 
+  (@equiv C cC A B) ==> (@equiv D cD (F B) (F A)) as contrafunctor_equiv_mor.
+Proof. apply morphism_contracompat. Qed.
+
+Add Parametric Morphism {C D : Type} `{cC : Category C} `{cD : Category D}
+  (F : ContraFunctor cC cD) : F.(obj_contramap)
+  with signature 
+  (@isomorphic C cC) ==> (@isomorphic D cD) as contrafunctor_isomorphic_mor.
+Proof. 
+  intros A B [fAB [fBA [HfABA HfBAB]]].
+  exists (F @' fBA); exists (F @' fAB).
+  rewrite <- 2!compose_contramap, HfABA, HfBAB.
+  split; apply id_contramap.
+Qed.
+
 Definition ContravariantFunctor {C D : Type} (cC: Category C) (cD : Category D) : Type :=
   Functor (cC^op) cD.
+
+Require Import ExamplesAutomation.
+
+Definition ContravariantFunctor_of_ContraFunctor {C D : Type} 
+  `{cC : Category C} `{cD : Category D} (F : ContraFunctor cC cD) : 
+  ContravariantFunctor cC cD := {|
+  obj_map := F.(obj_contramap);
+  morphism_map := fun (A B : C) (f : @morphism C (cC^op) A B) =>
+    F.(morphism_contramap) f;
+  id_map := id_contramap;
+  compose_map := fun (A B M : C) (f : @morphism C (cC^op) A B)
+    (g : @morphism C (cC^op) B M) =>
+    F.(compose_contramap) g f;
+  morphism_compat := fun A B => F.(morphism_contracompat);
+|}.
+
+Definition ContraFunctor_of_ContravariantFunctor {C D : Type} 
+  `{cC : Category C} `{cD : Category D} (F : ContravariantFunctor cC cD) : 
+  ContraFunctor cC cD := {|
+  obj_contramap := F.(obj_map);
+  morphism_contramap := fun A B (f : cC.(morphism) A B) =>
+    F @ f;
+  id_contramap := id_map;
+  compose_contramap := fun A B M f g => F.(compose_map) g f;
+  morphism_contracompat := fun A B f g => F.(morphism_compat) f g;
+|}.
 
 
 (** Product categories, equivalence of functors from them and bifunctors (currently unused) *)
@@ -379,7 +454,7 @@ Lemma equiv_of_iso_compose_l {C : Type} `{cC : Category C} {A A' B : C}
   f ≃ g. 
 Proof.
   rewrite <- (left_unit (f:=f)), <- (left_unit (f:=g)).
-  rewrite <- I.(id_B), 2!assoc, H.
+  rewrite <- (id_B I), 2!assoc, H.
   easy.
 Qed.
 
@@ -388,7 +463,7 @@ Lemma equiv_of_iso_compose_r {C : Type} `{cC : Category C} {A B' B : C}
   f ≃ g. 
 Proof.
   rewrite <- (right_unit (f:=f)), <- (right_unit (f:=g)).
-  rewrite <- I.(id_A), <- 2!assoc, H.
+  rewrite <- (id_A I), <- 2!assoc, H.
   easy.
 Qed.
 

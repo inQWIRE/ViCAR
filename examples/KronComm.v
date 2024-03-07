@@ -8,6 +8,8 @@ Require Import MatrixPermBase.
 From ViCaR Require Export CategoryTypeclass.
 From ViCaR Require Import ExamplesAutomation.
 
+Local Open Scope matrix_scope.
+
 Lemma Msum_transpose : forall n m p f,
   (big_sum (G:=Matrix n m) f p) ⊤ = 
   big_sum (G:=Matrix n m) (fun i => (f i) ⊤) p.
