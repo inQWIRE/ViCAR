@@ -1,4 +1,5 @@
 Require Import Setoid.
+From ViCaR Require Export CategoryTypeclass.
 
 Require Import Psatz.
 

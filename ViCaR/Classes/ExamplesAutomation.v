@@ -2,9 +2,9 @@ From VyZX Require Import PermutationAutomation.
 Require Import String.
 
 Ltac print_state :=
-  try (match goal with | H : ?p |- _ => idtac H ":" p; fail end);
+  try (match reverse goal with | H : ?p |- _ => idtac H ":" p; fail end);
   idtac "---------------------------------------------------------";
-  match goal with |- ?P => idtac P; idtac "" 
+  match reverse goal with |- ?P => idtac P; idtac "" 
 end.
 
 Ltac is_C0 x := assert (x = C0) by (cbv; lca).
