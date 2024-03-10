@@ -43,11 +43,12 @@ Definition MxKronBiFunctor : Bifunctor MxCategory MxCategory MxCategory := {|
   (* id_A := ltac:(simpl; rewrite Nat.mul_assoc, Mmult_1_r_mat_eq; easy);
   id_B := ltac:(simpl; rewrite Nat.mul_assoc, Mmult_1_r_mat_eq; easy); *)
   |};
-
+  
   left_unitor := fun n => {|
   forward := (I n : Matrix (1 * n) n);
   reverse := (I n : Matrix n (1 * n));
-  isomorphism_inverse := ltac:(split; rewrite Nat.mul_1_l, Mmult_1_r_mat_eq; easy);
+  isomorphism_inverse 
+    := ltac:(abstract(split; rewrite Nat.mul_1_l, Mmult_1_r_mat_eq; easy));
   (* id_A := ltac:(rewrite Nat.mul_1_l, Mmult_1_r_mat_eq; easy);
   id_B := ltac:(rewrite Nat.mul_1_l, Mmult_1_r_mat_eq; easy); *)
   |};
@@ -55,7 +56,8 @@ Definition MxKronBiFunctor : Bifunctor MxCategory MxCategory MxCategory := {|
   right_unitor := fun n => {|
   forward := (I n : Matrix (n * 1) n);
   reverse := (I n : Matrix n (n * 1));
-  isomorphism_inverse := ltac:(split; rewrite Nat.mul_1_r, Mmult_1_r_mat_eq; easy);
+  isomorphism_inverse 
+    := ltac:(abstract(split; rewrite Nat.mul_1_r, Mmult_1_r_mat_eq; easy));
   (* id_A := ltac:(rewrite Nat.mul_1_r, Mmult_1_r_mat_eq; easy);
   id_B := ltac:(rewrite Nat.mul_1_r, Mmult_1_r_mat_eq; easy); *)
   |};
@@ -103,3 +105,22 @@ Definition MxKronBraidingIsomorphism : forall n m,
     rewrite (kron_comm_commutes_r_mat_equiv);
     easy);
 |}.
+
+
+From ViCaR Require Import CategoryAutomation.
+
+Open Scope matrix_scope.
+
+Delimit Scope matrix_scope with mat.
+
+Lemma test {n} : forall (zx : Matrix n n),
+  ((λ_ n).(forward) × zx ≡ Matrix.I (S O) ⊗ zx × (ρ_ n).(forward)).
+Proof.
+  intros.
+  simpl. to_Cat.
+  replace (n+0)%nat with (1*n)%nat by lia.
+  simpl forward.
+  to_Cat.
+  rewrite (left_unitor_cohere (f:=zx : (MxCategory.(morphism) n n)%Cat)).
+  easy.
+Qed.

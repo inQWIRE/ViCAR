@@ -643,6 +643,413 @@ Proof.
   bdestructΩ'.
 Qed.
 
+(* 
+Ltac not_evar' v :=
+  not_evar v; try (let v := eval unfold v in v in 
+  tryif not_evar v then idtac else fail 1).
+
+Ltac subst_evars := 
+  repeat match goal with
+  | x := ?y : nat |- _ => subst x
+  end.
+
+Ltac evarify_1func_once f :=
+  match goal with 
+  |- context[@f ?a ?A] => 
+      not_evar' a; let x:= fresh in evar (x : nat); 
+      replace (@f a A) with (@f x A) by
+      ( replace (@f a) with (@f x) by (replace a with x by shelve; reflexivity);
+        reflexivity)
+  end.
+
+Ltac evarify_1func f := repeat (evarify_1func_once f).
+Ltac evarify_1func' f := repeat (evarify_1func_once f); subst_evars.
+
+Ltac evarify_2func_once f :=
+  match goal with 
+  |- context[@f ?a ?b ?A] => 
+      not_evar' a; not_evar' b;
+      let x:= fresh in let y := fresh in 
+      evar (x : nat); evar (y : nat); 
+      replace (@f a b A) with (@f x y A) by
+      ( replace (@f a) with (@f x) by (replace a with x by shelve; reflexivity);
+        replace (@f x b) with (@f x y) by (replace b with y by shelve; reflexivity); 
+        reflexivity)
+  end.
+
+Ltac evarify_2func f := repeat (evarify_2func_once f).
+Ltac evarify_2func' f := repeat (evarify_2func_once f); subst_evars.
+
+Ltac evarify_3func_once f :=
+  match goal with 
+  |- context[@f ?a ?b ?c ?A] => 
+      not_evar' a; not_evar' b; not_evar' c;
+      let x:= fresh in let y := fresh in let z := fresh in
+      evar (x : nat); evar (y : nat); evar (z : nat);
+      replace (@f a b c A) with (@f x y z A) by
+      ( replace (@f a) with (@f x) by (replace a with x by shelve; reflexivity);
+        replace (@f x b) with (@f x y) by (replace b with y by shelve; reflexivity); 
+        replace (@f x y c) with (@f x y z) by (replace c with z by shelve; reflexivity); 
+        reflexivity)
+  end.
+
+Ltac evarify_3func f := repeat (evarify_3func_once f).
+Ltac evarify_3func' f := repeat (evarify_3func_once f); subst_evars.
+
+Ltac evarify_4func_once f :=
+  match goal with 
+  |- context[@f ?a ?b ?c ?d ?A] => 
+      not_evar' a; not_evar' b; not_evar' c; not_evar' d;
+      let x:= fresh in let y := fresh in let z := fresh in let zz := fresh in
+      evar (x : nat); evar (y : nat); evar (z : nat); evar (zz : nat);
+      replace (@f a b c d A) with (@f x y z zz A) by
+      ( replace (@f a) with (@f x) by (replace a with x by shelve; reflexivity);
+        replace (@f x b) with (@f x y) by (replace b with y by shelve; reflexivity); 
+        replace (@f x y c) with (@f x y z) by (replace c with z by shelve; reflexivity); 
+        replace (@f x y z c) with (@f x y z zz) by (replace d with zz by shelve; reflexivity); 
+        reflexivity)
+  end.
+
+Ltac evarify_4func f := repeat (evarify_4func_once f).
+Ltac evarify_4func' f := repeat (evarify_4func_once f); subst_evars.
+
+(* Ltac lem_conclusion lem :=
+  match type of lem with
+  | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _, ?P => P
+  | forall _ _ _ _ _ _ _ _ _ _ _ _ _, ?P => P
+  | forall _ _ _ _ _ _ _ _ _ _ _ _, ?P => P
+  | forall _ _ _ _ _ _ _ _ _ _ _, ?P => P
+  | forall _ _ _ _ _ _ _ _ _ _, ?P => P
+  | forall _ _ _ _ _ _ _ _ _, ?P => P
+  | forall _ _ _ _ _ _ _ _, ?P => P
+  | forall _ _ _ _ _ _ _, ?P => P
+  | forall _ _ _ _ _ _, ?P => P
+  | forall _ _ _ _ _, ?P => P
+  | forall _ _ _ _, ?P => P
+  | forall _ _ _, ?P => P
+  | forall _ _, ?P => P
+  | forall _, ?P => P
+  |         ?P => P
+  end. *)
+
+(* Ltac lem_conclusion lem :=
+  lazymatch type of lem with
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _) (f : _) (g : _) (h : _) (i : _) (j : _) (k : _) (l : _) (m : _) (n : _), ?P => open_constr:(P)
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _) (f : _) (g : _) (h : _) (i : _) (j : _) (k : _) (l : _) (m : _), ?P => open_constr:(P)
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _) (f : _) (g : _) (h : _) (i : _) (j : _) (k : _) (l : _), ?P => open_constr:(P)
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _) (f : _) (g : _) (h : _) (i : _) (j : _) (k : _), ?P => open_constr:(P)
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _) (f : _) (g : _) (h : _) (i : _) (j : _), ?P => open_constr:(P)
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _) (f : _) (g : _) (h : _) (i : _), ?P => open_constr:(P)
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _) (f : _) (g : _) (h : _), ?P => open_constr:(P)
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _) (f : _) (g : _), ?P => open_constr:(P)
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _) (f : _), ?P => open_constr:(P)
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _), ?P => open_constr:(P)
+  | forall (a : _) (b : _) (c : _) (d : _), ?P => open_constr:(P)
+  | forall (a : _) (b : _) (c : _), ?P => open_constr:(P)
+  | forall (a : _) (b : _), ?P => open_constr:(P)
+  | forall (a : _), ?P => open_constr:(P)
+  |         ?P => open_constr:(P)
+  end.
+
+Ltac eq_lem_lhs lem :=
+  let t:= lem_conclusion lem in
+  match open_constr:(t) with
+  | ?x = ?y => uconstr:(x)
+  end.
+
+Ltac eq_lem_lhs_head' lem :=
+  let t:= eq_lem_lhs lem in
+  let s := type of t in idtac s;
+  match type of t with
+  | ?f ?x => idtac f
+  end.
+
+Ltac eq_lem_lhs_head lem :=
+  let hd ty :=
+  match type of ty with
+  | ?f _ _ _ _ _ _ _ _ _ _ _ => f
+  | ?f _ _ _ _ _ _ _ _ _ _ => f
+  | ?f _ _ _ _ _ _ _ _ _ => f
+  | ?f _ _ _ _ _ _ _ _ => f
+  | ?f _ _ _ _ _ _ _ => f
+  | ?f _ _ _ _ _ _ => f
+  | ?f _ _ _ _ _ => f
+  | ?f _ _ _ _ => f
+  | ?f _ _ _ => f
+  | ?f _ _ => f
+  | ?f _ => f
+  end in
+  lazymatch type of lem with
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _) (f : _) (g : _) (h : _) (i : _) (j : _) (k : _) (l : _) (m : _) (n : _), ?P => hd P
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _) (f : _) (g : _) (h : _) (i : _) (j : _) (k : _) (l : _) (m : _), ?P => hd P
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _) (f : _) (g : _) (h : _) (i : _) (j : _) (k : _) (l : _), ?P => hd P
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _) (f : _) (g : _) (h : _) (i : _) (j : _) (k : _), ?P => hd P
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _) (f : _) (g : _) (h : _) (i : _) (j : _), ?P => hd P
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _) (f : _) (g : _) (h : _) (i : _), ?P => hd P
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _) (f : _) (g : _) (h : _), ?P => hd P
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _) (f : _) (g : _), ?P => hd P
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _) (f : _), ?P => hd P
+  | forall (a : _) (b : _) (c : _) (d : _) (e : _), ?P => hd P
+  | forall (a : _) (b : _) (c : _) (d : _), ?P => hd P
+  | forall (a : _) (b : _) (c : _), ?P => hd P
+  | forall (a : _) (b : _), ?P => hd P
+  | forall (a : _), ?P => hd P
+  |         ?P => hd P
+  end. *)
+
+(* NOTE: modified from https://coq.discourse.group/t/ltac-that-goes-under-binders-to-return-a-non-constr-value/257/5
+Ltac head_application th :=
+  match th with
+  | ?f _ _ _ _ _ _ _ _ _ _ _ => f
+  | ?f _ _ _ _ _ _ _ _ _ _ => f
+  | ?f _ _ _ _ _ _ _ _ _ => f
+  | ?f _ _ _ _ _ _ _ _ => f
+  | ?f _ _ _ _ _ _ _ => f
+  | ?f _ _ _ _ _ _ => f
+  | ?f _ _ _ _ _ => f
+  | ?f _ _ _ _ => f
+  | ?f _ _ _ => f
+  | ?f _ _ => f
+  | ?f _ => f
+  end.
+
+(* go under binder and rebuild a term with a good name inside,
+   catchable by a match context. *)
+Ltac get_head_name' lem lemty :=
+  lazymatch lemty with
+  | forall z:?A , ?B =>
+    let name := 
+        constr:(
+          forall z:A,
+            ltac:(
+            let h' := constr:(lem z) in
+            let th' := type of h' in
+              get_head_name' h' th')) in
+    (* remove the let *)
+    eval lazy zeta in name
+  | _ =>
+    (* let nme := fallback_rename_hyp h th in *)
+    head_application lemty
+  end.
+
+Ltac get_head_name'' lemty :=
+  lazymatch lemty with
+  | forall z:?A , ?B =>
+    let t := type of B in
+    get_head_name' t
+    (* let name := get_head_name' t in
+    (* remove the let *)
+    eval lazy zeta in name *)
+  | _ =>
+    (* let nme := fallback_rename_hyp h th in *)
+    head_application lemty
+  end. *)
+
+(*endcomment*)
+
+Definition DUMMY {T : Type} := fun (x : T) => x.
+(* Extract the head of an application *)
+Ltac head_application th :=
+  let ty := type of th in 
+  match th with
+  | ?f _ _ _ _ _ _ _ _ _ _ _ => constr:(Some f)
+  | ?f _ _ _ _ _ _ _ _ _ _ => constr:(Some f)
+  | ?f _ _ _ _ _ _ _ _ _ => constr:(Some f)
+  | ?f _ _ _ _ _ _ _ _ => constr:(Some f)
+  | ?f _ _ _ _ _ _ _ => constr:(Some f)
+  | ?f _ _ _ _ _ _ => constr:(Some f)
+  | ?f _ _ _ _ _ => constr:(Some f)
+  | ?f _ _ _ _ => constr:(Some f)
+  | ?f _ _ _ => constr:(Some f)
+  | ?f _ _ => constr:(Some f)
+  | ?f _ => constr:(Some f)
+  | _ => constr:(None : option ty)
+  end.
+
+(* go under binder and rebuild a term with dummy labels,
+   catchable by a match context. *)
+Ltac build_dummy_quantified h th :=
+  lazymatch th with
+  | forall z:?A , ?B =>
+    let tA := type of A in let A' := build_dummy_quantified A tA in
+    let x := 
+        constr:(
+          forall z:A',
+            let h' := (h z) in
+            ltac:(
+              let th' := type of h' in
+              let res := build_dummy_quantified h' th' in
+              exact res)) in
+    (* remove the let *)
+    eval lazy zeta in x
+  | _ =>
+    (* let nme := fallback_rename_hyp h th in *)
+    let hd := head_application th in
+    match hd with
+    | Some ?f => constr:(DUMMY f)
+    | None => constr:(h)
+    end
+    (* let frshnme := fresh hd in
+    (* Build something catchable with mathc context *)
+    constr:(forall frshnme:Prop, DUMMY frshnme) *)
+  end.
+
+Lemma xxx:
+  (forall x y z:nat, x <y -> y< z -> x < z)%nat -> True.
+Proof.
+  intros h.
+  let x := build_dummy_quantified 4 nat in idtac x.
+  let typ := type of h in
+  let x := build_dummy_quantified h typ in
+  idtac x. (* Se the type built by the tactic *)
+  (* use it to rename h: *)
+  match x with
+  | context [forall (Xnam : _), DUMMY Xnam] => let nme := fresh "h_" Xnam in rename h into nme
+  end.
+Qed.
+
+Lemma test : forall (A B M : nat),
+(and
+   (@mat_equiv (Nat.add (Nat.add A B) M) (Nat.add (Nat.add A B) M)
+	  (@Mmult (Nat.add (Nat.add A B) M) (Nat.add A (Nat.add B M))
+         (Nat.add (Nat.add A B) M) (I (Init.Nat.add (Init.Nat.add A B) M))
+         (@adjoint (Nat.add (Nat.add A B) M) (Nat.add A (Nat.add B M))
+            (I (Init.Nat.add (Init.Nat.add A B) M))))
+      (I (Nat.add (Nat.add A B) M)))
+   (@mat_equiv (Nat.add A (Nat.add B M)) (Nat.add A (Nat.add B M))
+      (@Mmult (Nat.add A (Nat.add B M)) (Nat.add (Nat.add A B) M)
+         (Nat.add A (Nat.add B M))
+         (@adjoint (Nat.add (Nat.add A B) M) (Nat.add A (Nat.add B M))
+            (I (Init.Nat.add (Init.Nat.add A B) M)))
+         (I (Init.Nat.add (Init.Nat.add A B) M)))
+      (I (Nat.add A (Nat.add B M))))).
+intros A B M.
+
+Ltac get_head term :=
+  match term with
+  | ?f _ _ _ _ _ _ _ _ _=> constr:(f)
+  | ?f _ _ _ _ _ _ _ _ => constr:(f)
+  | ?f _ _ _ _ _ _ _ => constr:(f)
+  | ?f _ _ _ _ _ _ => constr:(f)
+  | ?f _ _ _ _ _ => constr:(f)
+  | ?f _ _ _ _ => constr:(f)
+  | ?f _ _ _ => constr:(f)
+  | ?f _ _ => constr:(f)
+  | ?f _ => constr:(f)
+  | ?f => constr:(f)
+  end.
+
+  (*stdpp: *)
+Ltac mk_evar T :=
+    let T := constr:(T : Type) in
+    let e := fresh in
+    let _ := match goal with _ => evar (e:T) end in
+    let e' := eval unfold e in e in
+    let _ := match goal with _ => clear e end in
+    e'.
+
+Ltac head_fn term :=
+  lazymatch type of term with
+  | forall (a : ?A), _ => (* idtac "forall" a; *)
+    let H := fresh in 
+    let x := mk_evar A in
+    let t := constr:(term x) in 
+    let _ := match goal with _ => specialize (term x) as H end in (* idtac H; *)
+    let h := head_fn H in 
+    let _ := match goal with _ => clear H end in
+    (* let _ := match goal with _ => idtac "propogate" h end in *) constr:(h)
+  (* | ?A -> ?B => idtac A B; constr:(Type)
+  | _ -> ?a = ?b => idtac a b; constr:(Type) *)
+  | ?a = ?b => let h := get_head a in 
+  let t := type of h in 
+  let _ := match goal with _ => idtac "finish at" a "=" b "with" t end in 
+  constr:(h)
+  | ?T => let h := get_head T in 
+    let _ := match goal with _ => idtac "finish at" T "with" h end in 
+    constr:(h)
+  end.
+  (* lazymatch ty with
+  | forall (a : ?A), ?P a => idtac "dep";
+    (* let t := type of (P a) in idtac t "(dep)"; *)
+    let h := head_fn (P a) in constr:(h)
+  | forall (a : ?A), ?P => idtac "fun";
+    (* let t := type of P in  *)
+    (* let __ := match goal with _ => idtac t "(fun)" end in *)
+    let h := head_fn P in constr:(h)
+  | ?a = ?b => 
+    (* let t := type of a in idtac t "(eq)"; *)
+    let h := head_fn a in idtac h; constr:(h)
+  | ?P => 
+    let t := type of P in constr:(t)
+  end. *)
+(* Ltac test := constr:(Matrix).
+let t := test in idtac t. *)
+
+let h := (head_fn @Mmult_1_l) in idtac h.
+Inductive ltac_tuple := 
+  | ltac_nil
+  | ltac_cons (T : Type) (t : T) (rest : ltac_tuple).
+
+Fixpoint ltac_app (tu1 tu2 : ltac_tuple) : ltac_tuple :=
+  match tu1 with
+  | ltac_nil => tu2
+  | ltac_cons T t rest => ltac_app rest (ltac_cons T t tu2)
+  end.
+
+Local Notation "'#' x" := (ltac_cons _ x ltac_nil) (at level 100).
+
+Ltac get_heads term :=
+  match term with
+  | ?f _ _ _ _ _ _ _ _ _=> constr:(# f)
+  | ?f _ _ _ _ _ _ _ _ => constr:(# f)
+  | ?f _ _ _ _ _ _ _ => constr:(# f)
+  | ?f _ _ _ _ _ _ => constr:(# f)
+  | ?f _ _ _ _ _ => constr:(# f)
+  | ?f _ _ _ _ => constr:(# f)
+  | ?f _ _ _ => constr:(# f)
+  | ?f _ _ => constr:(# f)
+  | ?f _ => constr:(# f)
+  | ?f => constr:(ltac_nil)
+  end.
+Ltac head_fns term :=
+  lazymatch type of term with
+  | forall (a : ?A), _ => (* idtac "forall" a; *)
+    let H := fresh in 
+    let x := mk_evar A in
+    let t := constr:(term x) in 
+    let _ := match goal with _ =>  specialize (term x) as H end in (* idtac H; *)
+    let rest := head_fns H in 
+    let this := head_fns x in 
+    (* let out := constr:(app h) *)
+    let _ := match goal with _ => clear H end in
+    (* let _ := match goal with _ => idtac "propogate" h end in *) 
+    let out := constr:(ltac_app this rest) in 
+    let out := eval cbn in out in constr:(out)
+  (* | ?A -> ?B => idtac A B; constr:(Type)
+  | _ -> ?a = ?b => idtac a b; constr:(Type) *)
+  | ?a = ?b => let h := get_heads a in constr:(h)
+  | ?T => let h := get_heads T in 
+    (* let t := type of h in
+    let _ := match goal with _ => idtac t end in  *)
+    (* let __ := match goal with _ => idtac "finish at" T "with" h end in  *)
+    constr:(h)
+  end.
+let h := (head_fns @direct_sum'_id) in idtac h.
+let h := (head_fn @Mmult_1_l) in idtac h.
+
+
+
+evarify_2func' @adjoint.
+
+rewrite id_adjoint_eq.
+evarify_3func' @Mmult.
+evarify_2func' @mat_equiv.
+rewrite Mmult_1_r_mat_eq.
+split; f_equiv; lia.
+Unshelve.
+all : lia.
+Qed. *)
+
 #[export] Instance MxDaggerMonoidalCategory : DaggerMonoidalCategory nat := {
   dagger_compat := ltac: (intros; apply direct_sum'_adjoint);
 

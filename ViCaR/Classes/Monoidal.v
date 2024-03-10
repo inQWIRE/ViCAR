@@ -100,9 +100,11 @@ Class MonoidalCategory (C : Type) `{cC : Category C} : Type := {
 *)
 }.
 Infix "×" := tensor (at level 40, left associativity) : Cat_scope. (* \times *)
-Infix "⊗" := tensor.(morphism2_map) (at level 40, left associativity) (* : Cat_scope *) . (* \otimes *)  
-Notation "'λ_' x" := (@left_unitor x) (at level 30, no associativity). (* \lambda *) 
-Notation "'ρ_' x" := (@right_unitor x) (at level 30, no associativity). (* \rho *) 
+Notation "A '⊗' B" := 
+  (@morphism2_map _ _ _ _ _ _ (@tensor _ _ _) _ _ _ _ A B) 
+  (at level 40, left associativity) (* : Cat_scope *) . (* \otimes *)  
+Notation "'λ_' x" := (@left_unitor _ _ _ x) (at level 30, no associativity). (* \lambda *) 
+Notation "'ρ_' x" := (@right_unitor _ _ _ x) (at level 30, no associativity). (* \rho *) 
 
 (* TODO: Conflicts with VyZX, I think. Or maybe QuantumLib.
 Notation "A '⨂' B" := (@morphism2_map _ _ _ _ _ _ (tensor) _ _ _ _ A B)

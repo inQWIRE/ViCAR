@@ -53,4 +53,11 @@ Class BraidedMonoidalCategory (C : Type) `{MonoidalCategory C} : Type := {
 }.
 Notation "'B_' x , y" := (braiding x y) (at level 39, no associativity).
 
+Definition MonoidalCategory_of_BraidedMonoidalCategory
+  {C : Type} `{BraidedMonoidalCategory C} : MonoidalCategory C
+  := _.
+Coercion MonoidalCategory_of_BraidedMonoidalCategory 
+ : BraidedMonoidalCategory >-> MonoidalCategory.
+
+
 Local Close Scope Cat.

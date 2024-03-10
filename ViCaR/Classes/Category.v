@@ -4,7 +4,7 @@ Declare Scope Cat_scope.
 Delimit Scope Cat_scope with Cat.
 Local Open Scope Cat.
 
-Reserved Notation "A ~> B" (at level 50).
+Reserved Notation "A ~> B" (at level 55).
 Reserved Notation "f ≃ g" (at level 60).
 Reserved Notation "A ≅ B" (at level 60).
 
@@ -37,8 +37,43 @@ Class Category (C : Type) : Type := {
     right_unit {A B : C} {f : A ~> B} : compose f (c_identity B) ≃ f;
 }.
 
+(* Notations didn't work with:
+Class Category (C : Type) (morphism : C -> C -> Type) 
+  (equiv : forall {A B : C}, relation (morphism A B))
+  (compose : forall {A B M : C}, morphism A B -> morphism B M -> morphism A M)
+  (c_identity : forall (A : C), morphism A A)
+  : Type := {
+    
+        (* where "A ~> B" := (morphism A B); *)
+
+    (* Morphism equivalence *)
+    
+        (* where "f ≃ g" := (equiv f g) : Cat_scope; *)
+    equiv_rel {A B : C} : equivalence (morphism A B) equiv
+      where "A ~> B" := (morphism A B);
+    
+
+    (* Object equivalence
+    obj_equiv : relation C
+        where "A ≅ B" := (obj_equiv A B) : Cat_scope;
+    obj_equiv_rel : equivalence C obj_equiv; *)
+
+    compose_compat {A B M : C} : 
+        forall (f g : A ~> B), equiv f g ->
+        forall (h j : B ~> M), equiv h j ->
+        equiv (compose f h) (compose g j)
+        where "f ≃ g" := (equiv f g) : Cat_scope;
+    assoc {A B M N : C}
+        {f : A ~> B} {g : B ~> M} {h : M ~> N} : 
+        compose (compose f g) h ≃ compose f (compose g h);
+
+    left_unit {A B : C} {f : A ~> B} : compose (c_identity A) f ≃ f;
+    right_unit {A B : C} {f : A ~> B} : compose f (c_identity B) ≃ f;
+}.
+*)
+
 Notation "'id_' A" := (c_identity A) (at level 10, no associativity).
-Notation "A ~> B" := (morphism A B) : Cat_scope.
+Notation "A ~> B" := (morphism A B) (at level 55, no associativity) : Cat_scope.
 Notation "f ≃ g" := (equiv f g) : Cat_scope. (* \simeq *)
 Infix "∘" := compose (at level 40, left associativity) : Cat_scope. (* \circ *)
 

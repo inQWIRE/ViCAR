@@ -5,54 +5,37 @@ From ViCaR Require Export CategoryTypeclass.
 From ViCaR Require Import RigCategory.
 
 
-Definition reln (A B : Type) : Type := A -> B -> Prop.
 
-Definition compose_relns {A B C : Type} (f : reln A B) (g : reln B C) : reln A C 
-  := fun a c => exists b, f a b /\ g b c.
-
-Definition idn {A : Type} : reln A A :=
-  fun i j => i = j.
-
-Local Notation "f '\o' g" := (compose_relns f g) 
+Local Notation "f '\o' g" := (fun A => g (f A)) 
   (at level 45, left associativity).
 
-Local Notation "f ~ g" := (forall a b, f a b <-> g a b) 
+Local Notation "f ~ g" := (forall a, f a = g a) 
   (at level 80, no associativity).
 
-Definition reln_equiv {A B : Type} (f g : reln A B) := 
+Definition fun_equiv {A B : Type} (f g : A -> B) := 
   f ~ g.
 
 Local Notation "⊤" := Datatypes.unit.
 Local Notation "⊥" := Datatypes.Empty_set.
 
-Definition reln_sum {A B A' B' : Type} (f : reln A B) (g : reln A' B') :
-  reln (A + A') (B + B') :=
-  fun i j =>
-  match i, j with
-  | inl a, inl b => f a b
-  | inr a', inr b' => g a' b'
-  | _, _ => False
+Definition fun_sum {A B A' B' : Type} (f : A -> B) (g : A' -> B') :
+  (A + A') -> (B + B') :=
+  fun i =>
+  match i with
+  | inl a => inl (f a)
+  | inr a' => inr (g a')
   end.
 
-Local Notation "f '\+' g" := (reln_sum f g) (at level 43, left associativity).
+Local Notation "f '\+' g" := (fun_sum f g) (at level 43, left associativity).
 
-Definition reln_prod {A B A' B' : Type} (f : reln A B) (g : reln A' B') :
-  reln (A * A') (B * B') :=
-  fun i j =>
-  match i, j with
-  | (a, a'), (b, b') => f a b /\ g a' b'
+Definition fun_prod {A B A' B' : Type} (f : A -> B) (g : A' -> B') :
+  (A * A') -> (B * B') :=
+  fun i =>
+  match i with
+  | (a, a') => (f a, g a')
   end.
 
-Local Notation "f '\*' g" := (reln_prod f g) (at level 41, left associativity).
-
-Definition reln_unit {A} : reln ⊤ (A*A) :=
-  fun i j =>
-  match j with
-  | (a, b) => a = b
-  end.
-
-
-
+Local Notation "f '\*' g" := (fun_prod f g) (at level 41, left associativity).
 
 Ltac print_state :=
   try (match reverse goal with | H : ?p |- _ => idtac H ":" p; fail end);
@@ -74,60 +57,69 @@ Ltac extend pf :=
   let t := type of pf in
     notHyp t; generalize pf; intro.
 
-Ltac __saturate_relns Hf :=
-  match type of Hf with ?f ?i ?j =>
+Ltac __saturate_funs Hf :=
+  match type of Hf with ?f ?i =>
   repeat match goal with
   | H : f ~ ?g |- _ => 
-    let Hg := constr:(proj1 (H i j) Hf) in
-      extend Hg; __saturate_relns Hg
+    let Hg := constr:(H i) in
+      extend Hg; __saturate_funs (g i)
   | H : ?g ~ f |- _ => 
-    let Hg := constr:(proj2 (H i j) Hf) in
-      extend Hg; __saturate_relns Hg
+    let Hg := constr:(H i) in
+      extend Hg; __saturate_funs (g i)
   end
 end.
 
-Ltac __solve_relations_end_forward := 
+Ltac __solve_functions_end_forward := 
   repeat match goal with
-  | H : ?f ?i ?j |- _ => match type of f with reln ?A ?B =>
+  | H : ?f ?i = ?g ?j |- _ => match type of f with ?A -> ?B =>
       revert H
       end
   end;
   repeat (let Hf := fresh "Hf" in intros Hf;
-    __saturate_relns Hf);
+    match type of Hf with
+    | ?f ?i = ?g ?j =>
+      __saturate_funs (f i); __saturate_funs (g j)
+    end);
   easy.
 
 (* Begin tactics *)
-Ltac __solve_relations_end := 
+Ltac __solve_functions_end := 
   try eassumption;
   try reflexivity;
   try easy;
   auto;  
   try (match goal with
-  | |- ?f ?x ?y => match type of f with reln ?n ?m => eassumption end
+  | |- ?f ?x => match type of f with ?n -> ?m => eassumption end
   (* | H : ?A ?i ?j |- ?A ?i' ?j' =>
     match type of A with 
     | reln ?n ?m => 
       (eapply H || ( idtac "needed rewrite";
       replace i' with i by auto; replace j' with j by auto; eapply H))
     end *)
-  | H : ?A ~ ?A' |- ?A ?i ?j => 
-    (apply H; clear H; solve __solve_relations_end) 
-    || (clear H; solve __solve_relations_end)
-  | H : ?A ~ ?A' |- ?A' ?i ?j => 
-    (apply H; clear H; solve __solve_relations_end)
-    || (clear H; solve __solve_relations_end)
+  | H : ?A ~ ?A' |- ?A ?i = ?A' ?i => idtac "hitexact"; apply H
+  | H : ?A ~ ?A' |- ?A' ?i = ?A ?i => idtac "hitsym"; symmetry; apply H
+  | H : ?A ~ ?A' |- _ => apply H
+  | H : ?A ~ ?A' |- _ => symmetry; apply H
+  | H : ?A ~ ?A' |- context[?A ?i] => 
+    (rewrite H; clear H; print_state; solve __solve_functions_end)
+    || (rewrite <- H; clear H; print_state; solve __solve_functions_end)
+    || (clear H; solve __solve_functions_end)
+  | H : ?A ~ ?A' |- context[?A' ?i] =>   
+    (rewrite <- H; clear H; print_state; solve __solve_functions_end)
+    || (rewrite H; clear H; print_state; solve __solve_functions_end)
+    || (clear H; solve __solve_functions_end)
   end || idtac (* " no match" *)).
 
 
-Ltac solve_relations := idtac. (* Hack to allow "mutual recursion" *)
+Ltac solve_functions := idtac. (* Hack to allow "mutual recursion" *)
 
-Ltac __setup_solve_relations :=
+Ltac __setup_solve_functions :=
   simpl; unfold unitary; simpl;
-  unfold compose_relns, reln_equiv, idn, reln_sum, 
-    reln_prod, reln_unit, flip in *;
+  unfold fun_equiv, id, fun_sum, 
+    fun_prod in *;
   simpl.
 
-Ltac __solve_relations_mid_step := 
+Ltac __solve_functions_mid_step := 
   repeat (intros ?); intros; subst; auto.
 
 Lemma exists_prod {A B} : forall P,
@@ -154,15 +146,15 @@ Proof.
 Qed.
 
 
-Ltac __process_solve_relations_cleanup_vars :=
+Ltac __process_solve_functions_cleanup_vars :=
   repeat match goal with
   | a : ?A * ?B |- _ => destruct a
   | a : ⊤ |- _ => destruct a
   | a : ?A + ?B |- _ => destruct a
   end.
 
-Ltac __process_solve_relations_step :=
-  __process_solve_relations_cleanup_vars;
+Ltac __process_solve_functions_step :=
+  __process_solve_functions_cleanup_vars;
   try easy;
   match goal with
   | H : (_, _) = (_, _) |- _ => inversion H; subst; clear H
@@ -172,10 +164,10 @@ Ltac __process_solve_relations_step :=
   | H : _ /\ _ |- _ => destruct H
   | |- _ <-> _ => split
   | |- _ /\ _ => split
-  | H : _ \/ _ |- _ => destruct H; [solve_relations | solve_relations]
+  | H : _ \/ _ |- _ => destruct H; [solve_functions | solve_functions]
   | |- _ \/ _ => 
-       (left; solve [solve_relations; auto]) 
-    || (right; solve [solve_relations; auto]) 
+       (left; solve [solve_functions; auto]) 
+    || (right; solve [solve_functions; auto]) 
     || (* print_state; *) fail 2
   | |- exists (_ : ?A), _ => 
     match A with 
@@ -186,36 +178,69 @@ Ltac __process_solve_relations_step :=
       (* idtac "trying vars"; print_state;  *)
       match goal with
         | x : A |- _ => 
-          exists x; (* idtac "yes" x; *) (solve [solve_relations; auto])
+          exists x; (* idtac "yes" x; *) (solve [solve_functions; auto])
         end; match goal with
         | |- _ => (* idtac "none worked"; *) eexists
       end
     end
   end.
 
-Ltac __process_solve_relations := 
+Ltac __process_solve_functions := 
   repeat (
-  __solve_relations_mid_step;
-  __process_solve_relations_step).
+  __solve_functions_mid_step;
+  __process_solve_functions_step).
 
-Ltac solve_relations ::= 
-  __setup_solve_relations;
-  __process_solve_relations;
-  __solve_relations_mid_step;
-  __solve_relations_end || __solve_relations_end_forward.
+Ltac solve_functions ::= 
+  __setup_solve_functions;
+  __process_solve_functions;
+  __solve_functions_mid_step;
+  __solve_functions_end || __solve_functions_end_forward.
 (* End tactics *)
 
-Lemma reln_equiv_refl {A B : Type} (f : reln A B) :
+Lemma fun_equiv_refl {A B : Type} (f : A -> B) :
   f ~ f.
 Proof. easy. Qed.
 
-Lemma reln_equiv_sym {A B : Type} (f g : reln A B) :
+Lemma fun_equiv_sym {A B : Type} (f g : A -> B) :
   f ~ g -> g ~ f.
 Proof. easy. Qed.
 
-Lemma reln_equiv_trans {A B : Type} (f g h : reln A B) :
+(* Lemma fun_equiv_trans {A B : Type} (f g h : A -> B) :
   f ~ g -> g ~ h -> f ~ h.
-Proof. solve_relations. Qed.
+Proof. 
+  intros.
+  try eassumption; try reflexivity; try easy; auto;
+   try
+	match goal with
+    | |- ?f ?x => match type of f with
+                  | ?n -> ?m => eassumption
+                  end
+    (* | H: ?A ~ ?A' |- ?A ?i = ?A' ?i => idtac "hitexact"; apply H
+    | H: ?A ~ ?A' |- ?A' ?i = ?A ?i => idtac "hitsym"; symmetry; apply H *)
+    | H: ?A ~ ?A' |- _ => apply H
+    | H: ?A ~ ?A' |- _ => symmetry; apply H
+    | H: ?A ~ ?A'
+      |- context [ ?A ?i ] =>
+          (rewrite H; clear H; print_state;
+            solve __solve_functions_end) ||
+            (rewrite <- H; clear H; print_state;
+              solve __solve_functions_end) ||
+              (clear H; solve __solve_functions_end)
+    | H:?A ~ ?A'
+      |- context [ ?A' ?i ] =>
+          (rewrite <- H; clear H; print_state;
+            solve __solve_functions_end) ||
+            (rewrite H; clear H; print_state;
+              solve __solve_functions_end) ||
+              (clear H; solve __solve_functions_end)
+    end.
+  etransitivity.
+  
+  
+  repeat __solve_functions_end.
+  rewrite H.
+  
+  solve_functions. Qed.
 
 Lemma reln_equiv_equivalence (A B : Type) : 
   equivalence (reln A B) (@reln_equiv A B).
@@ -488,16 +513,14 @@ Qed.
   component2_iso_natural := ltac:(abstract(solve_relations))
 }.
 
-#[export] Instance RelSumBraidedMonoidal : 
-  @BraidedMonoidalCategory Type Rel RelSumMonoidal := {
+#[export] Instance RelSumBraidedMonoidal : BraidedMonoidalCategory Type := {
   braiding := RelSumBraiding;
   hexagon_1 := ltac:(abstract(solve_relations));
   hexagon_2 := ltac:(abstract(solve_relations));
 }.
 
 #[export] Instance RelSumSymmetricMonoidal : 
-  @SymmetricMonoidalCategory Type Rel RelSumMonoidal
-  RelSumBraidedMonoidal := {
+  SymmetricMonoidalCategory Type := {
   symmetry := ltac:(abstract(solve_relations));
 }.
 
@@ -612,7 +635,7 @@ Qed.
   right_absorbtion_natural := ltac:(abstract(solve_relations));
 }.
 
-(* #[export] Instance RelSemiCoherent :
+#[export] Instance RelSemiCoherent :
   SemiCoherent_DistributiveBimonoidalCategory RelDistrBimonoidal := {
   condition_I (A B C : Type) := ltac:(abstract(solve_relations));
   condition_III (A B C : Type) := ltac:(abstract(solve_relations));
@@ -636,31 +659,10 @@ Qed.
   condition_XXII (A B : Type) := ltac:(abstract(solve_relations));
   condition_XXIII (A B : Type) := ltac:(abstract(solve_relations));
   condition_XXIV (A B : Type) := ltac:(abstract(solve_relations));
-}. *)
+}.
 
 #[export] Instance RelSemiCoherentBraided :
   SemiCoherent_BraidedDistributiveBimonoidalCategory RelDistrBimonoidal RelBraidedMonoidal := {
   condition_II (A B C : Type) := ltac:(abstract(solve_relations));
   condition_XV (A : Type) := ltac:(abstract(solve_relations));
-}.
-
-From ViCaR Require Import CategoryAutomation.
-
-
-Lemma test {A} : forall (f : reln A (A★)%Cat) (g : reln (A★)%Cat A), 
-  ((unit (A:=A) \o (braiding (H:=RelMonoidal) _ A).(forward) \o (f \* g) \o counit) † ~ 
-  (unit (A:=A) \o g \* f \o (braiding (H:=RelMonoidal) A _).(forward) \o counit) †)%Cat.
-Proof.
-  simpl.
-  intros f g.
-  to_Cat.
-  Admitted.
-
-
-Lemma test2 {A B} : forall (f g : reln A B) (h : reln ⊤ A) (i : reln (⊤ * (A*A)) _), 
-  (RelMonoidal.(left_unitor).(forward) \o (idn \o f \* g) ~ i \o f \* g)%Cat.
-Proof.
-  intros f g h i.
-  simpl.
-  to_Cat.
-  Admitted.
+}. *)

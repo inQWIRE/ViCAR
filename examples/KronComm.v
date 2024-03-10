@@ -1213,7 +1213,45 @@ Proof.
   match type of (kron_comm_mul_inv_mat_equiv t s) with
   | ?f ?x ≡ ?g ?y => idtac f; idtac x; idtac g; idtac y
   end. *)
-  (* Mmult_transpose
+  (* Mmult_transpose *)
+  (* Tactic Notation "my_context_match" open_constr(g) :=
+  (* [match] does not support [uconstr], cf COQBUG(https://github.com/coq/coq/issues/9321),
+     so we use [open_constr] *)
+  (* let g := open_constr:(g) in *)
+  (* turning [g] into an [open_constr] creates new evars, so we must
+     eventually unify them with the goal *)
+  let G := match goal with |- ?G => G end in
+  (* We now search for [g] in the goal, and then replace the matching
+     subterm with the [open_constr] [g], so that we can unify the
+     result with the goal [G] to resolve the new evars we created *)
+  match G with
+  | context cG[g]
+    => let G' := context cG[g] in
+       idtac g; idtac G; idtac G'; idtac cG;
+       unify G G'
+  end.
+  Ltac eval_sat lem :=
+    let H := fresh "H" in
+    specialize lem as H;
+    repeat match type of H with
+    | forall a : ?A, _ => let x := fresh "x" in evar (x : A);
+      let x := eval unfold x in x in
+      specialize (H x)
+    end. *)
+    (* match t with
+    | forall a : ?A, _ => let x := fresh "x" in let H := fresh "H" in 
+        evar (x : A); specialize (lem x) as H; idtac H;
+        let t := eval_sat H in open_constr:(t)
+    | ?P => open_constr:(P)
+    end. *)
+  
+  
+  (* eval_sat @kron_comm_mul_inv.
+  rewrite H.
+  match goal with
+  | context[open_contr:(pat)] => idtac "hit"
+  end.
+  let p := getpat @kron_comm in idtac p.
   match goal with 
   |- context[@Mmult ?n ?m ?o (kron_comm ?t' ?s') (kron_comm ?s'' ?t'')] =>
     (* idtac n m o t' s' s'' t''; *)

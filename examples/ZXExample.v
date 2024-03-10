@@ -1591,3 +1591,105 @@ Qed.
 #[export] Instance ZXDaggerBraidedMonoidalCategory : DaggerBraidedMonoidalCategory nat := {}.
 
 #[export] Instance ZXDaggerSymmetricMonoidalCategory : DaggerSymmetricMonoidalCategory nat := {}. 
+
+Ltac not_evar' v :=
+  not_evar v; try (let v := eval unfold v in v in 
+  tryif not_evar v then idtac else fail 1).
+
+Ltac subst_evars := 
+  repeat match goal with
+  | x := ?y : nat |- _ => subst x
+  end.
+
+Ltac evarify_1func_once f :=
+  match goal with 
+  |- context[@f ?a ?A] => 
+      not_evar' a; let x:= fresh in evar (x : nat); 
+      replace (@f a A) with (@f x A) by
+      ( replace (@f a) with (@f x) by (replace a with x by shelve; reflexivity);
+        reflexivity)
+  end.
+
+Ltac evarify_1func f := repeat (evarify_1func_once f).
+Ltac evarify_1func' f := repeat (evarify_1func_once f); subst_evars.
+
+Ltac evarify_2func_once f :=
+  match goal with 
+  |- context[@f ?a ?b ?A] => 
+      not_evar' a; not_evar' b;
+      let x:= fresh in let y := fresh in 
+      evar (x : nat); evar (y : nat); 
+      replace (@f a b A) with (@f x y A) by
+      ( replace (@f a) with (@f x) by (replace a with x by shelve; reflexivity);
+        replace (@f x b) with (@f x y) by (replace b with y by shelve; reflexivity); 
+        reflexivity)
+  end.
+
+Ltac evarify_2func f := repeat (evarify_2func_once f).
+Ltac evarify_2func' f := repeat (evarify_2func_once f); subst_evars.
+
+
+Lemma nat_equality_proof_equality : forall (n m : nat) (H0 H1 : n = m),
+  H0 = H1.
+Proof.
+  intros n. intros. subst n.
+  now rewrite Logic.Eqdep_dec.UIP_refl_nat.
+Qed.
+
+Ltac evarify_cast_once :=
+  match goal with 
+  |- context[@cast ?n ?m ?n' ?m' ?prfn ?prfm ?zx] => 
+      not_evar' prfm; not_evar' prfm;
+      let x:= fresh in let y := fresh in 
+      evar (x : n = n'); evar (y : m = m'); 
+      replace (@cast n m n' m' prfn prfm) with (@cast n m n' m' x y) by
+      ( replace (@cast n m n' m' prfn) with (@cast n m n' m' x) by 
+          (replace prfn with x by (apply nat_equality_proof_equality); reflexivity);
+        replace (@cast n m n' m' x prfm) with (@cast n m n' m' x y) by 
+          (replace prfm with y by (apply nat_equality_proof_equality); reflexivity); 
+        reflexivity)
+  end.
+
+Ltac subst_eqs_evars := 
+  repeat match goal with
+  | x := ?y : _ = _ |- _ => subst x
+  end.
+
+Ltac evarify_cast := repeat (evarify_cast_once).
+Ltac evarify_cast' := evarify_cast; subst_eqs_evars.
+
+
+(* For example: *)
+Lemma temp_id {n} : forall (zx : ZX n n),
+  cast n n eq_refl eq_refl zx ∝ zx.
+Admitted.
+
+Lemma gen_id {n} : forall (zx : ZX n n) prfn prfm,
+  cast n n prfn prfm zx ∝ zx.
+  intros.
+  evarify_cast'. (* Replace all proofs with evars *)
+  rewrite temp_id.
+  reflexivity.
+Qed.
+
+
+
+
+
+
+From ViCaR Require Import CategoryAutomation.
+
+(* Ltac varify_nats f :=
+  match ty *)
+
+Lemma test  :  forall {n m o} (zx0 : ZX n m) (zx1 : ZX m o),
+	(zx0 ⟷ zx1) ↕ —  ∝ (zx0 ↕ —) ⟷ (zx1 ↕ —).
+Proof.
+  (* setoid_rewrite wire_to_n_wire. *)
+  to_Cat.
+  intros.
+  rewrite wire_to_n_wire.
+  
+  to_Cat.
+  Admitted.
+  
