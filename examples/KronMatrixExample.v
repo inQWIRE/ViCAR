@@ -2,7 +2,7 @@
 Require Import MatrixPermBase.
 Require Import KronComm.
 Require Export MatrixExampleBase.
-From ViCaR Require Import ExamplesAutomation.
+Require Import ExamplesAutomation.
 
 
 #[export] Instance MxCategory : Category nat := {

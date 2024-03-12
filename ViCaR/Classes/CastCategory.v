@@ -1,8 +1,10 @@
 Require Import Setoid.
 
 Require Export CategoryTypeclass.
+Require Logic.Eqdep_dec. (* only for UIP_dec *)
+Require PeanoNat. (* only for eq_dep on nat *)
 
-Require Import ExamplesAutomation.
+#[local] Set Universe Polymorphism.
 
 Local Open Scope Cat.
 
@@ -605,7 +607,7 @@ Definition CastCategory_of_DecEq_Category {C : Type} (cC: Category C)
     match HA in (_ = a) return (a ~> B' -> A ~> B) with (* Tell coq that A = A' *)
     | eq_refl =>
       fun f => 
-      match HB in (_ = a) return (A ~> a -> A ~> B) with 
+      match HB in (_ = b) return (A ~> b -> A ~> B) with 
       | eq_refl => fun f' => f'
       end f
     end;
@@ -616,7 +618,17 @@ Definition CastCategory_of_DecEq_Category {C : Type} (cC: Category C)
 |}.
 
 Definition CastCategory_of_NatCategory (cC: Category nat) :
-  @CastCategory nat cC.
-apply CastCategory_of_DecEq_Category.
-apply PeanoNat.Nat.eq_dec.
-Defined.
+  @CastCategory nat cC := {|
+  cast := fun A B A' B' HA HB =>
+    match HA in (_ = a) return (a ~> B' -> A ~> B) with (* Tell coq that A = A' *)
+    | eq_refl =>
+      fun f => 
+      match HB in (_ = b) return (A ~> b -> A ~> B) with 
+      | eq_refl => fun f' => f'
+      end f
+    end;
+  cast_refl := ltac:(intros A B HA HB; 
+    rewrite (Eqdep_dec.UIP_refl_nat _ HA);
+    rewrite (Eqdep_dec.UIP_refl_nat _ HB);
+    reflexivity);
+|}.

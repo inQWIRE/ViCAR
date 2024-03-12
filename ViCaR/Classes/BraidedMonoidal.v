@@ -2,6 +2,8 @@ Require Import Category.
 Require Import Monoidal.
 Require Import Setoid.
 
+#[local] Set Universe Polymorphism.
+
 Local Open Scope Cat.
 
 Notation CommuteBifunctor' F := ({|

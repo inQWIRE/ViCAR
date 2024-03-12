@@ -1,6 +1,6 @@
 Require Import MatrixExampleBase.
 Require Import MatrixPermBase.
-From ViCaR Require Import ExamplesAutomation.
+Require Import ExamplesAutomation.
 
 #[export] Instance MxCategory : Category nat := {
   morphism := Matrix;

@@ -6,7 +6,7 @@ From VyZX Require Import PermutationRules.
 Require Import MatrixExampleBase.
 Require Import MatrixPermBase.
 From ViCaR Require Export CategoryTypeclass.
-From ViCaR Require Import ExamplesAutomation.
+Require Import ExamplesAutomation.
 
 Local Open Scope matrix_scope.
 

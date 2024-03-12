@@ -359,7 +359,7 @@ Proof.
   - rewrite (Nat.div_small i m),
   (Nat.mod_small i m), Nat.eqb_refl, andb_true_r, andb_true_l by easy.
   replace ((j / o =? k) && (j / o <? n)) with (j / o =? k) by bdestructΩ'.
-  ExamplesAutomation.bdestruct_one_old; [|easy].
+  (*mark*) bdestruct_one; [|easy].
   rewrite mod_eq_sub; f_equal;
   lia.
   - bdestructΩ'.
@@ -380,7 +380,7 @@ Proof.
   - rewrite (Nat.div_small j o),
   (Nat.mod_small j o), Nat.eqb_refl, andb_true_r, andb_true_l by easy.
   replace ((i / m =? k) && (i / m <? n)) with (i / m =? k) by bdestructΩ'.
-  ExamplesAutomation.bdestruct_one_old; [|easy].
+  (*mark*) bdestruct_one; [|easy].
   rewrite mod_eq_sub; f_equal;
   lia.
   - bdestructΩ'.
@@ -401,7 +401,7 @@ Proof.
   - rewrite (Nat.div_small i m), Nat.eqb_refl, andb_true_r, andb_true_l by easy.
   rewrite Nat.mod_small by easy.
   replace ((j / o =? k) && (j / o <? n)) with ((k * o <=? j) && (j <? S k * o)).
-  + do 2 ExamplesAutomation.bdestruct_one_old; simpl; try easy.
+  + do 2 (*mark*) bdestruct_one; simpl; try easy.
     destruct o; [lia|].
     f_equal.
     rewrite mod_eq_sub, Nat.mul_comm.
@@ -434,7 +434,7 @@ Proof.
   - rewrite (Nat.div_small j o), Nat.eqb_refl, andb_true_r, andb_true_l by easy.
   rewrite (Nat.mod_small j o) by easy.
   replace ((i / m =? k) && (i / m <? n)) with ((k * m <=? i) && (i <? S k * m)).
-  + do 2 ExamplesAutomation.bdestruct_one_old; simpl; try easy.
+  + do 2 (*mark*) bdestruct_one; simpl; try easy.
     destruct m; [lia|].
     f_equal.
     rewrite mod_eq_sub, Nat.mul_comm.
@@ -501,7 +501,7 @@ Proof.
   [| rewrite Nat.mul_eq_0; lia].
   unfold Matrix.I.
   rewrite <- 2!andb_if.
-  ExamplesAutomation.bdestruct_one_old; [
+  (*mark*) bdestruct_one; [
   rewrite 2!andb_true_r, andb_true_l | rewrite 4!andb_false_r; easy
   ].
   easy.
@@ -528,7 +528,7 @@ Proof.
   simpl.
   replace (i / n <? m) with true by (
   symmetry; rewrite Nat.ltb_lt; apply Nat.div_lt_upper_bound; lia).
-  ExamplesAutomation.bdestruct_one_old; [ExamplesAutomation.bdestruct_one_old|]; simpl; symmetry; [
+  (*mark*) bdestruct_one; [(*mark*) bdestruct_one|]; simpl; symmetry; [
   apply big_sum_unique;
   exists (j / m)%nat;
   split; [ apply Nat.div_lt_upper_bound; lia | ];

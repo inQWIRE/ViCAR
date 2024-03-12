@@ -1,6 +1,8 @@
 Require Import Category.
 Require Import Setoid.
 
+#[local] Set Universe Polymorphism.
+
 Local Open Scope Cat_scope.
 
 Reserved Notation "x × y" (at level 40, left associativity). (* \times *)

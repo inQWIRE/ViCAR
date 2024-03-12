@@ -1,5 +1,5 @@
 Require Export MatrixExampleBase.
-From ViCaR Require Import ExamplesAutomation.
+Require Import ExamplesAutomation.
 
 Lemma perm_mat_permutes_ei_r : forall n f k, (k < n)%nat ->
   (perm_mat n f) × (e_i k) = e_i (f k).

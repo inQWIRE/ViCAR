@@ -2,6 +2,8 @@ Require Import Category.
 Require Import Dagger.
 Require Import Monoidal.
 
+#[local] Set Universe Polymorphism.
+
 Local Open Scope Cat.
 
 Class DaggerMonoidalCategory (C : Type) 

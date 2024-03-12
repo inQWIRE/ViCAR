@@ -7,7 +7,7 @@ Ltac Zify.zify_post_hook ::= PreOmega.Z.div_mod_to_equations.
 From VyZX Require Export PermutationAutomation PermutationFacts PermutationInstances.
 From ViCaR Require Export CategoryTypeclass.
 From QuantumLib Require Export Matrix.
-From ViCaR Require Import ExamplesAutomation.
+Require Import ExamplesAutomation.
 
 Open Scope matrix_scope.
 

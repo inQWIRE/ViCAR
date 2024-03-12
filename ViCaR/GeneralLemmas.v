@@ -59,7 +59,7 @@ Proof.
   easy.
 Qed.
 
-Ltac fencestep :=
+(* Ltac fencestep :=
   let test_simple t := match t with
     | context[(_ ⊗ _) ∘ _] => fail 2
     | context[_ ∘ (_ ⊗ _)] => fail 2
@@ -80,7 +80,7 @@ Ltac fencestep :=
   |- context[(?f ∘ ?g) ⊗ (?h)] =>
       test_simple f; test_simple g; test_simple h;
       rewrite (stack_distr_pushout_r_bot f g h)
-  end].
+  end]. *)
 
 
 
@@ -100,7 +100,12 @@ Ltac fencestep :=
       id  id  id  id                          id  id
       ). I suspect the strict spec will make reasoning
       much easier, i.e. to process f⊗g, we *must* push it out
-      to f⊗id ∘ id⊗g. *) *)
+      to f⊗id ∘ id⊗g. *) 
+*)
+
+
+
+
 
 
 
@@ -128,8 +133,6 @@ Proof.
   easy.
 Qed.
 
-Require Import ExamplesAutomation.
-
 Lemma stack_id_compose_split_top : forall {C : Type}
   {Cat: Category C} {MonCat : MonoidalCategory C}
   {topIn topMid topOut bot : C} 
@@ -152,136 +155,5 @@ Proof.
   easy.
 Qed.
 
-(* Ignore this stuff for now: *)
-
-Ltac _fencepost term :=
-  match term with
-  | id_ ?A => idtac
-  | ?f ⊗ id_ _ => _fencepost f; idtac "fix:"; print_state
-  | id_ _ ⊗ ?f => _fencepost f; idtac "fix:"; print_state
-  | ?f ∘ ?g => idtac f "∘" g; _fencepost f; _fencepost g
-  | ?f ⊗ ?g => idtac f "⊗" g; match type of f with
-    | ?topIn ~> ?topOut => match type of g with
-    | ?botIn ~> ?botOut => rewrite <- (nwire_stackcompose_topright_general f g);
-      _fencepost (f ⊗ c_identity botIn); _fencepost (c_identity topOut ⊗ g)
-    end end
-  | ?f => idtac "should be clean:" f
-  end.
-
-Ltac __fencepost term :=
-  match term with
-  | id_ ?A => idtac
-  | ?f ∘ ?g => (* idtac f "∘" g; *) __fencepost f; __fencepost g
-  | ?f ⊗ id_ _ => __fencepost f  (* ; idtac "fix:"; print_state *)
-  | id_ _ ⊗ ?f => __fencepost f  (* ; idtac "fix:"; print_state *)
-  | (?f ∘ ?g) ⊗ (?h ∘ ?i) => first [
-    first [progress __fencepost f; rewrite ?assoc |
-    progress __fencepost g; rewrite ?assoc |
-    progress __fencepost h; rewrite ?assoc |
-    progress __fencepost i; rewrite ?assoc];
-    idtac "hit1"; __fencepost term; idtac "hit2" |
-    rewrite (compose2_map f g h i); __fencepost (f⊗h); __fencepost (g⊗i)]
-  | (?f ∘ ?g) ⊗ ?h => first [
-    progress __fencepost f; rewrite ?assoc |
-    progress __fencepost g; rewrite ?assoc |
-    progress __fencepost h; rewrite ?assoc |
-    rewrite (stack_distr_pushout_r_bot f g h)]
-  | ?f ⊗ (?g ∘ ?h) => first [
-    progress __fencepost f; rewrite ?assoc |
-    progress __fencepost g; rewrite ?assoc |
-    progress __fencepost h; rewrite ?assoc |
-    rewrite (stack_distr_pushout_r_top f g h)]
-  | ?f ⊗ ?g => first [
-    progress __fencepost f; rewrite ?assoc |
-    progress __fencepost g; rewrite ?assoc |
-    rewrite <- (nwire_stackcompose_topright_general f g)]
-  (* | ?f ⊗ ?g => idtac f "⊗" g; match type of f with
-    | ?topIn ~> ?topOut => match type of g with
-    | ?botIn ~> ?botOut => rewrite <- (nwire_stackcompose_topright_general f g);
-      __fencepost (f ⊗ c_identity botIn); __fencepost (c_identity topOut ⊗ g)
-    end end *)
-  | ?f => idtac "should be clean:" f
-  end.
-
-Ltac weak_fencepost term := 
-  let fence f := progress (weak_fencepost f) in
-  match term with
-  | id_ ?A => idtac
-  | ?f ∘ ?g => (* idtac f "∘" g; *) weak_fencepost f; weak_fencepost g
-  (* | ?f ⊗ id_ _ => fence f  (* ; idtac "fix:"; print_state *)
-  | id_ _ ⊗ ?f => fence f  (* ; idtac "fix:"; print_state *) *)
-  | (?f ∘ ?g) ⊗ (?h ∘ ?i) => first [
-    (* first [fence f | fence g | fence h | fence i]; 
-      rewrite ?assoc; weak_fencepost term | *)
-    rewrite (compose2_map f g h i); 
-      weak_fencepost (f⊗h); weak_fencepost (g⊗i)]
-  | (?f ∘ ?g) ⊗ ?h => first [
-    (* first [fence f | fence g | fence h]; 
-      rewrite ?assoc; weak_fencepost term | *)
-    rewrite (stack_distr_pushout_r_bot f g h)]
-  | ?f ⊗ (?g ∘ ?h) => first [
-    (* first [fence f | fence g | fence h]; 
-      idtac term; rewrite ?assoc; idtac term; weak_fencepost term | *)
-    rewrite (stack_distr_pushout_r_top f g h)]
-  | ?f ⊗ ?g => first [
-    (* first [fence f | fence g]; 
-      rewrite ?assoc; weak_fencepost term | *)
-    rewrite <- (nwire_stackcompose_topright_general f g)]
-  (* | ?f ⊗ ?g => idtac f "⊗" g; match type of f with
-    | ?topIn ~> ?topOut => match type of g with
-    | ?botIn ~> ?botOut => rewrite <- (nwire_stackcompose_topright_general f g);
-      __fencepost (f ⊗ c_identity botIn); __fencepost (c_identity topOut ⊗ g)
-    end end *)
-  | ?f => idtac "should be clean:" f
-  end.
-
-Ltac weak_fencepost' term := 
-  match term with
-  | id_ ?A => idtac
-  | ?f ∘ ?g => (* idtac f "∘" g; *) weak_fencepost f; weak_fencepost g
-  (* | ?f ⊗ id_ _ => fence f  (* ; idtac "fix:"; print_state *)
-  | id_ _ ⊗ ?f => fence f  (* ; idtac "fix:"; print_state *) *)
-  | (?f ∘ ?g) ⊗ (?h ∘ ?i) => first [
-    (* first [fence f | fence g | fence h | fence i]; 
-      rewrite ?assoc; weak_fencepost term | *)
-    rewrite (compose2_map f g h i); 
-      weak_fencepost (f⊗h); weak_fencepost (g⊗i)]
-  | (?f ∘ ?g) ⊗ ?h => first [
-    (* first [fence f | fence g | fence h]; 
-      rewrite ?assoc; weak_fencepost term | *)
-    rewrite (stack_distr_pushout_r_bot f g h)]
-  | ?f ⊗ (?g ∘ ?h) => first [
-    (* first [fence f | fence g | fence h]; 
-      idtac term; rewrite ?assoc; idtac term; weak_fencepost term | *)
-    rewrite (stack_distr_pushout_r_top f g h)]
-  | ?f ⊗ ?g => first [
-    (* first [fence f | fence g]; 
-      rewrite ?assoc; weak_fencepost term | *)
-    rewrite <- (nwire_stackcompose_topright_general f g)]
-  (* | ?f ⊗ ?g => idtac f "⊗" g; match type of f with
-    | ?topIn ~> ?topOut => match type of g with
-    | ?botIn ~> ?botOut => rewrite <- (nwire_stackcompose_topright_general f g);
-      __fencepost (f ⊗ c_identity botIn); __fencepost (c_identity topOut ⊗ g)
-    end end *)
-  | ?f => idtac "should be clean:" f
-  end.
-
-Definition cast_fn {C : Type} `{Category C} (A B : C) {A' B' : C} 
-  (prfA : A = A') (prfB : B = B') (f : A' ~> B') : A ~> B.
-Proof.
-  destruct prfA.
-  destruct prfB.
-  exact f.
-Defined.
-
-Add Parametric Morphism {C : Type} `{cC : Category C} {A B : C} {A' B' : C}
-  {prfA : A = A'} {prfB : B = B'} : (@cast_fn C cC A B A' B' prfA prfB)
-  with signature
-  (@Category.equiv C cC A' B') ==> (@Category.equiv C cC A B) as cast_fn_equiv_morphism.
-Proof.
-  intros. 
-  subst.
-  easy.
-Qed.
 
 Local Close Scope Cat.

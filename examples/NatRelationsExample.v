@@ -4,7 +4,7 @@ From ViCaR Require Export CategoryTypeclass.
 Require Import Psatz.
 
 From QuantumLib Require Import Prelim.
-From ViCaR Require Import ExamplesAutomation.
+Require Import ExamplesAutomation.
 From ViCaR Require Export CategoryTypeclass.
 
 

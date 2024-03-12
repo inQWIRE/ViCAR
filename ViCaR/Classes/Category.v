@@ -4,6 +4,8 @@ Declare Scope Cat_scope.
 Delimit Scope Cat_scope with Cat.
 Local Open Scope Cat.
 
+#[local] Set Universe Polymorphism.
+
 Reserved Notation "A ~> B" (at level 55).
 Reserved Notation "f ≃ g" (at level 60).
 Reserved Notation "A ≅ B" (at level 60).
@@ -353,8 +355,6 @@ Qed.
 
 Definition ContravariantFunctor {C D : Type} (cC: Category C) (cD : Category D) : Type :=
   Functor (cC^op) cD.
-
-Require Import ExamplesAutomation.
 
 Definition ContravariantFunctor_of_ContraFunctor {C D : Type} 
   `{cC : Category C} `{cD : Category D} (F : ContraFunctor cC cD) : 

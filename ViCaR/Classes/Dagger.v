@@ -1,6 +1,8 @@
 Require Import Setoid.
 Require Import Category.
 
+#[local] Set Universe Polymorphism.
+
 Local Open Scope Cat.
 
 Reserved Notation "f †" (at level 0).

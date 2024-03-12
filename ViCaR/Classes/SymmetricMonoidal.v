@@ -2,6 +2,8 @@ Require Import Category.
 Require Import Monoidal.
 Require Import BraidedMonoidal.
 
+#[local] Set Universe Polymorphism.
+
 Local Open Scope Cat.
 
 Class SymmetricMonoidalCategory (C : Type) `{BraidedMonoidalCategory C} : Type := {

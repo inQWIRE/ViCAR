@@ -1592,6 +1592,11 @@ Qed.
 
 #[export] Instance ZXDaggerSymmetricMonoidalCategory : DaggerSymmetricMonoidalCategory nat := {}. 
 
+
+
+
+
+(* 
 Ltac not_evar' v :=
   not_evar v; try (let v := eval unfold v in v in 
   tryif not_evar v then idtac else fail 1).
@@ -1670,7 +1675,7 @@ Lemma gen_id {n} : forall (zx : ZX n n) prfn prfm,
   evarify_cast'. (* Replace all proofs with evars *)
   rewrite temp_id.
   reflexivity.
-Qed.
+Qed. *)
 
 
 
@@ -1686,10 +1691,28 @@ Lemma test  :  forall {n m o} (zx0 : ZX n m) (zx1 : ZX m o),
 	(zx0 ⟷ zx1) ↕ —  ∝ (zx0 ↕ —) ⟷ (zx1 ↕ —).
 Proof.
   (* setoid_rewrite wire_to_n_wire. *)
-  to_Cat.
   intros.
   rewrite wire_to_n_wire.
-  
+  fold_all_categories;
+  fold_all_monoidal_categories.
+  match goal with
+  |- (?T ≃ ?T')%Cat => 
+    strong_fencepost_no_id T
+  end.
+  easy.
+Qed.
+
+Lemma test2 :  forall {n m o p} (zx0 : ZX n m) (zx1 : ZX o p),
+	(zx0 ↕ zx1)  ∝ (zx0 ↕ n_wire _) ⟷ (n_wire _ ↕ zx1).
+Proof.
+  (* setoid_rewrite wire_to_n_wire. *)
+  intros.
   to_Cat.
-  Admitted.
-  
+  (* fold_all_categories;
+  fold_all_monoidal_categories. *)
+  match goal with
+  |- (?T ≃ ?T')%Cat => 
+    strong_fencepost_no_id T
+  end.
+  easy.
+Qed.

@@ -5,6 +5,8 @@ Require Import BraidedMonoidal.
 Require Import DaggerMonoidal.
 Require Import SymmetricMonoidal.
 
+#[local] Set Universe Polymorphism.
+
 Local Open Scope Cat.
 
 Class DaggerSymmetricMonoidalCategory (C : Type) 

@@ -3,6 +3,8 @@ Require Import Monoidal.
 Require Import BraidedMonoidal.
 Require Import SymmetricMonoidal.
 
+#[local] Set Universe Polymorphism.
+
 Local Open Scope Cat.
 
 Reserved Notation "A ★" (at level 0).

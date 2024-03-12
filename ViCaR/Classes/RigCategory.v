@@ -5,8 +5,9 @@ Require Import Monoidal.
 Require Import BraidedMonoidal.
 Require Import SymmetricMonoidal.
 
-Local Open Scope Cat_scope.
+#[local] Set Universe Polymorphism.
 
+Local Open Scope Cat_scope.
 
 Class PreDistributiveBimonoidalCategory {C : Type} `{cC : Category C}
   `(AddC : SymmetricMonoidalCategory C (cC:=cC))
@@ -45,6 +46,7 @@ Class PreDistributiveBimonoidalCategory {C : Type} `{cC : Category C}
 }.
 
 Declare Scope Rig_scope.
+Delimit Scope Rig_scope with Rig.
 Open Scope Rig_scope.
 
 Definition add_of_prerig {C} {cC}
