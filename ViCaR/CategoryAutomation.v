@@ -61,15 +61,15 @@ Ltac fold_Category cC :=
         let cidx := eval cbn in (cid x') in 
         pose (eq_refl : cidx = cC.(c_identity) x') as H;
         erewrite H; clear x H));
-  let eqbase := base_fn @equiv in
-  let eqcat := catify @equiv in
+  let eqbase := base_fn @c_equiv in
+  let eqcat := catify @c_equiv in
   change eqbase with eqcat; (* I think this is a no-op *)
   repeat (progress match goal with
   |- eqbase ?A ?B ?f ?g 
     => change (eqbase A B f g) with (eqcat A B f g)
   end);
   try let H' := fresh in 
-    enough (H':(@equiv _ _ _ _ _ _)) by (eapply H')
+    enough (H':(@c_equiv _ _ _ _ _ _)) by (eapply H')
   end.
 
 Ltac fold_all_categories :=
@@ -102,11 +102,11 @@ Ltac fold_MonoidalCategory mC :=
     let catted := mcatify @f in
     change base with catted in *) in
   let tens := mbase_fn @tensor in
-    let ob_base := base_fn (@obj2_map C C C cC cC cC tens) in
-      change ob_base with mC.(tensor).(obj2_map);
-    let mor_base := base_fn (@morphism2_map C C C cC cC cC tens) in
-      change mor_base with (@morphism2_map C C C cC cC cC mC.(tensor))
-      (* (@tensor C cC mC).(@morphism2_map C C C cC cC cC) *);
+    let ob_base := base_fn (@obj_bimap C C C cC cC cC tens) in
+      change ob_base with mC.(tensor).(obj_bimap);
+    let mor_base := base_fn (@morphism_bimap C C C cC cC cC tens) in
+      change mor_base with (@morphism_bimap C C C cC cC cC mC.(tensor))
+      (* (@tensor C cC mC).(@morphism_bimap C C C cC cC cC) *);
   mcat_fold @I;
   let lunit := mbase_fn @left_unitor in
     repeat progress (
@@ -114,7 +114,7 @@ Ltac fold_MonoidalCategory mC :=
       evar (x : C);  (* TODO: Test this - last I tried it was uncooperative *)
       let x' := eval unfold x in x in 
       let lunitx := eval cbn in ((lunit x').(forward)) in
-      pose (eq_refl : lunitx = (mC.(left_unitor) (A:=x')).(forward)) as H;
+      pose (eq_refl : lunitx = (mC.(left_unitor) x').(forward)) as H;
       erewrite H; clear x H);
   let runit := mbase_fn @right_unitor in 
     repeat progress (
@@ -122,7 +122,7 @@ Ltac fold_MonoidalCategory mC :=
       evar (x : C);  (* TODO: Test this - last I tried it was uncooperative *)
       let x' := eval unfold x in x in 
       let runitx := eval cbn in ((runit x').(forward)) in
-      pose (eq_refl : runitx = (mC.(right_unitor) (A:=x')).(forward)) as H;
+      pose (eq_refl : runitx = (mC.(right_unitor) x').(forward)) as H;
       erewrite H; clear x H)
   end.
 
@@ -165,23 +165,23 @@ Ltac fold_BraidedMonoidalCategory bC :=
   let braid := bbase_fn @braiding in
     let braidbase := constr:(ltac:(first [exact (ltac:(eval unfold braid in braid)) | exact braid])) in
     let braidforw := eval cbn in 
-      (fun A B => (braidbase.(component2_iso) A B).(forward)) in
+      (fun A B => (braidbase.(component_biiso) A B).(forward)) in
     repeat progress (let H := fresh in let y := fresh in let x := fresh in
       evar (y : C); evar (x : C); 
       let x' := eval unfold x in x in let y' := eval unfold y in y in
       let braidforwxy := eval cbn in (braidforw x' y') in
       pose (eq_refl : braidforwxy = 
-        (bC.(braiding).(component2_iso) x' y').(forward)) as H;
+        (bC.(braiding).(component_biiso) x' y').(forward)) as H;
       erewrite H; clear x y H);
     
     let braidrev := eval cbn in
-      (fun A B => (braidbase.(component2_iso) A B).(reverse)) in
+      (fun A B => (braidbase.(component_biiso) A B).(reverse)) in
     repeat progress (let H := fresh in let y := fresh in let x := fresh in
       evar (y : C); evar (x : C); 
       let x' := eval unfold x in x in let y' := eval unfold y in y in
       let braidrevxy := eval cbn in (braidrev x' y') in
       pose (eq_refl : braidrevxy = 
-        (bC.(braiding).(component2_iso) x' y').(reverse)) as H;
+        (bC.(braiding).(component_biiso) x' y').(reverse)) as H;
       erewrite H; clear x y H)
   end.
 
@@ -249,7 +249,7 @@ Ltac fold_CompactClosedCategory ccC :=
       let x' := eval unfold x in x in 
       let unix := eval cbn in (uni x') in
       pose (eq_refl : unix = 
-        ccC.(unit) (A:=x')) as H;
+        ccC.(unit) x') as H;
       erewrite H; clear x H);
   
   let couni := ccbase_fn @counit in
@@ -258,7 +258,7 @@ Ltac fold_CompactClosedCategory ccC :=
       let x' := eval unfold x in x in 
       let counix := eval cbn in (couni x') in
       pose (eq_refl : counix = 
-        ccC.(counit) (A:=x')) as H;
+        ccC.(counit) x') as H;
       erewrite H; clear x H)
   end.
 
@@ -325,7 +325,7 @@ Ltac to_Cat :=
 
 Ltac tensor_free f :=
   try match f with
-  | context[@morphism2_map _ _ _ _ _ _ (@tensor _ _ _)] => fail 2
+  | context[@morphism_bimap _ _ _ _ _ _ (@tensor _ _ _)] => fail 2
   end.
 
 Ltac compose_free f :=
@@ -343,7 +343,7 @@ Ltac tensor_only f :=
   first [
     pseudo_const f
   | lazymatch f with 
-    | @morphism2_map _ _ _ _ _ _ (@tensor _ _ _) _ _ _ _ ?f ?g =>
+    | @morphism_bimap _ _ _ _ _ _ (@tensor _ _ _) _ _ _ _ ?f ?g =>
         tensor_only f; tensor_only g
     end]. *)
 
@@ -357,20 +357,20 @@ Ltac tensor_only f :=
 Ltac compose_only f :=
   first [pseudo_const f
   | lazymatch f with (* TODO: Does lazy matter here? Pretty sure it doesn't hurt, but idk if it'd ever match more than once anyways*)
-    | (?g ∘ ?h)%Cat =>  (* old: @compose _ _ _ _ _ ?g ?h *)
+    | (?g ∘ ?h)%Mor =>  (* old: @compose _ _ _ _ _ ?g ?h *)
         compose_only g; compose_only h
     end].
 
 (* Old:
 | @compose _ _ _ _ _ ?g ?h => tensor_only g; is_weak_fenced h
-| @morphism2_map _ _ _ _ _ _ (@tensor _ _ _) _ _ _ _ ?g ?h =>
+| @morphism_bimap _ _ _ _ _ _ (@tensor _ _ _) _ _ _ _ ?g ?h =>
     tensor_only g; tensor_only h
 | _ => pseudo_const f
   *)
 Ltac is_weak_fenced f :=
   lazymatch f with
-  | (?g ∘ ?h)%Cat => tensor_only g; is_weak_fenced h
-  | (?g ⊗ ?h)%Cat =>
+  | (?g ∘ ?h)%Mor => tensor_only g; is_weak_fenced h
+  | (?g ⊗ ?h)%Mor =>
       tensor_only g; tensor_only h
   | _ => pseudo_const f
   end.
@@ -387,15 +387,15 @@ Ltac is_weak_fenced f :=
 Ltac weak_fencepost_form_debug_old f :=
   let rec weak_fencepost_form f :=
   match f with
-  | (?g ∘ ?h)%Cat => 
+  | (?g ∘ ?h)%Mor => 
       let _ := match goal with _ => tensor_only g end in (* test for tensor-only while returning constr *)
       let _ := match goal with _ => idtac "left composite" g "is tensor-only" end in
       let Nh := weak_fencepost_form h in 
       (* let _ := match goal with _ => idtac h "normalizes to" Nh end in *)
-      constr:((g ∘ Nh)%Cat)
-  | (?g ∘ ?h)%Cat => 
+      constr:((g ∘ Nh)%Mor)
+  | (?g ∘ ?h)%Mor => 
     match g with 
-    | (?g' ∘ ?h')%Cat => 
+    | (?g' ∘ ?h')%Mor => 
       (* We _can_ do this, but we can also just recurse:
       let _ := tensor_only g' in 
       let _ := match goal with _ => idtac "associating as" g' "is tensor-only" end in
@@ -407,13 +407,13 @@ Ltac weak_fencepost_form_debug_old f :=
       let Nf := weak_fencepost_form (Ng' ∘ Nh'h) in
       constr:(Nf)*)
       let _ := match goal with _ => idtac "associating to " g' "∘ (" h' "∘" h ")" end in
-      let Nf := weak_fencepost_form (g' ∘ (h' ∘ h))%Cat in
+      let Nf := weak_fencepost_form (g' ∘ (h' ∘ h))%Mor in
       constr:(Nf)
     | _ => 
       let _ := match goal with _ => 
         idtac "WARNING:" g "is not tensor-only or a composition" end in
         let Nh := weak_fencepost_form h in
-        constr:((g ∘ h)%Cat)
+        constr:((g ∘ h)%Mor)
     end
   | _ => let _ := match goal with _ => tensor_only f end in 
     let _ := match goal with _ => 
@@ -430,20 +430,20 @@ Ltac weak_fencepost_form_debug_old f :=
 
 Ltac right_associate f := 
   match f with 
-  | ((?g ∘ ?h) ∘ ?i)%Cat => right_associate (g ∘ (h ∘ i))%Cat
-  | (?g ∘ ?h)%Cat => (* g shouldn't be a composition *)
+  | ((?g ∘ ?h) ∘ ?i)%Mor => right_associate (g ∘ (h ∘ i))%Mor
+  | (?g ∘ ?h)%Mor => (* g shouldn't be a composition *)
       let RAh := right_associate h in
-        constr:((g ∘ RAh)%Cat)
+        constr:((g ∘ RAh)%Mor)
   | _ => constr:(f)
   end.
 
 (* TODO: Test this! *)
 Ltac left_associate f := 
   match f with 
-  | (?g ∘ (?h ∘ ?i))%Cat => left_associate ((g ∘ h) ∘ i)%Cat
-  | (?g ∘ ?h)%Cat => (* h shouldn't be a composition *)
+  | (?g ∘ (?h ∘ ?i))%Mor => left_associate ((g ∘ h) ∘ i)%Mor
+  | (?g ∘ ?h)%Mor => (* h shouldn't be a composition *)
       let LAg := left_associate g in
-        constr:((LAg ∘ h)%Cat)
+        constr:((LAg ∘ h)%Mor)
   | _ => constr:(f)
   end.
 
@@ -471,26 +471,26 @@ Ltac merge_stacked_composition_old g h :=
   (* With ltac restrictions, *)
   let rec merge_stacked_composition g h :=
   match g with
-  | (?g0 ∘ ?g1)%Cat => 
+  | (?g0 ∘ ?g1)%Mor => 
     match h with 
-    | (?h0 ∘ ?h1)%Cat =>
+    | (?h0 ∘ ?h1)%Mor =>
         let rest := merge_stacked_composition g1 h1 in
-        constr:((g0 ⊗ h0 ∘ rest)%Cat)
+        constr:((g0 ⊗ h0 ∘ rest)%Mor)
     | _ => 
         match type of h with (?A ~> ?B)%Cat =>
-          let rest := merge_stacked_composition g1 (id_ B) in
-          constr:((g0 ⊗ h ∘ rest)%Cat)
+          let rest := merge_stacked_composition g1 (id_ B)%Mor in
+          constr:((g0 ⊗ h ∘ rest)%Mor)
         end
     end
   | _ => 
     match h with 
-    | (?h0 ∘ ?h1)%Cat =>
+    | (?h0 ∘ ?h1)%Mor =>
         match type of g with (?A ~> ?B)%Cat =>
-          let rest := merge_stacked_composition (id_ B) h1 in
-          constr:((g ⊗ h0 ∘ rest)%Cat)
+          let rest := merge_stacked_composition ((id_ B)%Mor) h1 in
+          constr:((g ⊗ h0 ∘ rest)%Mor)
         end
     | _ => 
-        constr:((g ⊗ h)%Cat)
+        constr:((g ⊗ h)%Mor)
     end
   end
   in merge_stacked_composition g h. 
@@ -501,16 +501,16 @@ Ltac merge_stacked_composition_debug gh :=
   let rec merge_stacked_composition gh :=
   match type of gh with @morphism ?C ?cC _ _ =>
   match gh with
-    @morphism2_map C _ _ cC _ _ (@tensor C cC ?mC) ?gA ?gB ?hA ?hB ?g ?h =>
+    @morphism_bimap C _ _ cC _ _ (@tensor C cC ?mC) ?gA ?gB ?hA ?hB ?g ?h =>
   lazymatch g with
-  | (?g0 ∘ ?g1)%Cat => 
+  | (?g0 ∘ ?g1)%Mor => 
     let _ := match goal with _ => 
       idtac "found decomp of first as" g0 "∘" g1 end in
     lazymatch h with 
-    | (?h0 ∘ ?h1)%Cat =>
+    | (?h0 ∘ ?h1)%Mor =>
         let _ := match goal with _ => 
           idtac "found decomp of second as" h0 "∘" h1 end in
-        let rest := merge_stacked_composition (mC.(tensor) @@ g1, h1) in
+        let rest := merge_stacked_composition ((mC.(tensor) @@ g1, h1)%Mor) in
         let _ := match goal with _ => 
           idtac "remaining terms became" rest end in
         let res := constr:(cC.(compose) (mC.(tensor) @@ g0, h0) rest) in
@@ -523,7 +523,7 @@ Ltac merge_stacked_composition_debug gh :=
         match type of h with @morphism _ _ ?A ?B =>
           let _ := match goal with _ => 
             idtac "resolved second as type" hA "~>" hB end in
-          let rest := merge_stacked_composition (mC.(tensor) @@ g1, (cC.(c_identity) hB)) in
+          let rest := merge_stacked_composition ((mC.(tensor) @@ g1, (cC.(c_identity) hB))%Mor) in
           let _ := match goal with _ => 
             idtac "remaining terms became" rest end in
           let res := constr:(cC.(compose) (mC.(tensor) @@ g0, h) rest) in
@@ -536,13 +536,13 @@ Ltac merge_stacked_composition_debug gh :=
     let _ := match goal with _ => 
       idtac "found first to be atomic:" g end in
     lazymatch h with 
-    | (?h0 ∘ ?h1)%Cat =>
+    | (?h0 ∘ ?h1)%Mor =>
         let _ := match goal with _ => 
           idtac "found decomp of second as" h0 "∘" h1 end in
         match type of g with @morphism _ _ ?A ?B =>
           let _ := match goal with _ => 
             idtac "resolved second as type" gA "~>" gB end in
-          let rest := merge_stacked_composition (mC.(tensor) @@ (cC.(c_identity) gB), h1) in
+          let rest := merge_stacked_composition ((mC.(tensor) @@ (cC.(c_identity) gB), h1)%Mor) in
           let _ := match goal with _ => 
             idtac "remaining terms became" rest end in
           let res := constr:(cC.(compose) (mC.(tensor) @@ g, h0) rest) in
@@ -553,7 +553,7 @@ Ltac merge_stacked_composition_debug gh :=
     | _ => 
         let _ := match goal with _ => 
           idtac "found second to be atomic as well:" h end in
-        constr:(mC.(tensor) @@ g, h)
+        constr:((mC.(tensor) @@ g, h)%Mor)
     end
   end
   end end
@@ -563,28 +563,28 @@ Ltac merge_stacked_composition gh :=
   let rec merge_stacked_composition gh :=
   match type of gh with @morphism ?C ?cC _ _ =>
   match gh with
-    @morphism2_map C _ _ cC _ _ (@tensor C cC ?mC) ?gA ?gB ?hA ?hB ?g ?h =>
+    @morphism_bimap C _ _ cC _ _ (@tensor C cC ?mC) ?gA ?gB ?hA ?hB ?g ?h =>
   lazymatch g with
-  | (?g0 ∘ ?g1)%Cat => 
+  | (?g0 ∘ ?g1)%Mor => 
     lazymatch h with 
-    | (?h0 ∘ ?h1)%Cat =>
-        let rest := merge_stacked_composition (mC.(tensor) @@ g1, h1) in
+    | (?h0 ∘ ?h1)%Mor =>
+        let rest := merge_stacked_composition ((mC.(tensor) @@ g1, h1)%Mor) in
         constr:(cC.(compose) (mC.(tensor) @@ g0, h0) rest)
     | _ => 
         let rest :=
           merge_stacked_composition 
-            (mC.(tensor) @@ g1, (cC.(c_identity) hB)) in
+            ((mC.(tensor) @@ g1, (cC.(c_identity) hB))%Mor)in
         constr:(cC.(compose) (mC.(tensor) @@ g0, h) rest)
     end
   | _ => 
     lazymatch h with 
-    | (?h0 ∘ ?h1)%Cat =>
+    | (?h0 ∘ ?h1)%Mor =>
         let rest := 
           merge_stacked_composition
-            (mC.(tensor) @@ (cC.(c_identity) gB), h1) in
+            ((mC.(tensor) @@ (cC.(c_identity) gB), h1)%Mor) in
         constr:(cC.(compose) (mC.(tensor) @@ g, h0) rest)
     | _ => 
-        constr:(mC.(tensor) @@ g, h)
+        constr:((mC.(tensor) @@ g, h)%Mor)
     end
   end
   end end
@@ -604,14 +604,14 @@ Ltac weak_fencepost_form_debug f :=
       let _ := match goal with _ => 
         idtac "    " res end in
       constr:(res)
-  | @morphism2_map ?C _ _ ?cC _ _ (@tensor ?C ?cC ?mC) _ _ _ _ ?g ?h =>
+  | @morphism_bimap ?C _ _ ?cC _ _ (@tensor ?C ?cC ?mC) _ _ _ _ ?g ?h =>
       let _ := match goal with _ => 
         idtac "splitting on ⊗ into" g "and" h "..." end in
       let Ng := weak_fencepost g in
       let Nh := weak_fencepost h in 
       let _ := match goal with _ => 
         idtac "... getting" g "⊗" h "into" end in
-      let res := merge_stacked_composition (mC.(tensor) @@ Ng, Nh) in
+      let res := merge_stacked_composition ((mC.(tensor) @@ Ng, Nh)%Mor) in
       let _ := match goal with _ => 
         idtac "    " res end in
       constr:(res)
@@ -629,10 +629,10 @@ Ltac weak_fencepost_form f :=
       let Ng := weak_fencepost g in
       let Nh := weak_fencepost h in 
       right_associate (cC.(compose) Ng Nh)
-  | @morphism2_map ?C _ _ ?cC _ _ (@tensor ?C ?cC ?mC) _ _ _ _ ?g ?h =>
+  | @morphism_bimap ?C _ _ ?cC _ _ (@tensor ?C ?cC ?mC) _ _ _ _ ?g ?h =>
       let Ng := weak_fencepost g in
       let Nh := weak_fencepost h in 
-      merge_stacked_composition (mC.(tensor) @@ Ng, Nh)
+      merge_stacked_composition ((mC.(tensor) @@ Ng, Nh)%Mor)
   | _ => (* f "is const or unsupported" *)
       constr:(f)
   end
@@ -661,7 +661,7 @@ Lemma stack_compose_distr_compat {C} `{MonoidalCategory C}
   g ⊗ i ≃ gi -> (f ∘ g) ⊗ (h ∘ i) ≃ f ⊗ h ∘ gi.
 Proof.
   intros.
-  rewrite compose2_map.
+  rewrite compose_bimap.
   apply compose_compat; easy.
 Qed.
 
@@ -673,8 +673,8 @@ Proof.
   intros.
   (* `rewrite stack_distr_pushout_r_top.` is replaced here manually 
   to simplify dependencies *)
-  rewrite <- (right_unit (f:=f)) at 1.
-  rewrite compose2_map.
+  rewrite <- (right_unit f) at 1.
+  rewrite compose_bimap.
   apply compose_compat; easy.
 Qed.
 
@@ -686,8 +686,8 @@ Proof.
   intros.
   (* `rewrite stack_distr_pushout_r_bot.` is replaced here manually 
   to simplify dependencies *)
-  rewrite <- (right_unit (f:=h)) at 1.
-  rewrite compose2_map.
+  rewrite <- (right_unit h) at 1.
+  rewrite compose_bimap.
   apply compose_compat; easy.
 Qed.
 
@@ -696,7 +696,7 @@ Lemma compose_compat_trans_helper {C} `{cC:Category C} {A B M : C} : forall
   f ≃ f' -> g ≃ g' -> f' ∘ g' ≃ fg -> f ∘ g ≃ fg.
 Proof.
   intros.
-  transitivity (f' ∘ g'); [|easy].
+  transitivity (f' ∘ g')%Mor; [|easy].
   apply compose_compat; easy.
 Qed.
 
@@ -706,7 +706,7 @@ Lemma stack_compat_trans_helper {C} `{mC : MonoidalCategory C} {A A' B B' : C} :
 Proof.
   intros.
   transitivity (f' ⊗ g'); [|easy].
-  apply morphism2_compat; easy.
+  apply morphism_bicompat; easy.
 Qed.
 
 Lemma show_equiv_stack_comp_id_bot_helper {C} `{MonoidalCategory C} 
@@ -714,8 +714,8 @@ Lemma show_equiv_stack_comp_id_bot_helper {C} `{MonoidalCategory C}
   gs ⊗ id_ B ≃ gsB -> (g ∘ gs) ⊗ id_ B ≃ g ⊗ id_ B ∘ gsB.
 Proof.
   intros.
-  rewrite <- (right_unit (f:=id_ B)) at 1.
-  rewrite compose2_map.
+  rewrite <- (right_unit (id_ B)) at 1.
+  rewrite compose_bimap.
   apply compose_compat; easy.
 Qed.
 
@@ -724,8 +724,8 @@ Lemma show_equiv_stack_comp_id_top_helper {C} `{MonoidalCategory C}
   id_ A ⊗ gs ≃ Ags -> id_ A ⊗ (g ∘ gs) ≃ id_ A ⊗ g ∘ Ags.
 Proof.
   intros.
-  rewrite <- (right_unit (f:=id_ A)) at 1.
-  rewrite compose2_map.
+  rewrite <- (right_unit (id_ A)) at 1.
+  rewrite compose_bimap.
   apply compose_compat; easy.
 Qed.
 
@@ -738,7 +738,7 @@ Lemma show_equiv_unfold_tensor_stack_helper {C} `{MonoidalCategory C}
 Proof.
   intros Hf Hg Huf Hug.
   rewrite Hf, Hg.
-  rewrite <- (right_unit (f:=uf)), <- (left_unit (f:=ug)), compose2_map.
+  rewrite <- (right_unit uf), <- (left_unit ug), compose_bimap.
   apply compose_compat; easy.
 Qed.
 
@@ -750,11 +750,11 @@ Close Scope Cat_scope.
 Ltac show_equiv_right_associate f :=
   let rec show_equiv_right_associate f :=
   match f with 
-  | ((?g ∘ ?h) ∘ ?i)%Cat => 
+  | ((?g ∘ ?h) ∘ ?i)%Mor => 
     (* RHS is `right_associate (g ∘ (h ∘ i))` *)
     apply assoc_compat_helper;
-    show_equiv_right_associate ((g ∘ (h ∘ i))%Cat)
-  | (?g ∘ ?h)%Cat => (* g shouldn't be a composition *)
+    show_equiv_right_associate ((g ∘ (h ∘ i))%Mor)
+  | (?g ∘ ?h)%Mor => (* g shouldn't be a composition *)
       (* RHS is `(g ∘ right_associate h)` *)
       apply compose_compat_right;
       show_equiv_right_associate h
@@ -770,25 +770,25 @@ Ltac show_equiv_merge_stacked_composition gh :=
   let rec show_equiv_merge_stacked_composition gh :=
   match type of gh with @morphism ?C ?cC _ _ =>
   match gh with
-    @morphism2_map C _ _ cC _ _ (@tensor C cC ?mC) ?gA ?gB ?hA ?hB ?g ?h =>
+    @morphism_bimap C _ _ cC _ _ (@tensor C cC ?mC) ?gA ?gB ?hA ?hB ?g ?h =>
   lazymatch g with
-  | (?g0 ∘ ?g1)%Cat => 
+  | (?g0 ∘ ?g1)%Mor => 
     lazymatch h with 
-    | (?h0 ∘ ?h1)%Cat =>
+    | (?h0 ∘ ?h1)%Mor =>
         (* RHS is g0 ⊗ h0 ∘ merge_stacked_composition (g1 ⊗ h1) *)
         apply stack_compose_distr_compat;
-        show_equiv_merge_stacked_composition (mC.(tensor) @@ g1, h1)
+        show_equiv_merge_stacked_composition ((mC.(tensor) @@ g1, h1)%Mor)
     | _ => 
         (* RHS is g0 ⊗ h0 ∘ merge_stacked_composition (g1 ⊗ id_ hB) *)
         apply stack_distr_pushout_r_bot_compat;
-        show_equiv_merge_stacked_composition (mC.(tensor) @@ g1, (cC.(c_identity) hB))
+        show_equiv_merge_stacked_composition ((mC.(tensor) @@ g1, (cC.(c_identity) hB))%Mor)
     end
   | _ => 
     lazymatch h with 
-    | (?h0 ∘ ?h1)%Cat =>
+    | (?h0 ∘ ?h1)%Mor =>
         (* RHS is g0 ⊗ h0 ∘ merge_stacked_composition (id_ gB ⊗ h1) *)
         apply stack_distr_pushout_r_top_compat;
-        show_equiv_merge_stacked_composition (mC.(tensor) @@ (cC.(c_identity) gB), h1)
+        show_equiv_merge_stacked_composition ((mC.(tensor) @@ (cC.(c_identity) gB), h1)%Mor)
     | _ => 
         (* RHS is g ⊗ h *)
         reflexivity
@@ -811,14 +811,14 @@ Ltac show_equiv_weak_fencepost_form f :=
         ltac:(show_equiv_weak_fencepost_form g)
         ltac:(show_equiv_weak_fencepost_form h)
         ltac:(show_equiv_right_associate (cC.(compose) Ng Nh)))
-  | @morphism2_map ?C _ _ ?cC _ _ (@tensor ?C ?cC ?mC) _ _ _ _ ?g ?h =>
+  | @morphism_bimap ?C _ _ ?cC _ _ (@tensor ?C ?cC ?mC) _ _ _ _ ?g ?h =>
       let Ng := weak_fencepost g in
       let Nh := weak_fencepost h in 
-      let res := merge_stacked_composition (mC.(tensor) @@ Ng, Nh) in
+      let res := merge_stacked_composition ((mC.(tensor) @@ Ng, Nh)%Mor) in
       apply (stack_compat_trans_helper (cC:=cC) g Ng h Nh res 
         ltac:(show_equiv_weak_fencepost_form g)
         ltac:(show_equiv_weak_fencepost_form h)
-        ltac:(show_equiv_merge_stacked_composition (mC.(tensor) @@ Ng, Nh)))
+        ltac:(show_equiv_merge_stacked_composition ((mC.(tensor) @@ Ng, Nh))%Mor))
   | _ => (* f "is const or unsupported" *)
       (* constr:(f) *)
       reflexivity
@@ -830,13 +830,13 @@ Ltac show_equiv_weak_fencepost_form f :=
    in the given monoidal category mC. *)
 Ltac stack_comp_id_bot f B mC :=
   let base g :=
-    constr:(mC.(tensor) @@ g, id_ B) in
+    constr:((mC.(tensor) @@ g, id_ B)%Mor) in
   let rec stack_comp h :=
   match h with
-  | (?g ∘ ?gs)%Cat => 
+  | (?g ∘ ?gs)%Mor => 
       let stg := base g in
       let stgs := stack_comp gs in
-      constr:((stg ∘ stgs)%Cat)
+      constr:((stg ∘ stgs)%Mor)
   | ?g => 
       base h
   end
@@ -846,13 +846,13 @@ Ltac stack_comp_id_bot f B mC :=
    in the given monoidal category mC. *)
 Ltac stack_comp_id_top f A mC :=
   let base g :=
-    constr:(mC.(tensor) @@ id_ A, g) in
+    constr:((mC.(tensor) @@ id_ A, g)%Mor) in
   let rec stack_comp h :=
   match h with
-  | (?g ∘ ?gs)%Cat => 
+  | (?g ∘ ?gs)%Mor => 
       let stg := base g in
       let stgs := stack_comp gs in
-      constr:((stg ∘ stgs)%Cat)
+      constr:((stg ∘ stgs)%Mor)
   | ?g => 
       base h
   end
@@ -866,12 +866,12 @@ Ltac stack_comp_id_top f A mC :=
 Ltac unfold_tensor_stack f :=
   let rec unfold_tensor_stack f :=
   lazymatch f with 
-  | @morphism2_map _ _ _ _ _ _ (@tensor _ _ ?mC) ?gA ?gB ?hA ?hB ?g ?h =>
+  | @morphism_bimap _ _ _ _ _ _ (@tensor _ _ ?mC) ?gA ?gB ?hA ?hB ?g ?h =>
       let ug := unfold_tensor_stack g in 
       let uh := unfold_tensor_stack h in 
       let sg := stack_comp_id_bot ug hA mC in
       let sh := stack_comp_id_top uh gB mC in
-      constr:((sg ∘ sh)%Cat)
+      constr:((sg ∘ sh)%Mor)
   | _ => constr:(f)
   end
   in unfold_tensor_stack f.
@@ -881,26 +881,26 @@ Ltac unfold_tensor_stack_no_id f :=
   let rec unfold_tensor_stack f :=
   lazymatch f with 
     (* TODO: is this case smart to have? *)
-  | @morphism2_map _ _ _ _ _ _ (@tensor _ ?cC ?mC) 
-    ?gA ?gA ?hA ?hA (id_ ?gA)%Cat (id_ ?hA) => 
+  | @morphism_bimap _ _ _ _ _ _ (@tensor _ ?cC ?mC) 
+    ?gA ?gA ?hA ?hA (id_ ?gA)%Mor (id_ ?hA)%Mor => 
       constr:(cC.(c_identity) (mC.(tensor) gA hA))
   
-  | @morphism2_map _ _ _ _ _ _ (@tensor _ _ ?mC) ?gA ?gA ?hA ?hB (id_ ?gA)%Cat ?h => 
+  | @morphism_bimap _ _ _ _ _ _ (@tensor _ _ ?mC) ?gA ?gA ?hA ?hB (id_ ?gA)%Mor ?h => 
       let uh := unfold_tensor_stack h in 
       let sh := stack_comp_id_top uh gA mC in
       constr:(sh)
       
-  | @morphism2_map _ _ _ _ _ _ (@tensor _ _ ?mC) ?gA ?gB ?hA ?hA ?g (id_ ?hA)%Cat => 
+  | @morphism_bimap _ _ _ _ _ _ (@tensor _ _ ?mC) ?gA ?gB ?hA ?hA ?g (id_ ?hA)%Mor => 
       let ug := unfold_tensor_stack g in 
       let sg := stack_comp_id_bot ug hA mC in
       constr:(sg)
 
-  | @morphism2_map _ _ _ _ _ _ (@tensor _ _ ?mC) ?gA ?gB ?hA ?hB ?g ?h =>
+  | @morphism_bimap _ _ _ _ _ _ (@tensor _ _ ?mC) ?gA ?gB ?hA ?hB ?g ?h =>
       let ug := unfold_tensor_stack g in 
       let uh := unfold_tensor_stack h in 
       let sg := stack_comp_id_bot ug hA mC in
       let sh := stack_comp_id_top uh gB mC in
-      constr:((sg ∘ sh)%Cat)
+      constr:((sg ∘ sh)%Mor)
   | _ => constr:(f)
   end
   in unfold_tensor_stack f.
@@ -911,10 +911,10 @@ Ltac unfold_tensor_stack_no_id f :=
 Ltac strong_fencepost_form_of_weak f :=
   let rec strong_fence f :=
   lazymatch f with
-  | (?g ∘ ?h)%Cat => 
+  | (?g ∘ ?h)%Mor => 
       let ug := strong_fence g in
       let uh := strong_fence h in
-      right_associate (ug ∘ uh)%Cat
+      right_associate (ug ∘ uh)%Mor
   | _ => 
       unfold_tensor_stack f
   end
@@ -924,10 +924,10 @@ Ltac strong_fencepost_form_of_weak f :=
 Ltac strong_fencepost_form_of_weak_no_id f :=
   let rec strong_fence f :=
   lazymatch f with
-  | (?g ∘ ?h)%Cat => 
+  | (?g ∘ ?h)%Mor => 
       let ug := strong_fence g in
       let uh := strong_fence h in
-      right_associate (ug ∘ uh)%Cat
+      right_associate (ug ∘ uh)%Mor
   | _ => 
       unfold_tensor_stack_no_id f
   end
@@ -936,10 +936,10 @@ Ltac strong_fencepost_form_of_weak_no_id f :=
 
 Ltac show_equiv_stack_comp_id_bot f B mC :=
   let base g :=
-    constr:(mC.(tensor) @@ g, id_ B) in
+    constr:((mC.(tensor) @@ g, id_ B)%Mor) in
   let rec show_stack_comp h :=
   match h with
-  | (?g ∘ ?gs)%Cat => 
+  | (?g ∘ ?gs)%Mor => 
       (* let stg := base g in
       let stgs := stack_comp gs in
       constr:(stg ∘ stgs)%Cat *)
@@ -953,10 +953,10 @@ Ltac show_equiv_stack_comp_id_bot f B mC :=
 
 Ltac show_equiv_stack_comp_id_top f A mC :=
   let base g :=
-    constr:(mC.(tensor) @@ id_ A, g) in
+    constr:((mC.(tensor) @@ id_ A, g)%Mor) in
   let rec show_stack_comp h :=
   match h with
-  | (?g ∘ ?gs)%Cat => 
+  | (?g ∘ ?gs)%Mor => 
       (* let stg := base g in
       let stgs := stack_comp gs in
       constr:(stg ∘ stgs)%Cat *)
@@ -972,7 +972,7 @@ Ltac show_equiv_stack_comp_id_top f A mC :=
 Ltac show_equiv_unfold_tensor_stack f :=
   let rec show_unfold f :=
   lazymatch f with 
-  | @morphism2_map _ _ _ _ _ _ (@tensor _ ?cC ?mC) ?gA ?gB ?hA ?hB ?g ?h =>
+  | @morphism_bimap _ _ _ _ _ _ (@tensor _ ?cC ?mC) ?gA ?gB ?hA ?hB ?g ?h =>
       let ug := unfold_tensor_stack g in 
       let uh := unfold_tensor_stack h in 
       let sg := stack_comp_id_bot ug hA mC in
@@ -995,12 +995,12 @@ Ltac show_equiv_unfold_tensor_stack_no_id f :=
   let rec show_unfold f :=
   lazymatch f with 
     (* TODO: is this case smart to have? *)
-  | @morphism2_map _ _ _ _ _ _ (@tensor _ _ ?mC) 
-    ?gA ?gA ?hA ?hA (id_ ?gA)%Cat (id_ ?hA) => 
+  | @morphism_bimap _ _ _ _ _ _ (@tensor _ _ ?mC) 
+    ?gA ?gA ?hA ?hA (id_ ?gA)%Mor (id_ ?hA)%Mor => 
       (* constr:(cC.(c_identity) (mC.(tensor) gA hA)) *)
-      apply (mC.(tensor).(id2_map) (A1:=gA) (A2:=hA))
+      apply (mC.(tensor).(id_bimap) gA hA)
   
-  | @morphism2_map _ _ _ _ _ _ (@tensor _ ?cC ?mC) ?gA ?gA ?hA ?hB (id_ ?gA)%Cat ?h => 
+  | @morphism_bimap _ _ _ _ _ _ (@tensor _ ?cC ?mC) ?gA ?gA ?hA ?hB (id_ ?gA)%Mor ?h => 
       let uh := unfold_tensor_stack h in 
       let sh := stack_comp_id_top uh gA mC in   (* constr:(sh) *)
       apply (stack_compat_trans_helper
@@ -1008,7 +1008,7 @@ Ltac show_equiv_unfold_tensor_stack_no_id f :=
         ltac:(reflexivity) ltac:(show_unfold h)
         ltac:(show_equiv_stack_comp_id_top h gA mC))
       
-  | @morphism2_map _ _ _ _ _ _ (@tensor _ ?cC ?mC) ?gA ?gB ?hA ?hA ?g (id_ ?hA)%Cat => 
+  | @morphism_bimap _ _ _ _ _ _ (@tensor _ ?cC ?mC) ?gA ?gB ?hA ?hA ?g (id_ ?hA)%Mor => 
       let ug := unfold_tensor_stack g in 
       let sg := stack_comp_id_bot ug hA mC in   (* constr:(sg) *)
       apply (stack_compat_trans_helper
@@ -1016,7 +1016,7 @@ Ltac show_equiv_unfold_tensor_stack_no_id f :=
         ltac:(show_unfold g) ltac:(reflexivity)
         ltac:(show_equiv_stack_comp_id_bot g hA mC))
 
-  | @morphism2_map _ _ _ _ _ _ (@tensor _ _ ?mC) ?gA ?gB ?hA ?hB ?g ?h =>
+  | @morphism_bimap _ _ _ _ _ _ (@tensor _ _ ?mC) ?gA ?gB ?hA ?hB ?g ?h =>
       let ug := unfold_tensor_stack g in 
       let uh := unfold_tensor_stack h in 
       let sg := stack_comp_id_bot ug hA mC in
@@ -1038,12 +1038,12 @@ Ltac show_equiv_unfold_tensor_stack_no_id_debug f :=
   let rec show_unfold f :=
   lazymatch f with 
     (* TODO: is this case smart to have? *)
-  | @morphism2_map _ _ _ _ _ _ (@tensor _ _ ?mC) ?gA _ ?hA _ (id_ ?gA)%Cat (id_ ?hA) => 
+  | @morphism_bimap _ _ _ _ _ _ (@tensor _ _ ?mC) ?gA _ ?hA _ (id_ ?gA)%Mor (id_ ?hA)%Mor => 
       idtac "id id case:"; print_state;
       (* constr:(cC.(c_identity) (mC.(tensor) gA hA)) *)
-      apply (mC.(tensor).(id2_map) (A1:=gA) (A2:=hA))
+      apply (mC.(tensor).(id_bimap) gA hA)
   
-  | @morphism2_map _ _ _ _ _ _ (@tensor _ ?cC ?mC) ?gA ?gA ?hA ?hB (id_ ?gA)%Cat ?h => 
+  | @morphism_bimap _ _ _ _ _ _ (@tensor _ ?cC ?mC) ?gA ?gA ?hA ?hB (id_ ?gA)%Mor ?h => 
       let uh := unfold_tensor_stack h in 
       let sh := stack_comp_id_top uh gA mC in   (* constr:(sh) *)
       idtac "left id case:"; print_state;
@@ -1052,7 +1052,7 @@ Ltac show_equiv_unfold_tensor_stack_no_id_debug f :=
         ltac:(reflexivity) ltac:(show_unfold h)
         ltac:(show_equiv_stack_comp_id_top h gA mC))
       
-  | @morphism2_map _ _ _ _ _ _ (@tensor _ ?cC ?mC) ?gA ?gB ?hA ?hA ?g (id_ ?hA)%Cat => 
+  | @morphism_bimap _ _ _ _ _ _ (@tensor _ ?cC ?mC) ?gA ?gB ?hA ?hA ?g (id_ ?hA)%Mor => 
       let ug := unfold_tensor_stack g in 
       let sg := stack_comp_id_bot ug hA mC in   (* constr:(sg) *)
       idtac "right id case:"; print_state;
@@ -1061,7 +1061,7 @@ Ltac show_equiv_unfold_tensor_stack_no_id_debug f :=
         ltac:(show_unfold g) ltac:(reflexivity)
         ltac:(show_equiv_stack_comp_id_bot g hA mC))
 
-  | @morphism2_map _ _ _ _ _ _ (@tensor _ _ ?mC) ?gA ?gB ?hA ?hB ?g ?h =>
+  | @morphism_bimap _ _ _ _ _ _ (@tensor _ _ ?mC) ?gA ?gB ?hA ?hB ?g ?h =>
       let ug := unfold_tensor_stack g in let uh := unfold_tensor_stack h in 
       let sg := stack_comp_id_bot ug hA mC in
       let sh := stack_comp_id_top uh gB mC in
@@ -1080,16 +1080,16 @@ Ltac show_equiv_strong_fencepost_form_of_weak f :=
   let strong_fence := strong_fencepost_form_of_weak in
   let rec show_strong_fence f :=
   lazymatch f with
-  | (?g ∘ ?h)%Cat => 
+  | (?g ∘ ?h)%Mor => 
       let ug := strong_fence g in
       let uh := strong_fence h in
-      let rassoc := right_associate (ug ∘ uh)%Cat in
+      let rassoc := right_associate (ug ∘ uh)%Mor in
       (* right_associate (ug ∘ uh)%Cat *)
       apply (compose_compat_trans_helper
         g ug  h uh rassoc
         ltac:(show_strong_fence g)
         ltac:(show_strong_fence h)
-        ltac:(show_equiv_right_associate (ug ∘ uh)%Cat)
+        ltac:(show_equiv_right_associate (ug ∘ uh)%Mor)
       )
   | _ => 
       (* unfold_tensor_stack f *)
@@ -1102,16 +1102,16 @@ Ltac show_equiv_strong_fencepost_form_of_weak_no_id f :=
   let strong_fence := strong_fencepost_form_of_weak_no_id in
   let rec show_strong_fence f :=
   lazymatch f with
-  | (?g ∘ ?h)%Cat => 
+  | (?g ∘ ?h)%Mor => 
       let ug := strong_fence g in
       let uh := strong_fence h in
-      let rassoc := right_associate (ug ∘ uh)%Cat in
+      let rassoc := right_associate (ug ∘ uh)%Mor in
       (* right_associate (ug ∘ uh)%Cat *)
       apply (compose_compat_trans_helper
         g ug  h uh rassoc
         ltac:(show_strong_fence g)
         ltac:(show_strong_fence h)
-        ltac:(show_equiv_right_associate (ug ∘ uh)%Cat)
+        ltac:(show_equiv_right_associate (ug ∘ uh)%Mor)
       )
   | _ => 
       (* unfold_tensor_stack f *)
@@ -1123,16 +1123,16 @@ Ltac show_equiv_strong_fencepost_form_of_weak_no_id_debug f :=
   let strong_fence := strong_fencepost_form_of_weak_no_id in
   let rec show_strong_fence f :=
   lazymatch f with
-  | (?g ∘ ?h)%Cat => 
+  | (?g ∘ ?h)%Mor => 
       let ug := strong_fence g in
       let uh := strong_fence h in
-      let rassoc := right_associate (ug ∘ uh)%Cat in
+      let rassoc := right_associate (ug ∘ uh)%Mor in
       (* right_associate (ug ∘ uh)%Cat *)
       apply (compose_compat_trans_helper
         g ug  h uh rassoc
         ltac:(show_strong_fence g)
         ltac:(show_strong_fence h)
-        ltac:(show_equiv_right_associate (ug ∘ uh)%Cat)
+        ltac:(show_equiv_right_associate (ug ∘ uh)%Mor)
       )
   | _ => 
       (* unfold_tensor_stack f *)
@@ -1275,7 +1275,7 @@ Local Ltac test_show_unfold_no_id_of_wf f :=
   assert (H : wf ≃ sf) by (show_equiv_unfold_tensor_stack_no_id wf);
   clear H.
 
-test_show_unfold_no_id_of_wf (f ⊗ (f0 ∘ g0 ∘ id_ _) ⊗ (id_ A ⊗ id_ B)).
+test_show_unfold_no_id_of_wf (f ⊗ (f0 ∘ g0 ∘ id_ _) ⊗ (id_ A ⊗ id_ B))%Mor.
 
 
 
@@ -1287,10 +1287,10 @@ Local Ltac test_show_unfold_no_id f :=
   assert (H : f ≃ sf) by (show_equiv_unfold_tensor_stack_no_id f; print_state);
   clear H.
 
-test_show_unfold_no_id ((id_ B ⊗ id_ M ⊗ id_ (A × B))).
-test_show_unfold_no_id (f ⊗ (f0 ∘ g0 ∘ id_ _) ⊗ (id_ A ⊗ id_ B)).
-test_show_unfold_no_id (f ⊗ f0 ⊗ (id_ A ⊗ id_ B)).
-test_show_unfold_no_id (id_ B ⊗ g0 ⊗ id_ (A × B)).
+test_show_unfold_no_id ((id_ B ⊗ id_ M ⊗ id_ (A × B)))%Mor.
+test_show_unfold_no_id (f ⊗ (f0 ∘ g0 ∘ id_ _) ⊗ (id_ A ⊗ id_ B))%Mor.
+test_show_unfold_no_id (f ⊗ f0 ⊗ (id_ A ⊗ id_ B))%Mor.
+test_show_unfold_no_id (id_ B ⊗ g0 ⊗ id_ (A × B))%Mor.
 
 
 
@@ -1298,15 +1298,15 @@ Local Ltac test_show_st_of_wk f :=
   let wf := weak_fencepost_form f in
   let sf := strong_fencepost_form_of_weak wf in
   let H := fresh in 
-  assert (H: wf ≃ sf) by (show_equiv_strong_fencepost_form_of_weak wf);
+  assert (H: (wf ≃ sf)%Cat) by (show_equiv_strong_fencepost_form_of_weak wf);
   clear H.
 
 test_show_st_of_wk f.
-test_show_st_of_wk (f ∘ g).
-test_show_st_of_wk (f ⊗ g).
+test_show_st_of_wk (f ∘ g)%Mor.
+test_show_st_of_wk (f ⊗ g)%Mor.
 
-test_show_st_of_wk (f ⊗ (f ∘ g)).
-test_show_st_of_wk ((f ⊗ ((f ∘ g) ⊗ (f0 ∘ g0)))).
+test_show_st_of_wk (f ⊗ (f ∘ g))%Mor.
+test_show_st_of_wk ((f ⊗ ((f ∘ g) ⊗ (f0 ∘ g0))))%Mor.
 
 
 
@@ -1318,9 +1318,9 @@ Local Ltac test_show_unfold f :=
   clear H.
 
 test_show_unfold f.
-test_show_unfold (f ∘ g).
-test_show_unfold (f ⊗ g).
-
+test_show_unfold (f ∘ g)%Mor.
+test_show_unfold (f ⊗ g)%Mor.
+Local Open Scope Mor_scope.
 test_show_unfold ((f ⊗ (f ∘ g) ⊗ (f0 ∘ g0))).
 
 test_show_unfold ((f ∘ g) ⊗ (f0 ∘ g0)).
@@ -1406,7 +1406,7 @@ test_show_wf ((f ⊗ ((f ∘ g) ⊗ (f0 ∘ g0)))).
 test_show_wf ((f ⊗ ((f ⊗ g) ∘ (g ⊗ id_ _)))).
 
 test_show_wf ((f ∘ id_ _ ∘ id_ _ ∘ id_ _ ∘ id_ _) 
-  ⊗ ((f ⊗ f0) ∘ (g ⊗ g0) ⊗ (f0 ∘ g0 ∘ id_ _))).
+  ⊗ ((f ⊗ f0 ∘ g ⊗ g0) ⊗ (f0 ∘ g0 ∘ id_ _))).
 
 
 
@@ -1445,7 +1445,7 @@ test_fence ((f ⊗ (f ∘ g) ⊗ (f0 ∘ g0 ∘ id_ _))).
 test_fence (((f ∘ id_ _ ∘ id_ _ ∘ id_ _ ∘ id_ _) 
   ⊗ (f ∘ g) ⊗ (f0 ∘ g0 ∘ id_ _))).
 test_fence ((f ∘ id_ _ ∘ id_ _ ∘ id_ _ ∘ id_ _) 
-  ⊗ ((f ⊗ f0) ∘ (g ⊗ g0) ⊗ (f0 ∘ g0 ∘ id_ _))).
+  ⊗ ((f ⊗ f0 ∘ g ⊗ g0) ⊗ (f0 ∘ g0 ∘ id_ _))).
 
 
 
@@ -1483,11 +1483,13 @@ Qed.
 
 End Testing.
 
+Local Close Scope Mor_scope.
 Local Close Scope Cat_scope.
 
 Module FutureDirections.
 
 Local Open Scope Cat_scope.
+Local Open Scope Mor_scope.
 
 Section CatExpr_orig.
 
@@ -1507,6 +1509,8 @@ Inductive cat_expr_o {C} `{cC : Category C}
     : cat_expr (cast A B HA HB f) *)
 
 End CatExpr_orig.
+
+(* Dependency cycle:
 
 Require Import RigCategory.
 
@@ -1543,7 +1547,7 @@ Inductive rigcat_expr {C} `{mC : PreDistributiveBimonoidalCategory C}
   | rigcat_times {A1 A2 B1 B2 : C} (g : A1 ~> A2) (h : B1 ~> B2) 
     : rigcat_expr (g ⊠ h).
 
-End CatExpr_hierarchy.
+End CatExpr_hierarchy. *)
 
 End FutureDirections.
 

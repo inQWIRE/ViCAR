@@ -25,8 +25,8 @@ Qed.
 #[export] Instance ZXCategory : Category nat := {
   morphism := ZX;
 
-  equiv := @proportional;
-  equiv_rel := @proportional_equiv;
+  c_equiv := @proportional;
+  c_equiv_rel := @proportional_equiv;
 
   compose := @Compose;
   compose_compat := @Proportional.compose_compat;
@@ -184,11 +184,11 @@ Proof.
 Qed.
 
 Definition ZXTensorBiFunctor : Bifunctor ZXCategory ZXCategory ZXCategory := {|
-  obj2_map := Nat.add;
-  morphism2_map := @Stack;
-  id2_map := n_wire_stack;
-  compose2_map := @stack_compose_distr;
-  morphism2_compat := @stack_simplify;
+  obj_bimap := Nat.add;
+  morphism_bimap := @Stack;
+  id_bimap := n_wire_stack;
+  compose_bimap := @stack_compose_distr;
+  morphism_bicompat := @stack_simplify;
 |}.
 
 #[export] Instance ZXMonoidalCategory : MonoidalCategory nat := {
@@ -450,8 +450,8 @@ Definition ZXBraidingIsomorphism : forall n m,
 
 #[export] Instance ZXBraidingBiIsomorphism : 
   NaturalBiIsomorphism ZXTensorBiFunctor (CommuteBifunctor ZXTensorBiFunctor) := {|
-  component2_iso := ZXBraidingIsomorphism;
-  component2_iso_natural := zx_braiding_iso_natural;
+  component_biiso := ZXBraidingIsomorphism;
+  component_biiso_natural := zx_braiding_iso_natural;
 |}.
 
 
@@ -562,7 +562,7 @@ Qed.
   adjoint_compat := Proportional.adjoint_compat;
 }.
 
-Lemma zx_dagger_compat : forall {n n' m m'} 
+Lemma zx_dagger_tensor_compat : forall {n n' m m'} 
   (zx0: ZX n m) (zx1 : ZX n' m'),
   zx0 †%ZX ↕ zx1 †%ZX ∝ (zx0 ↕ zx1) †%ZX.
 Proof.
@@ -1575,7 +1575,7 @@ Qed.
 
 
 #[export] Instance ZXDaggerMonoidalCategory : DaggerMonoidalCategory nat := {
-  dagger_compat := @zx_dagger_compat;
+  dagger_tensor_compat := @zx_dagger_tensor_compat;
 
   associator_unitary := fun A B M => 
     conj (@zx_associator_unitary_r A B M) (@zx_associator_unitary_l A B M);
@@ -1596,7 +1596,7 @@ Qed.
 
 
 
-(* 
+
 Ltac not_evar' v :=
   not_evar v; try (let v := eval unfold v in v in 
   tryif not_evar v then idtac else fail 1).
@@ -1675,7 +1675,7 @@ Lemma gen_id {n} : forall (zx : ZX n n) prfn prfm,
   evarify_cast'. (* Replace all proofs with evars *)
   rewrite temp_id.
   reflexivity.
-Qed. *)
+Qed.
 
 
 
@@ -1714,5 +1714,5 @@ Proof.
   |- (?T ≃ ?T')%Cat => 
     strong_fencepost_no_id T
   end.
-  easy.
+  easy. 
 Qed.

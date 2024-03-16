@@ -8,7 +8,7 @@ Require PeanoNat. (* only for eq_dep on nat *)
 
 Local Open Scope Cat.
 
-Class CastCategory (C : Type) {cC : Category C} : Type := {
+Class CastCategory {C : Type} (cC : Category C) : Type := {
   cast {A B A' B' : C} (HA : A = A') (HB : B = B') :
     A' ~> B' -> A ~> B;
   (* After experimentation, this is actually all we need: *)
@@ -46,11 +46,11 @@ Class CastCategory (C : Type) {cC : Category C} : Type := {
 Notation "'cast' A B f" := (@cast _ _ _ A B _ _ _ _ f) 
   (at level 0, A at next level, B at next level, only printing).
 
-Add Parametric Morphism {C : Type} `{cC : Category C, castC : !CastCategory C}
+Add Parametric Morphism {C : Type} {cC : Category C} {castC : CastCategory cC}
   {A B : C} {A' B' : C}
   {prfA : A = A'} {prfB : B = B'} : (@cast C cC castC A B A' B' prfA prfB)
   with signature
-  (@Category.equiv C cC A' B') ==> (@Category.equiv C cC A B) as cast_equiv_morphism.
+  (@c_equiv C cC A' B') ==> (@c_equiv C cC A B) as cast_equiv_morphism.
 Proof.
   intros. 
   subst.
@@ -58,7 +58,7 @@ Proof.
   easy.
 Qed.
 
-Lemma cast_id {C} `{castC : CastCategory C}
+Lemma cast_id {C} {cC : Category C} {castC : CastCategory cC}
   (A A' : C) (HA1 HA2 : A = A') :
   cast HA1 HA2 (id_ A') ≃ id_ A.
 Proof.
@@ -66,7 +66,7 @@ Proof.
   apply cast_refl.
 Qed.
 
-Lemma cast_compose_gen {C} `{castC : CastCategory C}
+Lemma cast_compose_gen {C} {cC : Category C} {castC : CastCategory cC}
   {A A' B M M' : C} (HA : A = A') (HM : M = M')
     (HB1 HB2 : B = B)
     (f : A' ~> B) (g: B ~> M') : 
@@ -77,7 +77,7 @@ Proof.
   easy.
 Qed.
 
-Lemma cast_compose {C} `{castC : CastCategory C}
+Lemma cast_compose {C} {cC : Category C} {castC : CastCategory cC}
   {A A' B M M' : C} (HA : A = A') (HM : M = M')
     (f : A' ~> B) (g: B ~> M') : 
     cast HA HM (f ∘ g) ≃ cast HA eq_refl f ∘ cast eq_refl HM g.
@@ -85,7 +85,7 @@ Proof.
   apply cast_compose_gen.
 Qed.
 
-Lemma cast_invertible {C} `{castC : CastCategory C}
+Lemma cast_invertible {C} {cC : Category C} {castC : CastCategory cC}
   {A B A' B' : C} 
   (HA : A' = A) (HB : B' = B) (HA' : A = A') (HB' : B = B') f : 
   cast HA' HB' (cast HA HB f) ≃ f.
@@ -95,7 +95,7 @@ Proof.
   easy.
 Qed.
   
-Lemma cast_cast_gen {C} `{castC : CastCategory C} 
+Lemma cast_cast_gen {C} {cC : Category C} {castC : CastCategory cC} 
   {A B A' B' A'' B''} (HA : A = A') (HB : B = B') 
   (HA' : A' = A'') (HB' : B' = B'') (HA'' : A = A'') (HB'' : B = B'')
   : forall f,
@@ -107,7 +107,7 @@ Proof.
   easy.
 Qed.
 
-Lemma cast_cast {C} `{castC : CastCategory C} 
+Lemma cast_cast {C} {cC : Category C} {castC : CastCategory cC} 
   {A B A' B' A'' B''} (HA : A = A') (HB : B = B') 
   (HA' : A' = A'') (HB' : B' = B'') : forall f,
   cast HA HB (cast HA' HB' f) ≃ cast (eq_trans HA HA') (eq_trans HB HB') f.
@@ -115,7 +115,7 @@ Proof.
   apply cast_cast_gen.
 Qed.
 
-Lemma cast_irrelevance {C} `{castC : CastCategory C} 
+Lemma cast_irrelevance {C} {cC : Category C} {castC : CastCategory cC} 
   {A B A' B'} (HA1 HA2 : A = A') (HB1 HB2 : B = B') : forall f,
   cast HA1 HB1 f ≃ cast HA2 HB2 f.
 Proof.
@@ -125,7 +125,7 @@ Proof.
   easy.
 Qed.
 
-Lemma cast_simplify {C} `{castC : CastCategory C} 
+Lemma cast_simplify {C} {cC : Category C} {castC : CastCategory cC} 
   {A B A' B'} (HA1 HA2 : A = A') (HB1 HB2 : B = B') : forall f g,
   f ≃ g -> cast HA1 HB1 f ≃ cast HA2 HB2 g.
 Proof.
@@ -134,7 +134,7 @@ Proof.
   apply cast_irrelevance.
 Qed.
 
-Lemma cast_compatability {C} `{castC : CastCategory C} 
+Lemma cast_compatability {C} {cC : Category C} {castC : CastCategory cC} 
   {A B A' B'} (HA1 HA2 : A = A') (HB1 HB2 : B = B') : forall f g,
   cast HA1 HB1 f ≃ cast HA2 HB2 g -> f ≃ g.
 Proof.
@@ -144,7 +144,7 @@ Proof.
   easy.
 Qed.
 
-Lemma cast_equiv_iff {C} `{castC : CastCategory C} 
+Lemma cast_equiv_iff {C} {cC : Category C} {castC : CastCategory cC} 
   {A B A' B'} (HA1 HA2 : A = A') (HB1 HB2 : B = B') : forall f g,
   cast HA1 HB1 f ≃ cast HA2 HB2 g <-> f ≃ g.
 Proof.
@@ -154,7 +154,7 @@ Proof.
   - apply cast_simplify. 
 Qed.
 
-Lemma cast_symmetry {C} `{castC : CastCategory C} 
+Lemma cast_symmetry {C} {cC : Category C} {castC : CastCategory cC} 
   {A B A' B'} (HA : A = A') (HB : B = B') 
   (HA' : A' = A) (HB' : B' = B) : forall f g,
   cast HA HB f ≃ g <-> f ≃ cast HA' HB' g.
@@ -165,7 +165,7 @@ Proof.
   easy.
 Qed.
 
-Lemma cast_symmetry_swap {C} `{castC : CastCategory C} 
+Lemma cast_symmetry_swap {C} {cC : Category C} {castC : CastCategory cC} 
   {A B A' B'} (HA : A = A') (HB : B = B') 
   (HA' : A' = A) (HB' : B' = B) : forall f g,
   cast HA HB f ≃ g <-> cast HA' HB' g ≃ f.
@@ -175,7 +175,7 @@ Proof.
   split; intros H; symmetry; apply H.
 Qed.
 
-Lemma compose_cast_mid_gen {C} `{castC : CastCategory C} 
+Lemma compose_cast_mid_gen {C} {cC : Category C} {castC : CastCategory cC} 
   {A M M' B : C} (HM1 HM2 : M = M') (HA : A = A) (HB : B = B) : 
   forall (f : A ~> M') (g : M' ~> B), 
   f ∘ g ≃ cast HA HM1 f ∘ cast HM2 HB g.
@@ -186,7 +186,7 @@ Proof.
   easy.
 Qed.
 
-Lemma compose_cast_mid {C} `{castC : CastCategory C} 
+Lemma compose_cast_mid {C} {cC : Category C} {castC : CastCategory cC} 
   {A M M' B : C} (HM : M = M'): 
   forall (f : A ~> M') (g : M' ~> B), 
   f ∘ g ≃ cast eq_refl HM f ∘ cast HM eq_refl g.
@@ -194,7 +194,7 @@ Proof.
   apply compose_cast_mid_gen.
 Qed.
 
-Lemma cast_compose_distribute_gen {C} `{castC : CastCategory C} 
+Lemma cast_compose_distribute_gen {C} {cC : Category C} {castC : CastCategory cC} 
   (A A' M M' B B' : C) 
   (HA1 HA2 : A = A') (HB1 HB2 : B = B') (HM1 HM2 : M = M') :
   forall (f : A' ~> M') (g : M' ~> B'),
@@ -206,7 +206,7 @@ Proof.
   easy.
 Qed.
 
-Lemma cast_compose_distribute {C} `{castC : CastCategory C} 
+Lemma cast_compose_distribute {C} {cC : Category C} {castC : CastCategory cC} 
   (A A' M M' B B' : C) (HA : A = A') (HB : B = B') (HM : M = M') :
   forall (f : A' ~> M') (g : M' ~> B'),
   cast HA HB (f ∘ g) ≃ cast HA HM f ∘ cast HM HB g.
@@ -214,7 +214,7 @@ Proof.
   apply cast_compose_distribute_gen.
 Qed.
 
-Lemma cast_compose_split_gen {C} `{castC : CastCategory C} 
+Lemma cast_compose_split_gen {C} {cC : Category C} {castC : CastCategory cC} 
   (A A' M B B' : C) 
   (HA1 HA2 : A = A') (HB1 HB2 : B = B') (HM1 HM2 : M = M) :
   forall (f : A' ~> M) (g : M ~> B'),
@@ -223,7 +223,7 @@ Proof.
   apply cast_compose_distribute_gen.
 Qed.
 
-Lemma cast_compose_split {C} `{castC : CastCategory C} 
+Lemma cast_compose_split {C} {cC : Category C} {castC : CastCategory cC} 
   (A A' M B B' : C) (HA : A = A') (HB : B = B') :
   forall (f : A' ~> M) (g : M ~> B'),
   cast HA HB (f ∘ g) ≃ cast HA eq_refl f ∘ cast eq_refl HB g.
@@ -232,7 +232,7 @@ Proof.
 Qed.
 
 
-Lemma cast_compose_l_gen {C} `{castC : CastCategory C} 
+Lemma cast_compose_l_gen {C} {cC : Category C} {castC : CastCategory cC} 
   (A A' M M' B : C) (HA1 HA2 : A = A') (HM : M = M') 
   (HM' : M' = M) (HB1 HB2 : B = B) :
   forall (f : A' ~> M') (g : M ~> B),
@@ -244,7 +244,7 @@ Proof.
   easy.
 Qed.
 
-Lemma cast_compose_l {C} `{castC : CastCategory C} 
+Lemma cast_compose_l {C} {cC : Category C} {castC : CastCategory cC} 
   (A A' M M' B : C) (HA : A = A') (HM : M = M') :
   forall (f : A' ~> M') (g : M ~> B),
   cast HA HM f ∘ g ≃ cast HA eq_refl (f ∘ cast (eq_sym HM) eq_refl g).
@@ -252,7 +252,7 @@ Proof.
   apply cast_compose_l_gen.
 Qed.
 
-Lemma cast_compose_r_gen {C} `{castC : CastCategory C} 
+Lemma cast_compose_r_gen {C} {cC : Category C} {castC : CastCategory cC} 
   (A M M' B B' : C) (HA1 HA2 : A = A) (HM : M = M') 
   (HM' : M' = M) (HB1 HB2 : B = B') :
   forall (f : A ~> M) (g : M' ~> B'),
@@ -264,7 +264,7 @@ Proof.
   easy.
 Qed.
 
-Lemma cast_compose_r {C} `{castC : CastCategory C} 
+Lemma cast_compose_r {C} {cC : Category C} {castC : CastCategory cC} 
   (A M M' B B' : C) (HM : M = M') (HB : B = B') :
   forall (f : A ~> M) (g : M' ~> B'),
   f ∘ cast HM HB g ≃ cast eq_refl HB (cast eq_refl (eq_sym HM) f ∘ g).
@@ -272,7 +272,7 @@ Proof.
   apply cast_compose_r_gen.
 Qed.
 
-Lemma cast_contract_l_gen {C} `{castC : CastCategory C} 
+Lemma cast_contract_l_gen {C} {cC : Category C} {castC : CastCategory cC} 
   {A A' A'' B B' B'' : C} (HA1 : A = A') (HA2 : A = A'')
   (HB1 : B = B') (HB2 : B = B'') (HA3 : A'' = A') (HB3 : B'' = B'):
   forall (f : A' ~> B') (g : A'' ~> B''),
@@ -284,7 +284,7 @@ Proof.
   easy.
 Qed.
 
-Lemma cast_contract_l {C} `{castC : CastCategory C} 
+Lemma cast_contract_l {C} {cC : Category C} {castC : CastCategory cC} 
   {A A' A'' B B' B'' : C} (HA1 : A = A') (HA2 : A = A'')
   (HB1 : B = B') (HB2 : B = B'') :
   forall (f : A' ~> B') (g : A'' ~> B''),
@@ -294,7 +294,7 @@ Proof.
   apply cast_contract_l_gen.
 Qed.
 
-Lemma cast_contract_r_gen {C} `{castC : CastCategory C} 
+Lemma cast_contract_r_gen {C} {cC : Category C} {castC : CastCategory cC} 
   {A A' A'' B B' B'' : C} (HA1 : A = A') (HA2 : A = A'')
   (HB1 : B = B') (HB2 : B = B'') (HA3 : A' = A'') (HB3 : B' = B''):
   forall (f : A' ~> B') (g : A'' ~> B''),
@@ -306,7 +306,7 @@ Proof.
   easy.
 Qed.
 
-Lemma cast_contract_r {C} `{castC : CastCategory C} 
+Lemma cast_contract_r {C} {cC : Category C} {castC : CastCategory cC} 
   {A A' A'' B B' B'' : C} (HA1 : A = A') (HA2 : A = A'')
   (HB1 : B = B') (HB2 : B = B'') :
   forall (f : A' ~> B') (g : A'' ~> B''),
@@ -320,7 +320,7 @@ Qed.
 
 
 
-Lemma cast_function {C} `{castC : CastCategory C} 
+Lemma cast_function {C} {cC : Category C} {castC : CastCategory cC} 
   {A B A' B'} (HA : A = A') (HB : B = B') (f : forall a b, a ~> b) :
   cast HA HB (f A' B') ≃ f A B.
 Proof.
@@ -329,7 +329,7 @@ Proof.
   easy.
 Qed.
 
-Lemma cast_function_diag {C} `{castC : CastCategory C} 
+Lemma cast_function_diag {C} {cC : Category C} {castC : CastCategory cC} 
   {A A'} (HA1 HA2 : A = A') (f : forall a, a ~> a) :
   cast HA1 HA2 (f A') ≃ f A.
 Proof.
@@ -484,8 +484,8 @@ Qed. *)
 
 
 (* Section for monoidal category casts *)
-Lemma cast_tensor {C} `{cC : Category C}
-  `{monC : !MonoidalCategory C} `{castC : @CastCategory C cC}
+Lemma cast_tensor {C} {cC : Category C}
+  {monC : MonoidalCategory cC} {castC : CastCategory cC}
   {A B M N A' B' M' N' : C} 
   (HA : A = A') (HB : B = B') (HM : M = M') (HN : N = N') 
   (HAB : A × B = A' × B') (HMN : M × N = M' × N') : forall f g, 
@@ -497,8 +497,8 @@ Proof.
   easy.
 Qed.
 
-Lemma cast_tensor_r_gen {C} `{cC : Category C}
-  `{monC : @MonoidalCategory C cC} `{castC : @CastCategory C cC}
+Lemma cast_tensor_r_gen {C} {cC : Category C}
+  {monC : MonoidalCategory cC} {castC : CastCategory cC}
   {A B M N M' N' : C} (HM : M = M') (HN : N = N') 
   (HAM : A × M = A × M') (HBN : B × N = B × N') : forall f g, 
   f ⊗ cast HM HN g ≃ cast HAM HBN (f ⊗ g).
@@ -512,8 +512,8 @@ Qed.
 Definition __cast_tensor_r_proof {C} `{monC : MonoidalCategory C}
   {M M' : C} (HM : M = M') A : A × M = A × M' := ltac:(subst;easy).
 
-Lemma cast_tensor_r {C} `{cC : Category C}
-  `{monC : @MonoidalCategory C cC} `{castC : @CastCategory C cC}
+Lemma cast_tensor_r {C} {cC : Category C}
+  {monC : MonoidalCategory cC} {castC : CastCategory cC}
   {A B M N M' N' : C} (HM : M = M') (HN : N = N') : forall (f : A ~> B) g,
   f ⊗ cast HM HN g ≃ 
   cast (__cast_tensor_r_proof HM A) (__cast_tensor_r_proof HN B) (f ⊗ g).
@@ -521,8 +521,8 @@ Proof.
   apply cast_tensor_r_gen.
 Qed.
   
-Lemma cast_tensor_l_gen {C} `{cC : Category C}
-  `{monC : @MonoidalCategory C cC} `{castC : @CastCategory C cC}
+Lemma cast_tensor_l_gen {C} {cC : Category C}
+  {monC : MonoidalCategory cC} {castC : CastCategory cC}
   {A B A' B' M N : C} (HA : A = A') (HB : B = B') 
   (HAM : A × M = A' × M) (HBN : B × N = B' × N) : forall f g, 
   cast HA HB f ⊗ g ≃ cast HAM HBN (f ⊗ g).
@@ -536,20 +536,21 @@ Qed.
 Definition __cast_tensor_l_proof {C} `{monC : MonoidalCategory C}
   {A A' : C} (HA : A = A') M : A × M = A' × M := ltac:(subst;easy).
 
-Lemma cast_tensor_l {C} `{cC : Category C, monC : !MonoidalCategory C, castC : !CastCategory C}
+Lemma cast_tensor_l {C} {cC : Category C}
+  {monC : MonoidalCategory cC} {castC : CastCategory cC}
   {A B A' B' M N : C} (HA : A = A') (HB : B = B') : forall f (g: M ~> N),
-  cast HA HB f ⊗ g ≃ cast (__cast_tensor_l_proof HA M) (__cast_tensor_l_proof HB N) (f ⊗ g).
+  cast HA HB f ⊗ g ≃ 
+  cast (__cast_tensor_l_proof HA M) (__cast_tensor_l_proof HB N) (f ⊗ g).
 Proof.
   apply cast_tensor_l_gen.
 Qed.
 
 
 (* Section for dagger category casts *)
-Lemma cast_dagger_gen {C} `{cC : Category C} `{dagC : @DaggerCategory C cC}
-  `{castC : @CastCategory C cC} {A B A' B' : C} 
-  (HA1 HA2 : A = A') (HB1 HB2 : B = B'): 
-  forall f,
-  (cast HA1 HB1 f) † ≃ cast HB2 HA2 (f †).
+Lemma cast_dagger_gen {C} {cC : Category C}
+  {dagC : DaggerCategory cC} {castC : CastCategory cC}
+  {A B A' B' : C} (HA1 HA2 : A = A') (HB1 HB2 : B = B'): 
+  forall f, (cast HA1 HB1 f) † ≃ cast HB2 HA2 (f †).
 Proof.
   intros.
   subst.
@@ -557,11 +558,10 @@ Proof.
   easy.
 Qed.
 
-Lemma cast_dagger {C} `{cC : Category C} `{dagC : @DaggerCategory C cC}
-  `{castC : @CastCategory C cC} {A B A' B' : C} 
-  (HA : A = A') (HB : B = B'): 
-  forall f,
-  (cast HA HB f) † ≃ cast HB HA (f †).
+Lemma cast_dagger {C} {cC : Category C}
+  {dagC : DaggerCategory cC} {castC : CastCategory cC}
+  {A B A' B' : C} (HA : A = A') (HB : B = B'): 
+  forall f, (cast HA HB f) † ≃ cast HB HA (f †).
 Proof.
   apply cast_dagger_gen; easy.
 Qed.

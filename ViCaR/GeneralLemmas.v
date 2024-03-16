@@ -30,11 +30,11 @@ Lemma stack_compose_distr_test : forall {C : Type}
   (f ∘ g) ⊗ (h ∘ i) ≃ (f ⊗ h) ∘ (g ⊗ i).
 Proof.
   intros.
-  rewrite compose2_map.
+  rewrite compose_bimap.
   easy.
 Qed.
 
-(* Local Notation "A ⨂ B" := (morphism2_map (Bifunctor:=tensor) A B) (only printing). *)
+(* Local Notation "A ⨂ B" := (morphism_bimap (Bifunctor:=tensor) A B) (only printing). *)
 
 
 Lemma stack_distr_pushout_r_bot : forall {C : Type}
@@ -43,7 +43,7 @@ Lemma stack_distr_pushout_r_bot : forall {C : Type}
   f ∘ g ⊗ h ≃ f ⊗ h ∘ (g ⊗ (id_ n)).
 Proof.
   intros.
-  rewrite <- compose2_map, right_unit.
+  rewrite <- compose_bimap, right_unit.
   easy.
 Qed.
 
@@ -55,7 +55,7 @@ Lemma stack_distr_pushout_r_top : forall {C : Type}
   f ⊗ (g ∘ h) ≃ f ⊗ g ∘ (id_ b ⊗ h).
 Proof.
   intros.
-  rewrite <- compose2_map, right_unit.
+  rewrite <- compose_bimap, right_unit.
   easy.
 Qed.
 
@@ -71,7 +71,7 @@ Qed.
   first [ match goal with
   |- context[(?f ∘ ?g) ⊗ (?h ∘ ?i)] =>
       test_simple f; test_simple g; test_simple h; test_simple i;
-      rewrite (compose2_map f g h i)
+      rewrite (compose_bimap f g h i)
   end | match goal with
   |- context[(?f) ⊗ (?g ∘ ?h)] =>
       test_simple f; test_simple g; test_simple h;
@@ -116,7 +116,7 @@ Lemma nwire_stack_compose_topleft_general : forall {C : Type}
   ((c_identity topIn) ⊗ f0) ∘ (f1 ⊗ (c_identity botOut)) ≃ (f1 ⊗ f0).
 Proof.
   intros.
-  rewrite <- compose2_map.
+  rewrite <- compose_bimap.
   rewrite left_unit; rewrite right_unit.
   easy.
 Qed.
@@ -128,7 +128,7 @@ Lemma nwire_stackcompose_topright_general : forall {C : Type}
   (f0 ⊗ (c_identity botIn)) ∘ ((c_identity topOut) ⊗ f1) ≃ (f0 ⊗ f1).
 Proof.
   intros.
-  rewrite <- compose2_map.
+  rewrite <- compose_bimap.
   rewrite right_unit, left_unit.
   easy.
 Qed.
@@ -140,7 +140,7 @@ Lemma stack_id_compose_split_top : forall {C : Type}
   (f0 ∘ f1) ⊗ (id_ bot) ≃ f0 ⊗ id_ bot ∘ (f1 ⊗ id_ bot).
 Proof.
   intros.
-  rewrite <- compose2_map, left_unit.
+  rewrite <- compose_bimap, left_unit.
   easy.
 Qed.
 
@@ -151,7 +151,7 @@ Lemma stack_id_compose_split_bot : forall {C : Type}
   (id_ top) ⊗ (f0 ∘ f1) ≃ id_ top ⊗ f0 ∘ (id_ top ⊗ f1).
 Proof.
   intros.
-  rewrite <- compose2_map, left_unit.
+  rewrite <- compose_bimap, left_unit.
   easy.
 Qed.
 

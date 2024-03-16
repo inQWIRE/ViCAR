@@ -84,8 +84,8 @@ Qed.
 
 #[export] Instance RelationCategory : Category nat := {
   morphism := @reln;
-  equiv := @reln_equiv;
-  equiv_rel := @reln_equiv_equivalence;
+  c_equiv := @reln_equiv;
+  c_equiv_rel := @reln_equiv_equivalence;
   compose := @compose_relns;
   compose_compat := @compose_relns_compat;
   assoc := @compose_relns_assoc;
@@ -293,8 +293,8 @@ Qed.
 #[export] Instance StackRelnsBifunctor : 
   Bifunctor RelationCategory RelationCategory RelationCategory. 
   refine {|
-    obj2_map := Nat.add;
-    morphism2_map := stack_relns;
+    obj_bimap := Nat.add;
+    morphism_bimap := stack_relns;
   |}.
 Proof.
   - apply stack_relns_idn.
@@ -363,13 +363,13 @@ Defined.
 Defined.
 
 Lemma reln_hexagon_1 : forall A B M : nat,
-  (morphism2_map (BraidRelationNaturalBiIsomorphism A B) (id_ M) ∘ associator
-    ∘ morphism2_map (id_ B) (BraidRelationNaturalBiIsomorphism A M)
+  (morphism_bimap (BraidRelationNaturalBiIsomorphism A B) (id_ M) ∘ associator
+    ∘ morphism_bimap (id_ B) (BraidRelationNaturalBiIsomorphism A M)
    ≃ associator ∘ BraidRelationNaturalBiIsomorphism A (B × M) ∘ associator)%Cat.
 Proof.
   unfold braid_relation.
   simpl (forward).
-  simpl (obj2_map).
+  simpl (obj_bimap).
   intros n m o.
 
   rewrite (Nat.add_comm m n).
@@ -407,13 +407,13 @@ Proof.
 Qed.
 
 Lemma reln_hexagon_2 : forall A B M : nat,
-(morphism2_map (BraidRelationNaturalBiIsomorphism B A ^-1) (id_ M) ∘ associator
- ∘ morphism2_map (id_ B) (BraidRelationNaturalBiIsomorphism M A ^-1)
+(morphism_bimap (BraidRelationNaturalBiIsomorphism B A ^-1) (id_ M) ∘ associator
+ ∘ morphism_bimap (id_ B) (BraidRelationNaturalBiIsomorphism M A ^-1)
  ≃ associator ∘ BraidRelationNaturalBiIsomorphism (B × M) A ^-1 ∘ associator)%Cat. 
 Proof.
   simpl (forward).
   simpl (reverse).
-  simpl (obj2_map).
+  simpl (obj_bimap).
   intros n m o.
 
   rewrite (Nat.add_comm m n).

@@ -5,19 +5,20 @@ Require Import Monoidal.
 #[local] Set Universe Polymorphism.
 
 Local Open Scope Cat.
+Local Open Scope Mon.
 
-Class DaggerMonoidalCategory (C : Type) 
-  `{!Category C, !DaggerCategory C, !MonoidalCategory C} : Type := {
-  dagger_compat {A B M N : C} {f : A ~> M} {g : B ~> N} :
+Class DaggerMonoidalCategory {C : Type} {cC : Category C} 
+  (dagC : DaggerCategory cC) (mC : MonoidalCategory cC) : Type := {
+  dagger_tensor_compat {A B M N : C} (f : A ~> M) (g : B ~> N) :
     f † ⊗ g † ≃ (f ⊗ g) †;
   
   associator_unitary {A B M : C} : 
-    unitary (@associator C _ _ A B M);
+    unitary (associator A B M);
   left_unitor_unitary {A : C} : 
-    unitary (left_unitor (A:=A));
+    unitary (left_unitor A);
   
   right_unitor_unitary {A : C} : 
-    unitary (right_unitor (A:=A));
+    unitary (right_unitor A);
       
   
   (* associator_unitary_r {A B M : C} : 

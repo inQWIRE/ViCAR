@@ -5,8 +5,8 @@ Require Import ExamplesAutomation.
 #[export] Instance MxCategory : Category nat := {
   morphism := Matrix;
 
-  equiv := @mat_equiv;  (* fun m n => @eq (Matrix m n); *)
-  equiv_rel := @mat_equiv_equivalence;
+  c_equiv := @mat_equiv;  (* fun m n => @eq (Matrix m n); *)
+  c_equiv_rel := @mat_equiv_equivalence;
 
   compose := @Mmult;
   compose_compat := fun n m o f g Hfg h i Hhi =>
@@ -107,11 +107,11 @@ Proof.
 Qed.
 
 Definition MxDirectSumBiFunctor : Bifunctor MxCategory MxCategory MxCategory := {|
-  obj2_map := Nat.add;
-  morphism2_map := @direct_sum';
-  id2_map := direct_sum'_id_mat_equiv;
-  compose2_map := @direct_sum'_Mmult;
-  morphism2_compat := @direct_sum'_simplify_mat_equiv;
+  obj_bimap := Nat.add;
+  morphism_bimap := @direct_sum';
+  id_bimap := direct_sum'_id_mat_equiv;
+  compose_bimap := @direct_sum'_Mmult;
+  morphism_bicompat := @direct_sum'_simplify_mat_equiv;
 |}.
 
 #[export] Instance MxDirectSumMonoidalCategory : MonoidalCategory nat := {
@@ -242,8 +242,8 @@ Definition MxBraidingIsomorphism : forall n m,
 
 #[export] Instance MxBraidingBiIsomorphism : 
   NaturalBiIsomorphism MxDirectSumBiFunctor (CommuteBifunctor MxDirectSumBiFunctor) := {|
-  component2_iso := MxBraidingIsomorphism;
-  component2_iso_natural := ltac:(intros; simpl in *; 
+  component_biiso := MxBraidingIsomorphism;
+  component_biiso_natural := ltac:(intros; simpl in *; 
     restore_dims; rewrite mx_braiding_braids_eq; easy);
 |}.
 
@@ -643,7 +643,7 @@ Proof.
   bdestructΩ'.
 Qed.
 
-(* 
+
 Ltac not_evar' v :=
   not_evar v; try (let v := eval unfold v in v in 
   tryif not_evar v then idtac else fail 1).
@@ -1038,6 +1038,67 @@ let h := (head_fns @direct_sum'_id) in idtac h.
 let h := (head_fn @Mmult_1_l) in idtac h.
 
 
+(* Require Import List. *)
+
+Ltac evarify_idxs f idxs evars :=
+  lazymatch idxs with
+  | [] => constr:(f)
+  | O :: ?ls => 
+    let _ := match goal with _ => idtac "hit" end in
+    lazymatch type of f with
+    | forall (a : ?A), ?P => 
+      let _:=match goal with _=>idtac "indep:" f ": forall (a :" A ")," P end in
+      (* let a' := mk_evar A in *)
+      lazymatch evars with | ?a :: ?vars =>
+      let f' := evarify_idxs (f a) ls vars in
+      let _:= match goal with _ => idtac "   rec to" f' end in
+      constr:(fun (b:A) => f')
+      | _ => 
+        let _ := match goal with 
+        _ => 
+        idtac "ERROR: Not enough evars! For evarify_idxs" f idxs evars "(returning first arg)"
+        end in constr:(f)
+      end
+    (* | forall (a : ?A), ?P a => 
+      idtac "dep:" f ": forall (a :" A ")," P "a";
+      let a' := mk_evar A in
+      constr:(forall (a:A),
+      ltac:(
+        exact (f a'))
+        ) *)
+    end
+  | (S ?n') :: ?ls => 
+    let _ := match goal with _ => idtac "dec" end in
+    lazymatch type of f with
+    | forall (a : ?A), ?P => 
+      constr:(fun (a : A) =>
+        ltac:(
+          let f' := evarify_idxs (f a) constr:(n' :: ls) evars in
+          let _ := match goal with _ => idtac "subcall gave" f' end in
+          exact f'))
+    | _ =>
+      let _ := match goal with _ => idtac "no more args" end in
+        constr:(f)
+    end
+  end.
+
+
+let a := mk_evar nat in
+let b := mk_evar nat in 
+let t := (evarify_idxs @Mmult [S O; O] [a; b]) in idtac t.
+
+specialize id_adjoint_eq as H;
+let a := mk_evar nat in
+let b := mk_evar nat in 
+let t := (evarify_idxs @adjoint [O; O] [a; b]) in
+match H with
+| context[@adjoint ?n ?m] =>
+    replace (@adjoint n m) with (t n m) in H
+end.
+replace (@adjoint ?n ?m) with (t ?n ?m) in H.
+
+
+
 
 evarify_2func' @adjoint.
 
@@ -1048,10 +1109,18 @@ rewrite Mmult_1_r_mat_eq.
 split; f_equiv; lia.
 Unshelve.
 all : lia.
-Qed. *)
+Qed.
+
+
+
+
+
+
+
+
 
 #[export] Instance MxDaggerMonoidalCategory : DaggerMonoidalCategory nat := {
-  dagger_compat := ltac: (intros; apply direct_sum'_adjoint);
+  dagger_tensor_compat := ltac: (intros; apply direct_sum'_adjoint);
 
   associator_unitary := ltac:(intros; unfold unitary; simpl in *;
     rewrite Nat.add_assoc, id_adjoint_eq, Mmult_1_r by auto with wf_db;

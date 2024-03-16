@@ -8,9 +8,10 @@ Require Import DaggerMonoidal.
 
 Local Open Scope Cat.
 
-Class DaggerBraidedMonoidalCategory (C : Type) 
-    `{!Category C} `{!DaggerCategory C} `{!MonoidalCategory C} 
-    `{!DaggerMonoidalCategory C} `{!BraidedMonoidalCategory C} : Type := {}.
+Class DaggerBraidedMonoidalCategory {C : Type} {cC : Category C} 
+  {dagC : DaggerCategory cC} {mC : MonoidalCategory cC}
+  (mdagC : DaggerMonoidalCategory dagC mC) (bC : BraidedMonoidalCategory mC)
+   : Type := {}.
 
 
 Local Close Scope Cat.
