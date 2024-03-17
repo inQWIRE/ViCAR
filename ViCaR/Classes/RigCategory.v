@@ -174,11 +174,10 @@ Notation "'[×]'" := (addC) (at level 0) : Rig_scope. *)
 
 Section CoherenceConditions.
 
-Variables (DD : Type).
-Context {cC : Category DD}
+Context {DD : Type} {cC : Category DD}
   {mAddC : MonoidalCategory cC} {bAddC : BraidedMonoidalCategory mAddC}
-  (AddC : SymmetricMonoidalCategory bAddC)
-  (MulC : MonoidalCategory cC)
+  {AddC : SymmetricMonoidalCategory bAddC}
+  {MulC : MonoidalCategory cC}
   (pdC : PreDistributiveBimonoidalCategory AddC MulC)
   (rC : DistributiveBimonoidalCategory pdC).
 
@@ -284,7 +283,7 @@ Definition condition_XV `{@BraidedMonoidalCategory DD cC MulC} :=
 
 
 
-
+(* 
 
 
 
@@ -624,7 +623,7 @@ Proof.
     apply stack_distr_pushout_l_top.
 Qed.
 
-Lemma distributive_hexagon_1 `{BMulC: @BraidedMonoidalCategory DD cC MulC} : 
+Lemma distributive_hexagon_1 {BMulC : BraidedMonoidalCategory MulC} : 
   forall (A B C D : DD),
   id_ A ⊠ γ_ B, C ⊞ id_ A ⊠ γ_ B, D ∘ γ_ A,(C×B) ⊞ γ_ A, (D×B)
    ∘ α^-1_ C,B,A ⊞ α^-1_ D,B,A ∘ id_ C ⊠ (γ_ A, B)^-1 ⊞ id_ D ⊠ (γ_ A, B)^-1
@@ -635,7 +634,7 @@ Proof.
   apply morphism_bicompat; apply hexagon_resultant_1.
 Qed.
 
-Lemma distributive_hexagon_2 `{BMulC: @BraidedMonoidalCategory DD cC MulC} : 
+Lemma distributive_hexagon_2 {BMulC : BraidedMonoidalCategory MulC} : 
   forall (A B C D : DD),
   id_ A ⊠ γ_ B,(C+D) ∘ γ_ A,((C+D)×B) 
    ∘ α^-1_ (C+D), B, A ∘ id_(C+D) ⊠ (γ_ A,B)^-1
@@ -645,7 +644,7 @@ Proof.
   apply hexagon_resultant_1.
 Qed.
 
-Lemma equivalence_3_helper_1 `{BMul: @BraidedMonoidalCategory DD cC MulC} :
+Lemma equivalence_3_helper_1 {BMul : BraidedMonoidalCategory MulC} :
   forall (A B C D : DD),
   α^-1_ (C+D), B, A 
   ≃ (γ_ A,((C+D)×B)) ^-1 ∘ id_ A ⊠ (γ_ B, (C+D)) ^-1
@@ -664,6 +663,8 @@ Proof.
   apply distributive_hexagon_2.
 Qed.
 
+Lemma equivalence_3_helper_2 {BMul : BraidedMonoidalCategory MulC} :
+  forall (A B C D : DD),
 
 
 
@@ -886,11 +887,39 @@ Proof.
     rewrite e; clear e.
     Admitted.
 
-.
+. *)
+End CoherenceConditions.
 
+Class SemiCoherent_DistributiveBimonoidalCategory {DD : Type} {cC : Category DD}
+  {mAddC : MonoidalCategory cC} {bAddC : BraidedMonoidalCategory mAddC}
+  {AddC : SymmetricMonoidalCategory bAddC}
+  {MulC : MonoidalCategory cC}
+  {pdC : PreDistributiveBimonoidalCategory AddC MulC}
+  (rC : DistributiveBimonoidalCategory pdC) := {
+  cond_I     : condition_I       _;
+  cond_III   : condition_III     _;
+  cond_IV    : condition_IV      _;
+  cond_V     : condition_V       _;
+  cond_VI    : condition_VI      _;
+  cond_VII   : condition_VII     _;
+  cond_VIII  : condition_VIII    _;
+  cond_IX    : condition_IX      _;
+  cond_X     : condition_X       _ _;
+  cond_XI    : condition_XI      _ _;
+  cond_XII   : condition_XII     _ _;
+  cond_XIII  : condition_XIII    _ _;
+  cond_XIV   : condition_XIV     _ _;
+  cond_XVI   : condition_XVI     _ _;
+  cond_XVII  : condition_XVII    _ _;
+  cond_XVIII : condition_XVIII   _ _;
+  cond_XIX   : condition_XIX     _ _;
+  cond_XX    : condition_XX      _ _;
+  cond_XXI   : condition_XXI     _ _;
+  cond_XXII  : condition_XXII    _ _;
+  cond_XXIII : condition_XXIII   _;
+  cond_XXIV  : condition_XXIV    _;
 
-Class SemiCoherent_DistributiveBimonoidalCategory {DD : Type} `(rC : DistributiveBimonoidalCategory DD) := {
-  condition_I (A B C : DD) : 
+(* condition_I (A B C : DD) : 
     δ_ A,B,C ∘ γ'_ (A×B), (A×C) ≃ 
     id_ A ⊠ γ'_ B, C ∘ δ_ A, C, B;
   condition_III (A B C : DD) :
@@ -957,21 +986,28 @@ Class SemiCoherent_DistributiveBimonoidalCategory {DD : Type} `(rC : Distributiv
   condition_XXIV (A B : DD) :
     δ#_ A,B,c1 ∘ (ρ_ A ⊞ ρ_ B)
     ≃ ρ_ (A+B);
+*)
 }. 
 
 
 
 
-Class SemiCoherent_BraidedDistributiveBimonoidalCategory {DD : Type} {cD} 
-  {H1 H2}
-  {AddC}
-  {MulC} `(rC : @DistributiveBimonoidalCategory DD cD H1 H2 AddC MulC)
-  `(@BraidedMonoidalCategory DD cD MulC) := {
+Class SemiCoherent_BraidedDistributiveBimonoidalCategory {DD : Type} {cC : Category DD}
+  {mAddC : MonoidalCategory cC} {bAddC : BraidedMonoidalCategory mAddC}
+  {AddC : SymmetricMonoidalCategory bAddC}
+  {MulC : MonoidalCategory cC}
+  {pdC : PreDistributiveBimonoidalCategory AddC MulC}
+  (rC : DistributiveBimonoidalCategory pdC)
+  (bMulC : BraidedMonoidalCategory MulC) := {
+  cond_II   : condition_II      _;
+  cond_XV   : condition_XV      _ _;
+(*   
   condition_II (A B C : DD) : 
     (δ#_ A, B, C) ∘ (γ_ A,C ⊞ γ_ B,C)
     ≃ γ_ A+B, C ∘ δ_ C,A,B;
   condition_XV (A : DD) :
     ρ*_ A ≃ γ_ A,c0 ∘ λ*_A;
+*)
 }.
 
 Close Scope Rig_scope.

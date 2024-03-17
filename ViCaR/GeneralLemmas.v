@@ -4,7 +4,7 @@ Require Import Setoid.
 
 Local Open Scope Cat.
 
-Lemma compose_simplify_general : forall {C : Type} {Cat : Category C}
+Lemma compose_simplify_general : forall {C : Type} {cC : Category C}
   {A B M : C} (f1 f3 : A ~> B) (f2 f4 : B ~> M),
   f1 ≃ f3 -> f2 ≃ f4 -> (f1 ∘ f2) ≃ (f3 ∘ f4).
 Proof.
@@ -14,7 +14,7 @@ Proof.
 Qed.
 
 Lemma stack_simplify_general : forall {C : Type} 
-  {Cat : Category C} {MonCat : MonoidalCategory C}
+  {cC : Category C} {mC : MonoidalCategory cC}
   {A B M N : C} (f1 f3 : A ~> B) (f2 f4 : M ~> N),
   f1 ≃ f3 -> f2 ≃ f4 -> (f1 ⊗ f2) ≃ (f3 ⊗ f4).
 Proof.
@@ -24,7 +24,7 @@ Proof.
 Qed.
 
 Lemma stack_compose_distr_test : forall {C : Type}
-  `{Cat : Category C} `{MonCat : MonoidalCategory C}
+  {cC : Category C} {mC : MonoidalCategory cC}
   {A B D M N P : C} (f : A ~> B) (g : B ~> D) 
   (h : M ~> N) (i : N ~> P),
   (f ∘ g) ⊗ (h ∘ i) ≃ (f ⊗ h) ∘ (g ⊗ i).
@@ -38,9 +38,9 @@ Qed.
 
 
 Lemma stack_distr_pushout_r_bot : forall {C : Type}
-  `{Cat : Category C} `{MonCat : MonoidalCategory C}
+  `{cC : Category C} `{mC : MonoidalCategory C}
   {a b d m n} (f : a ~> b) (g : b ~> d) (h : m ~> n),
-  f ∘ g ⊗ h ≃ f ⊗ h ∘ (g ⊗ (id_ n)).
+  (f ∘ g) ⊗ h ≃ f ⊗ h ∘ (g ⊗ (id_ n)).
 Proof.
   intros.
   rewrite <- compose_bimap, right_unit.
@@ -50,7 +50,7 @@ Qed.
 (* TODO: the other two; _l_bot and _l_top *)
 
 Lemma stack_distr_pushout_r_top : forall {C : Type}
-  `{Cat : Category C} `{MonCat : MonoidalCategory C}
+  {cC : Category C} {mC : MonoidalCategory cC}
   {a b m n o} (f : a ~> b) (g : m ~> n) (h : n ~> o),
   f ⊗ (g ∘ h) ≃ f ⊗ g ∘ (id_ b ⊗ h).
 Proof.
@@ -110,7 +110,7 @@ Qed.
 
 
 Lemma nwire_stack_compose_topleft_general : forall {C : Type}
-  {Cat : Category C} {MonCat : MonoidalCategory C}
+  {cC : Category C} {mC : MonoidalCategory cC}
   {topIn botIn topOut botOut : C} 
   (f0 : botIn ~> botOut) (f1 : topIn ~> topOut),
   ((c_identity topIn) ⊗ f0) ∘ (f1 ⊗ (c_identity botOut)) ≃ (f1 ⊗ f0).
@@ -122,7 +122,7 @@ Proof.
 Qed.
 
 Lemma nwire_stackcompose_topright_general : forall {C : Type}
-  {Cat: Category C} {MonCat : MonoidalCategory C}
+  {cC : Category C} {mC : MonoidalCategory cC}
   {topIn botIn topOut botOut : C} 
   (f0 : topIn ~> topOut) (f1 : botIn ~> botOut),
   (f0 ⊗ (c_identity botIn)) ∘ ((c_identity topOut) ⊗ f1) ≃ (f0 ⊗ f1).
@@ -134,7 +134,7 @@ Proof.
 Qed.
 
 Lemma stack_id_compose_split_top : forall {C : Type}
-  {Cat: Category C} {MonCat : MonoidalCategory C}
+  {cC : Category C} {mC : MonoidalCategory cC}
   {topIn topMid topOut bot : C} 
   (f0 : topIn ~> topMid) (f1 : topMid ~> topOut),
   (f0 ∘ f1) ⊗ (id_ bot) ≃ f0 ⊗ id_ bot ∘ (f1 ⊗ id_ bot).
@@ -145,7 +145,7 @@ Proof.
 Qed.
 
 Lemma stack_id_compose_split_bot : forall {C : Type}
-  {Cat: Category C} {MonCat : MonoidalCategory C}
+  {cC : Category C} {mC : MonoidalCategory cC}
   {top botIn botMid botOut : C} 
   (f0 : botIn ~> botMid) (f1 : botMid ~> botOut),
   (id_ top) ⊗ (f0 ∘ f1) ≃ id_ top ⊗ f0 ∘ (id_ top ⊗ f1).

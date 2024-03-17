@@ -1018,7 +1018,7 @@ Class Category_with_Limits {C} (cC : Category C) := {
 
 Definition typ_limit_obj {D} {cD : Category D} (F : Functor cD Typ) : Type :=
   { s : big_prod F.(obj_map) | 
-    forall (d d' : D) (f : d ~> d'), (F @ f) (s d) = s d'}.
+    forall (d d' : D) (f : d ~> d'), (F @ f) (s d) = s d' }.
 
 Definition typ_limit_obj_cone_mor {D} {cD : Category D} (F : Functor cD Typ) :
   forall (d : D), typ_limit_obj F ~> F d 
