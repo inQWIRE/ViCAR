@@ -283,7 +283,7 @@ Definition condition_XV `{@BraidedMonoidalCategory DD cC MulC} :=
 
 
 
-(* 
+
 
 
 
@@ -887,7 +887,7 @@ Proof.
     rewrite e; clear e.
     Admitted.
 
-. *)
+.
 End CoherenceConditions.
 
 Class SemiCoherent_DistributiveBimonoidalCategory {DD : Type} {cC : Category DD}

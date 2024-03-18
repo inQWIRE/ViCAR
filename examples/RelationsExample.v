@@ -1,6 +1,6 @@
 Require Import Setoid.
 Require Import Logic.
-Require Import Basics.
+Require Import Basics (flip).
 From ViCaR Require Export CategoryTypeclass.
 From ViCaR Require Import RigCategory.
 
@@ -122,7 +122,7 @@ Ltac __solve_relations_end :=
 Ltac solve_relations := idtac. (* Hack to allow "mutual recursion" *)
 
 Ltac __setup_solve_relations :=
-  simpl; unfold unitary; simpl;
+  simpl;
   unfold compose_relns, reln_equiv, idn, reln_sum, 
     reln_prod, reln_unit, flip in *;
   simpl.
@@ -204,6 +204,9 @@ Ltac solve_relations ::=
   __solve_relations_mid_step;
   __solve_relations_end || __solve_relations_end_forward.
 (* End tactics *)
+
+Obligation Tactic := (hnf; solve_relations).
+Unset Program Cases.
 
 Lemma reln_equiv_refl {A B : Type} (f : reln A B) :
   f ~ f.
@@ -290,7 +293,7 @@ Qed.
   morphism_bicompat := @prod_compat;
 }.
 
-#[export] Instance RelAssociator {A B C : Type} : 
+#[export, program] Instance RelAssociator {A B C : Type} : 
   Isomorphism (A * B * C) (A * (B * C)) := {
   forward := fun ab_c a_bc =>
     match ab_c with ((a, b), c) => 
@@ -302,39 +305,31 @@ Qed.
     match a_bc with (a',(b',c')) =>
       a = a' /\ b = b' /\ c = c'
     end end;
-  isomorphism_inverse := ltac:(abstract(solve_relations));
 }.
 
 (* Set Printing Universes. *)
 
-#[export] Instance RelLeftUnitor {A : Type} :
+#[export, program] Instance RelLeftUnitor {A : Type} :
   @Isomorphism Type Rel (⊤ * A) (A) := {
   forward := fun topa b => match topa with (_, a) => a = b end;
   reverse := fun a topb => match topb with (_, b) => a = b end;
-  isomorphism_inverse := ltac:(abstract(solve_relations))
 }.
 
-#[export] Instance RelRightUnitor {A : Type} :
+#[export, program] Instance RelRightUnitor {A : Type} :
   @Isomorphism Type Rel (A * ⊤) (A) := {
   forward := fun atop b => match atop with (a, _) => a = b end;
   reverse := fun a btop => match btop with (b, _) => a = b end;
-  isomorphism_inverse := ltac:(abstract(solve_relations))
 }.
 
-#[export] Instance RelMonoidal : MonoidalCategory Type | 0 := {
+#[export, program] Instance RelMonoidal : MonoidalCategory Rel | 0 := {
   tensor := ProductRelation;
-	I := ⊤;
+	mon_I := ⊤;
   associator := @RelAssociator;
   left_unitor := @RelLeftUnitor;
   right_unitor := @RelRightUnitor;
-  associator_cohere := ltac:(abstract(solve_relations));
-  left_unitor_cohere := ltac:(abstract(solve_relations));
-  right_unitor_cohere := ltac:(abstract(solve_relations));
-  triangle := ltac:(abstract(solve_relations));
-  pentagon := ltac:(abstract(solve_relations));
 }.
 
-#[export] Instance RelBraidingIsomorphism {A B} : 
+#[export, program] Instance RelBraidingIsomorphism {A B} : 
   Isomorphism (A * B) (B * A) := {
   forward := fun ab ba' => match ab with (a, b) => match ba' with (b', a') =>
     a = a' /\ b = b'
@@ -342,47 +337,35 @@ Qed.
   reverse := fun ba ab' => match ba with (b, a) => match ab' with (a', b') => 
     a = a' /\ b = b'
     end end;
-  isomorphism_inverse := ltac:(abstract(solve_relations))
 }.
 
-#[export] Instance RelBraiding : 
+#[export, program] Instance RelBraiding : 
   NaturalBiIsomorphism ProductRelation (CommuteBifunctor ProductRelation) := {
   component_biiso := @RelBraidingIsomorphism;
-  component_biiso_natural := ltac:(abstract(solve_relations))
 }.
 
-#[export] Instance RelBraidedMonoidal : BraidedMonoidalCategory Type | 0 := {
+#[export, program] Instance RelBraidedMonoidal 
+  : BraidedMonoidalCategory RelMonoidal | 0 := {
   braiding := RelBraiding;
-  hexagon_1 := ltac:(abstract(solve_relations));
-  hexagon_2 := ltac:(abstract(solve_relations));
 }.
 
-#[export] Instance RelSymmetricMonoidal : 
-  SymmetricMonoidalCategory Type | 0 := {
-  symmetry := ltac:(abstract(solve_relations));
+#[export, program] Instance RelSymmetricMonoidal : 
+  SymmetricMonoidalCategory RelBraidedMonoidal | 0 := {
 }.
 
-#[export] Instance RelCompactClosed : CompactClosedCategory Type := {
+#[export, program] Instance RelCompactClosed 
+  : CompactClosedCategory RelSymmetricMonoidal := {
   dual := fun A => A;
   unit := @reln_unit;
   counit := fun A => flip reln_unit;
-  triangle_1 := ltac:(abstract(solve_relations));
-  triangle_2 := ltac:(abstract(solve_relations));
 }.
 
-#[export] Instance RelDagger : DaggerCategory Type := {
+#[export, program] Instance RelDagger : DaggerCategory Rel := {
   adjoint := fun A B => @flip A B Prop;
-  adjoint_involutive := ltac:(easy);
-  adjoint_id := ltac:(easy);
-  adjoint_contravariant := ltac:(abstract(solve_relations));
-  adjoint_compat := ltac:(abstract(solve_relations));
 }.
 
-#[export] Instance RelDaggerMonoidal : DaggerMonoidalCategory Type := {
-  dagger_tensor_compat := ltac:(abstract(solve_relations));
-  associator_unitary := ltac:(abstract(solve_relations));
-  left_unitor_unitary := ltac:(abstract(solve_relations));
-  right_unitor_unitary := ltac:(abstract(solve_relations));
+#[export, program] Instance RelDaggerMonoidal 
+  : DaggerMonoidalCategory RelDagger RelMonoidal := {
 }.
 
 
@@ -400,15 +383,14 @@ Proof.
   solve_relations.
 Qed.
   
-#[export] Instance SumRelation : Bifunctor Rel Rel Rel := {
+#[export, program] Instance SumRelation : Bifunctor Rel Rel Rel := {
   obj_bimap := sum;
   morphism_bimap := @reln_sum;
   id_bimap := @sum_idn;
   compose_bimap := @sum_compose;
-  morphism_bicompat := ltac:(abstract(solve_relations));
 }.
 
-#[export] Instance RelSumAssociator {A B C : Type} : 
+#[export, program] Instance RelSumAssociator {A B C : Type} : 
   Isomorphism (A + B + C) (A + (B + C)) := {
   forward := fun ab_c a_bc =>
     match ab_c, a_bc with 
@@ -424,11 +406,10 @@ Qed.
     | inr c, inr (inr c') => c = c'
     | _, _ => False
     end;
-  isomorphism_inverse := ltac:(abstract(solve_relations));
 }.
 
 
-#[export] Instance RelSumLeftUnitor {A : Type} :
+#[export, program] Instance RelSumLeftUnitor {A : Type} :
   @Isomorphism Type Rel (⊥ + A) (A) := {
   forward := fun bota b => match bota with
     | inr a => a = b
@@ -437,10 +418,9 @@ Qed.
   reverse := fun a botb => match botb with 
     | inr b => a = b 
     | _ => False end;
-  isomorphism_inverse := ltac:(abstract(solve_relations))
 }.
 
-#[export] Instance RelSumRightUnitor {A : Type} :
+#[export, program] Instance RelSumRightUnitor {A : Type} :
   @Isomorphism Type Rel (A + ⊥) (A) := {
   forward := fun bota b => match bota with
     | inl a => a = b
@@ -449,23 +429,17 @@ Qed.
   reverse := fun a botb => match botb with 
     | inl b => a = b 
     | _ => False end;
-  isomorphism_inverse := ltac:(abstract(solve_relations))
 }.
 
-#[export] Instance RelSumMonoidal : MonoidalCategory Type | 10 := {
+#[export, program] Instance RelSumMonoidal : MonoidalCategory Rel | 10 := {
   tensor := SumRelation;
-	I := ⊥;
+	mon_I := ⊥;
   associator := @RelSumAssociator;
   left_unitor := @RelSumLeftUnitor;
   right_unitor := @RelSumRightUnitor;
-  associator_cohere := ltac:(abstract(solve_relations));
-  left_unitor_cohere := ltac:(abstract(solve_relations));
-  right_unitor_cohere := ltac:(abstract(solve_relations));
-  triangle := ltac:(abstract(solve_relations));
-  pentagon := ltac:(abstract(solve_relations));
 }.
 
-#[export] Instance RelSumBraidingIsomorphism {A B} : 
+#[export, program] Instance RelSumBraidingIsomorphism {A B} : 
   Isomorphism (A + B) (B + A) := {
   forward := fun ab ba' => 
     match ab, ba' with
@@ -479,26 +453,20 @@ Qed.
     | inl b, inr b' => b = b'
     | _, _ => False
     end;
-  isomorphism_inverse := ltac:(abstract(solve_relations))
 }.
 
-#[export] Instance RelSumBraiding : 
+#[export, program] Instance RelSumBraiding : 
   NaturalBiIsomorphism SumRelation (CommuteBifunctor SumRelation) := {
   component_biiso := @RelSumBraidingIsomorphism;
-  component_biiso_natural := ltac:(abstract(solve_relations))
 }.
 
-#[export] Instance RelSumBraidedMonoidal : 
-  @BraidedMonoidalCategory Type Rel RelSumMonoidal | 10 := {
+#[export, program] Instance RelSumBraidedMonoidal : 
+  BraidedMonoidalCategory RelSumMonoidal | 10 := {
   braiding := RelSumBraiding;
-  hexagon_1 := ltac:(abstract(solve_relations));
-  hexagon_2 := ltac:(abstract(solve_relations));
 }.
 
-#[export] Instance RelSumSymmetricMonoidal : 
-  @SymmetricMonoidalCategory Type Rel RelSumMonoidal
-  RelSumBraidedMonoidal | 10 := {
-  symmetry := ltac:(abstract(solve_relations));
+#[export, program] Instance RelSumSymmetricMonoidal : 
+  SymmetricMonoidalCategory RelSumBraidedMonoidal | 10 := {
 }.
 
 Lemma not_RelSumCompactClosed :
@@ -514,22 +482,15 @@ Proof.
   solve_relations.
 Qed.
 
-#[export] Instance RelSumDagger : DaggerCategory Type | 10 := {
+#[export, program] Instance RelSumDagger : DaggerCategory Rel | 10 := {
   adjoint := fun A B => @flip A B Prop;
-  adjoint_involutive := ltac:(easy);
-  adjoint_id := ltac:(easy);
-  adjoint_contravariant := ltac:(abstract(solve_relations));
-  adjoint_compat := ltac:(abstract(solve_relations));
 }.
 
-#[export] Instance RelSumDaggerMonoidal : DaggerMonoidalCategory Type | 10 := {
-  dagger_tensor_compat := ltac:(abstract(solve_relations));
-  associator_unitary := ltac:(abstract(solve_relations));
-  left_unitor_unitary := ltac:(abstract(solve_relations));
-  right_unitor_unitary := ltac:(abstract(solve_relations));
+#[export, program] Instance RelSumDaggerMonoidal 
+  : DaggerMonoidalCategory RelSumDagger RelSumMonoidal | 10 := {
 }.
 
-#[export] Instance RelLeftDistributivityIsomorphism (A B M : Type) :
+#[export, program] Instance RelLeftDistributivityIsomorphism (A B M : Type) :
   @Isomorphism Type Rel (A * (B + M))
   ((A * B) + (A * M)) := {
   forward := fun abm abam => match abm, abam with
@@ -542,10 +503,9 @@ Qed.
     | (a, inr m), inr (a', m') => a = a' /\ m = m'
     | _, _ => False
     end;
-  isomorphism_inverse := ltac:(abstract(solve_relations));
 }.
 
-#[export] Instance RelRightDistributivityIsomorphism (A B M : Type) :
+#[export, program] Instance RelRightDistributivityIsomorphism (A B M : Type) :
   @Isomorphism Type Rel ((A + B) * M)
   ((A * M) + (B * M)) := {
   forward := fun abm ambm => match abm, ambm with
@@ -558,7 +518,6 @@ Qed.
     | (inr b, m), inr (b', m') => b = b' /\ m = m'
     | _, _ => False
     end;
-  isomorphism_inverse := ltac:(abstract(solve_relations));
 }.
 
 Lemma rel_left_distributivity_isomorphism_natural {A B M A' B' M' : Type}
@@ -581,21 +540,19 @@ Proof.
   solve_relations.
 Qed.
 
-#[export] Instance RelLeftAbsorbtion (A : Type) :
+#[export, program] Instance RelLeftAbsorbtion (A : Type) :
   (⊥ * A <~> ⊥)%Cat := {
   forward := fun bota => match bota with | (bot, a) => match bot with end end;
   reverse := fun bot => match bot with end;
-  isomorphism_inverse := ltac:(abstract(solve_relations));
 }.
 
-#[export] Instance RelRightAbsorbtion (A : Type) :
+#[export, program] Instance RelRightAbsorbtion (A : Type) :
   (A * ⊥ <~> ⊥)%Cat := {
   forward := fun abot => match abot with | (a, bot) => match bot with end end;
   reverse := fun bot => match bot with end;
-  isomorphism_inverse := ltac:(abstract(solve_relations));
 }.
 
-#[export] Instance RelPreDistr : 
+#[export, program] Instance RelPreDistr : 
   PreDistributiveBimonoidalCategory RelSumSymmetricMonoidal
   RelMonoidal := {
     left_distr_iso := RelLeftDistributivityIsomorphism;
@@ -604,17 +561,17 @@ Qed.
     right_distr_natural := @rel_right_distributivity_isomorphism_natural;
 }.
 
-#[export] Instance RelDistrBimonoidal : 
-  DistributiveBimonoidalCategory RelSumSymmetricMonoidal RelMonoidal := {
+#[export, program] Instance RelDistrBimonoidal : 
+  DistributiveBimonoidalCategory RelPreDistr := {
   left_absorbtion_iso := RelLeftAbsorbtion;
   right_absorbtion_iso := RelRightAbsorbtion;
-  left_absorbtion_natural := ltac:(abstract(solve_relations));
-  right_absorbtion_natural := ltac:(abstract(solve_relations));
 }.
 
-(* #[export] Instance RelSemiCoherent :
+Obligation Tactic := idtac.
+
+#[export, program] Instance RelSemiCoherent :
   SemiCoherent_DistributiveBimonoidalCategory RelDistrBimonoidal := {
-  condition_I (A B C : Type) := ltac:(abstract(solve_relations));
+  (* condition_I (A B C : Type) := ltac:(abstract(solve_relations));
   condition_III (A B C : Type) := ltac:(abstract(solve_relations));
   condition_IV (A B C D : Type) := ltac:(abstract(solve_relations));
   condition_V (A B C D : Type) := ltac:(abstract(solve_relations));
@@ -635,16 +592,41 @@ Qed.
   condition_XXI (A B : Type) := ltac:(abstract(solve_relations));
   condition_XXII (A B : Type) := ltac:(abstract(solve_relations));
   condition_XXIII (A B : Type) := ltac:(abstract(solve_relations));
-  condition_XXIV (A B : Type) := ltac:(abstract(solve_relations));
-}. *)
+  condition_XXIV (A B : Type) := ltac:(abstract(solve_relations)); *)
+}.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
+Next Obligation. hnf; solve_relations. Qed.
 
-#[export] Instance RelSemiCoherentBraided :
+Obligation Tactic := (hnf; solve_relations).
+
+#[export, program] Instance RelSemiCoherentBraided :
   SemiCoherent_BraidedDistributiveBimonoidalCategory RelDistrBimonoidal RelBraidedMonoidal := {
-  condition_II (A B C : Type) := ltac:(abstract(solve_relations));
-  condition_XV (A : Type) := ltac:(abstract(solve_relations));
+  (* condition_II (A B C : Type) := ltac:(abstract(solve_relations));
+  condition_XV (A : Type) := ltac:(abstract(solve_relations)); *)
 }.
 
 Local Open Scope Cat_scope.
+Local Open Scope Obj_scope.
 Generalizable Variable C.
 
 Set Universe Polymorphism.
@@ -666,6 +648,7 @@ Class CategoryProduct `{cC : Category C} (A B : C) (AB : C) := {
     fAB' ≃ prod_mor Q fA fB
 }.
 
+Arguments CategoryProduct {_} {_}%Cat (_ _ _)%Obj.
 (* Local Notation "'@' AB" := (AB.(prod_AB)) (at level 8) : Cat_scope. *)
 
 
@@ -684,6 +667,7 @@ Proof.
   easy.
 Qed.
 
+Obligation Tactic := idtac.
 Program Definition category_product_unique `{cC : Category C} (A B : C) :
   forall {AB AB'} (HAB : CategoryProduct A B AB) 
   (HAB' : CategoryProduct A B AB'), Isomorphism AB AB' :=
@@ -702,7 +686,7 @@ Qed.
 
 Class CartesianMonoidalCategory `(mC : MonoidalCategory C) := {
   tensor_cartesian : forall (A B : C),
-    CategoryProduct A B (A × B);
+    CategoryProduct A B (A × B)%Mon;
 }.
 
 #[export, program] Instance RelCartesianMonoidalCategory :
@@ -717,37 +701,40 @@ Class CartesianMonoidalCategory `(mC : MonoidalCategory C) := {
         end
     |}
   }.
-Obligation 4. (* Only uniqueness can't be (fully) automated *)
-  __setup_solve_relations.
-  intros q [a | b].
-  - rewrite H.
-    solve_relations.
-  - rewrite H0.
-    solve_relations.
+Obligations.
+Next Obligation.
+ solve_relations.
 Qed.
-Solve All Obligations with solve_relations.
+Next Obligation.
+  __setup_solve_relations.
+  intros A B Q fA fB fAB'.
+  repeat split;
+  __process_solve_relations_cleanup_vars;
+  rewrite 1?H, 1?H0;
+  solve_relations.
+Qed.
 
 Module BigPredProd.
-Class CategoryBigProd `{cC : Category C} (I : C -> Prop) (prod_I : C) := {
-  p_i : forall i, I i -> prod_I ~> i;
+Class CategoryBigProd `{cC : Category C} (J : C -> Prop) (prod_J : C) := {
+  p_i : forall i, J i -> prod_J ~> i;
   big_prod_mor : 
-    forall (Q : C) (fQ_ : forall i, I i -> Q ~> i), Q ~> prod_I;
+    forall (Q : C) (fQ_ : forall i, J i -> Q ~> i), Q ~> prod_J;
   big_prod_mor_prop: 
-    forall (Q : C) (fQ_ : forall i, I i -> Q ~> i),
-    forall i (Hi : I i), 
+    forall (Q : C) (fQ_ : forall i, J i -> Q ~> i),
+    forall i (Hi : J i), 
     (big_prod_mor Q fQ_) ∘ p_i i Hi ≃ fQ_ i Hi;
   big_prod_mor_unique : 
-    forall (Q : C) (fQ_ : forall i, I i -> Q ~> i)
-    (fAB' : Q ~> prod_I), 
-    (forall i (Hi : I i), fQ_ i Hi ≃ fAB' ∘ p_i i Hi) ->
+    forall (Q : C) (fQ_ : forall i, J i -> Q ~> i)
+    (fAB' : Q ~> prod_J), 
+    (forall i (Hi : J i), fQ_ i Hi ≃ fAB' ∘ p_i i Hi) ->
     fAB' ≃ big_prod_mor Q fQ_
 }.
 
-Lemma big_prod_mor_unique' `{cC : Category C} {I} {pI : C} 
-  (HI : CategoryBigProd I pI) {Q} (fQ_ : forall i, I i -> Q ~> i) : 
-  forall (fAB fAB' : Q ~> pI),
-  (forall i (Hi : I i), fAB ∘ p_i i Hi ≃ fQ_ i Hi) ->
-  (forall i (Hi : I i), fAB' ∘ p_i i Hi ≃ fQ_ i Hi) ->
+Lemma big_prod_mor_unique' `{cC : Category C} {J} {pJ : C} 
+  (HJ : CategoryBigProd J pJ) {Q} (fQ_ : forall i, J i -> Q ~> i) : 
+  forall (fAB fAB' : Q ~> pJ),
+  (forall i (Hi : J i), fAB ∘ p_i i Hi ≃ fQ_ i Hi) ->
+  (forall i (Hi : J i), fAB' ∘ p_i i Hi ≃ fQ_ i Hi) ->
   fAB ≃ fAB'.
 Proof.
   intros.
@@ -757,13 +744,13 @@ Proof.
   easy.
 Qed.
 
-Program Definition category_big_prod_unique `{cC : Category C} I :
-  forall {pI pI'} (HI : CategoryBigProd I pI) (HI' : CategoryBigProd I pI'), 
-    Isomorphism pI pI' :=
-  fun pI pI' HI HI' =>
+Program Definition category_big_prod_unique `{cC : Category C} J :
+  forall {pJ pJ'} (HJ : CategoryBigProd J pJ) (HJ' : CategoryBigProd J pJ'), 
+    Isomorphism pJ pJ' :=
+  fun pJ pJ' HJ HJ' =>
   {|
-    forward := HI'.(big_prod_mor) pI p_i;
-    reverse := HI.(big_prod_mor) pI' p_i;
+    forward := HJ'.(big_prod_mor) pJ p_i;
+    reverse := HJ.(big_prod_mor) pJ' p_i;
   |}.
 Obligations.
 Next Obligation.
@@ -774,25 +761,25 @@ Qed.
 End BigPredProd.
 
 
-Class CategoryBigProd `{cC : Category C} {I : Type} 
-  (obj : I -> C) (prod_I : C) := {
-  p_i : forall i, prod_I ~> obj i;
+Class CategoryBigProd `{cC : Category C} {J : Type} 
+  (obj : J -> C) (prod_J : C) := {
+  p_i : forall i, prod_J ~> obj i;
   big_prod_mor : 
-    forall (Q : C) (fQ_ : forall i, Q ~> obj i), Q ~> prod_I;
+    forall (Q : C) (fQ_ : forall i, Q ~> obj i), Q ~> prod_J;
   big_prod_mor_prop: 
     forall (Q : C) (fQ_ : forall i, Q ~> obj i),
     forall i, 
     (big_prod_mor Q fQ_) ∘ p_i i ≃ fQ_ i;
   big_prod_mor_unique : 
     forall (Q : C) (fQ_ : forall i, Q ~> obj i)
-    (fAB' : Q ~> prod_I), 
+    (fAB' : Q ~> prod_J), 
     (forall i, fQ_ i ≃ fAB' ∘ p_i i) ->
     fAB' ≃ big_prod_mor Q fQ_
 }.
 
-Lemma big_prod_mor_unique' `{cC : Category C} {I} {obj : I -> C} {pI : C} 
-  (HI : CategoryBigProd obj pI) {Q} (fQ_ : forall i, Q ~> obj i) :
-  forall (fAB fAB' : Q ~> pI),
+Lemma big_prod_mor_unique' `{cC : Category C} {J} {obj : J -> C} {pJ : C} 
+  (HJ : CategoryBigProd obj pJ) {Q} (fQ_ : forall i, Q ~> obj i) :
+  forall (fAB fAB' : Q ~> pJ),
   (forall i, fAB  ∘ p_i i ≃ fQ_ i) ->
   (forall i, fAB' ∘ p_i i ≃ fQ_ i) ->
   fAB ≃ fAB'.
@@ -804,13 +791,13 @@ Proof.
   easy.
 Qed.
 
-Program Definition category_big_prod_unique `{cC : Category C} {I} {obj : I->C} :
-  forall {pI pI'} (HI : CategoryBigProd obj pI) (HI' : CategoryBigProd obj pI'), 
-    Isomorphism pI pI' :=
-  fun pI pI' HI HI' =>
+Program Definition category_big_prod_unique `{cC : Category C} {J} {obj : J->C} :
+  forall {pJ pJ'} (HJ : CategoryBigProd obj pJ) (HJ' : CategoryBigProd obj pJ'), 
+    Isomorphism pJ pJ' :=
+  fun pJ pJ' HJ HJ' =>
   {|
-    forward := HI'.(big_prod_mor) pI p_i;
-    reverse := HI.(big_prod_mor) pI' p_i;
+    forward := HJ'.(big_prod_mor) pJ p_i;
+    reverse := HJ.(big_prod_mor) pJ' p_i;
   |}.
 Obligations.
 Next Obligation.
@@ -820,8 +807,8 @@ Next Obligation.
 Qed.
 
 
-Inductive big_sum (I : Type -> Type) :=
-  | in_i i (a : I i) : big_sum I.
+Inductive big_sum (J : Type -> Type) :=
+  | in_i i (a : J i) : big_sum J.
 
 Arguments in_i {_} _ _.
 (* Set Printing Universes. *)
@@ -830,12 +817,14 @@ Definition my_f_equal [A B : Type] (f : A -> B) [x y : A] (H : x = y) :
   f x = f y := 
   match H in (_ = y') return (f x = f y') with eq_refl => eq_refl end.
 
-#[ export, program] Instance RelBigProd (I : Type -> Type) : 
-  CategoryBigProd I (big_sum I) := {
+Obligation Tactic := Tactics.program_simpl.
+
+#[export, program] Instance RelBigProd (J : Type -> Type) : 
+  CategoryBigProd J (big_sum J) := {
     p_i := fun i => fun somei a => match somei with
     | in_i i' a' => exists (H: i = i'), _
-      (* let Hi := my_f_equal I H in
-        match Hi in (_ = Ii') return Ii' with eq_refl => a end = a' *)
+      (* let Hi := my_f_equal J H in
+        match Hi in (_ = Ji') return Ji' with eq_refl => a end = a' *)
     end;
     big_prod_mor := fun Q fQ_ => fun q somei => match somei with
     | in_i i a => fQ_ i q a
@@ -875,7 +864,7 @@ Next Obligation.
 Qed.
 
 
-Section TransitiveClosure.
+(* Section TransitiveClosure.
 
 Local Open Scope Rig_scope.
 
@@ -1232,4 +1221,4 @@ Proof.
   intros f g h i.
   simpl.
   to_Cat.
-  Admitted.
+  Admitted. *)

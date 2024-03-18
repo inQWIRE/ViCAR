@@ -1,10 +1,7 @@
 Require Import Setoid.
 Require Import Logic.
-Require Import Basics.
 From ViCaR Require Export CategoryTypeclass.
 From ViCaR Require Import RigCategory.
-
-
 
 Local Notation "f '\o' g" := (fun A => g (f A)) 
   (at level 45, left associativity).
@@ -101,20 +98,20 @@ Ltac __solve_functions_end :=
   | H : ?A ~ ?A' |- _ => apply H
   | H : ?A ~ ?A' |- _ => symmetry; apply H
   | H : ?A ~ ?A' |- context[?A ?i] => 
-    (rewrite H; clear H; print_state; solve __solve_functions_end)
-    || (rewrite <- H; clear H; print_state; solve __solve_functions_end)
-    || (clear H; solve __solve_functions_end)
+    (rewrite H; clear H; print_state; solve [__solve_functions_end])
+    || (rewrite <- H; clear H; print_state; solve [__solve_functions_end])
+    || (clear H; solve [__solve_functions_end])
   | H : ?A ~ ?A' |- context[?A' ?i] =>   
-    (rewrite <- H; clear H; print_state; solve __solve_functions_end)
-    || (rewrite H; clear H; print_state; solve __solve_functions_end)
-    || (clear H; solve __solve_functions_end)
+    (rewrite <- H; clear H; print_state; solve [__solve_functions_end])
+    || (rewrite H; clear H; print_state; solve [__solve_functions_end])
+    || (clear H; solve [__solve_functions_end])
   end || idtac (* " no match" *)).
 
 
 Ltac solve_functions := idtac. (* Hack to allow "mutual recursion" *)
 
 Ltac __setup_solve_functions :=
-  simpl; unfold unitary; simpl;
+  simpl;
   unfold fun_equiv, id, fun_sum, 
     fun_prod in *;
   simpl.
@@ -258,7 +255,7 @@ Qed.
   right_unit := @compose_id_r;
 }.
 
-Lemma prod_id {A B} : 
+Lemma prod_jd {A B} : 
   id \* id ~ @id (A*B).
 Proof.
   intros [a b].
@@ -286,7 +283,7 @@ Qed.
 #[export] Instance ProductFunction : Bifunctor Typ Typ Typ := {
   obj_bimap := prod;
   morphism_bimap := @fun_prod;
-  id_bimap := @prod_id;
+  id_bimap := @prod_jd;
   compose_bimap := @prod_compose;
   morphism_bicompat := @prod_compat;
 }.
@@ -314,9 +311,9 @@ Qed.
     isomorphism_inverse := ltac:(abstract(solve_functions))
 }.
 
-#[export] Instance TypMonoidal : MonoidalCategory Type := {
+#[export] Instance TypMonoidal : MonoidalCategory Typ := {
   tensor := ProductFunction;
-	I := ⊤;
+	mon_I := ⊤;
   associator := @TypAssociator;
   left_unitor := @TypLeftUnitor;
   right_unitor := @TypRightUnitor;
@@ -340,14 +337,14 @@ Qed.
   component_biiso_natural := ltac:(abstract(solve_functions))
 }.
 
-#[export] Instance TypBraidedMonoidal : BraidedMonoidalCategory Type := {
+#[export] Instance TypBraidedMonoidal : BraidedMonoidalCategory TypMonoidal := {
   braiding := TypBraiding;
   hexagon_1 := ltac:(abstract(solve_functions));
   hexagon_2 := ltac:(abstract(solve_functions));
 }.
 
 #[export] Instance TypSymmetricMonoidal : 
-  SymmetricMonoidalCategory Type := {
+  SymmetricMonoidalCategory TypBraidedMonoidal := {
   symmetry := ltac:(abstract(solve_functions));
 }.
 
@@ -437,9 +434,9 @@ Qed.
   isomorphism_inverse := ltac:(abstract(solve_functions))
 }.
 
-#[export] Instance TypSumMonoidal : MonoidalCategory Type := {
+#[export] Instance TypSumMonoidal : MonoidalCategory Typ | 10 := {
   tensor := SumFunction;
-	I := ⊥;
+	mon_I := ⊥;
   associator := @TypSumAssociator;
   left_unitor := @TypSumLeftUnitor;
   right_unitor := @TypSumRightUnitor;
@@ -471,14 +468,15 @@ Qed.
   component_biiso_natural := ltac:(abstract(solve_functions))
 }.
 
-#[export] Instance TypSumBraidedMonoidal : BraidedMonoidalCategory Type := {
+#[export] Instance TypSumBraidedMonoidal 
+  : BraidedMonoidalCategory TypSumMonoidal | 10 := {
   braiding := TypSumBraiding;
   hexagon_1 := ltac:(abstract(solve_functions));
   hexagon_2 := ltac:(abstract(solve_functions));
 }.
 
 #[export] Instance TypSumSymmetricMonoidal : 
-  SymmetricMonoidalCategory Type := {
+  SymmetricMonoidalCategory TypSumBraidedMonoidal | 10 := {
   symmetry := ltac:(abstract(solve_functions));
 }.
 
@@ -491,8 +489,7 @@ Proof.
 Qed.
 
 #[export] Instance TypLeftDistributivityIsomorphism (A B M : Type) :
-  @Isomorphism Type Typ (A * (B + M))
-  ((A * B) + (A * M)) := {
+  @Isomorphism Type Typ (A * (B + M)) ((A * B) + (A * M)) := {
   forward := fun abm => match abm with
     | (a, inl b) => inl (a, b)
     | (a, inr m) => inr (a, m)
@@ -505,8 +502,7 @@ Qed.
 }.
 
 #[export] Instance TypRightDistributivityIsomorphism (A B M : Type) :
-  @Isomorphism Type Typ ((A + B) * M)
-  ((A * M) + (B * M)) := {
+  @Isomorphism Type Typ ((A + B) * M) ((A * M) + (B * M)) := {
     forward := fun abm => match abm with
     | (inl a, m) => inl (a, m)
     | (inr b, m) => inr (b, m)
@@ -562,7 +558,7 @@ Qed.
 }.
 
 #[export] Instance TypDistrBimonoidal : 
-  DistributiveBimonoidalCategory TypSumSymmetricMonoidal TypMonoidal := {
+  DistributiveBimonoidalCategory TypPreDistr := {
   left_absorbtion_iso := TypLeftAbsorbtion;
   right_absorbtion_iso := TypRightAbsorbtion;
   left_absorbtion_natural := ltac:(abstract(solve_functions));
@@ -571,6 +567,29 @@ Qed.
 
 #[export] Instance TypSemiCoherent :
   SemiCoherent_DistributiveBimonoidalCategory TypDistrBimonoidal := {
+  cond_I (A B C : Type) := ltac:(abstract(solve_functions));
+  cond_III (A B C : Type) := ltac:(abstract(solve_functions));
+  cond_IV (A B C D : Type) := ltac:(abstract(solve_functions));
+  cond_V (A B C D : Type) := ltac:(abstract(solve_functions));
+  cond_VI (A B C D : Type) := ltac:(abstract(solve_functions));
+  cond_VII (A B C D : Type) := ltac:(abstract(solve_functions));
+  cond_VIII (A B C D : Type) := ltac:(abstract(solve_functions));
+  cond_IX  (A B C D : Type) := ltac:(abstract(solve_functions));
+  cond_X := ltac:(abstract(solve_functions));
+  cond_XI (A B : Type) := ltac:(abstract(solve_functions));
+  cond_XII (A B : Type) := ltac:(abstract(solve_functions));
+  cond_XIII := ltac:(abstract(solve_functions));
+  cond_XIV := ltac:(abstract(solve_functions));
+  cond_XVI (A B : Type) := ltac:(abstract(solve_functions));
+  cond_XVII (A B : Type) := ltac:(abstract(solve_functions));
+  cond_XVIII (A B : Type) := ltac:(abstract(solve_functions));
+  cond_XIX (A B : Type) := ltac:(abstract(solve_functions));
+  cond_XX (A B : Type) := ltac:(abstract(solve_functions));
+  cond_XXI (A B : Type) := ltac:(abstract(solve_functions));
+  cond_XXII (A B : Type) := ltac:(abstract(solve_functions));
+  cond_XXIII (A B : Type) := ltac:(abstract(solve_functions));
+  cond_XXIV (A B : Type) := ltac:(abstract(solve_functions));
+(* 
   condition_I (A B C : Type) := ltac:(abstract(solve_functions));
   condition_III (A B C : Type) := ltac:(abstract(solve_functions));
   condition_IV (A B C D : Type) := ltac:(abstract(solve_functions));
@@ -592,13 +611,14 @@ Qed.
   condition_XXI (A B : Type) := ltac:(abstract(solve_functions));
   condition_XXII (A B : Type) := ltac:(abstract(solve_functions));
   condition_XXIII (A B : Type) := ltac:(abstract(solve_functions));
-  condition_XXIV (A B : Type) := ltac:(abstract(solve_functions));
+  condition_XXIV (A B : Type) := ltac:(abstract(solve_functions)); 
+*)
 }.
 
 #[export] Instance TypSemiCoherentBraided :
   SemiCoherent_BraidedDistributiveBimonoidalCategory TypDistrBimonoidal TypBraidedMonoidal := {
-  condition_II (A B C : Type) := ltac:(abstract(solve_functions));
-  condition_XV (A : Type) := ltac:(abstract(solve_functions));
+  cond_II (A B C : Type) := ltac:(abstract(solve_functions));
+  cond_XV (A : Type) := ltac:(abstract(solve_functions));
 }.
 
 
@@ -629,6 +649,8 @@ Class CategoryProduct `{cC : Category C} (A B : C) (AB : C) := {
     fA ≃ fAB' ∘ p_A -> fB ≃ fAB' ∘ p_B -> 
     fAB' ≃ prod_mor Q fA fB
 }.
+
+Arguments CategoryProduct {_} {_}%Cat (_ _ _)%Obj.
 
 (* Local Notation "'@' AB" := (AB.(prod_AB)) (at level 8) : Cat_scope. *)
 
@@ -664,9 +686,11 @@ Next Obligation.
   all: rewrite left_unit; easy.
 Qed.
 
+
+
 Class CartesianMonoidalCategory `(mC : MonoidalCategory C) := {
   tensor_cartesian : forall (A B : C),
-    CategoryProduct A B (A × B);
+    CategoryProduct A B (A × B)%Mon;
 }.
 
 #[export, program] Instance TypCartesianMonoidalCategory :
@@ -688,25 +712,25 @@ Next Obligation.
   easy. 
 Qed.
 
-Class CategoryBigProd `{cC : Category C} {I : Type} 
-  (obj : I -> C) (prod_I : C) := {
-  p_i : forall i, prod_I ~> obj i;
+Class CategoryBigProd `{cC : Category C} {J : Type} 
+  (obj : J -> C) (prod_J : C) := {
+  p_i : forall i, prod_J ~> obj i;
   big_prod_mor : 
-    forall (Q : C) (fQ_ : forall i, Q ~> obj i), Q ~> prod_I;
+    forall (Q : C) (fQ_ : forall i, Q ~> obj i), Q ~> prod_J;
   big_prod_mor_prop: 
     forall (Q : C) (fQ_ : forall i, Q ~> obj i),
     forall i, 
     (big_prod_mor Q fQ_) ∘ p_i i ≃ fQ_ i;
   big_prod_mor_unique : 
     forall (Q : C) (fQ_ : forall i, Q ~> obj i)
-    (fAB' : Q ~> prod_I), 
+    (fAB' : Q ~> prod_J), 
     (forall i, fQ_ i ≃ fAB' ∘ p_i i) ->
     fAB' ≃ big_prod_mor Q fQ_
 }.
 
-Lemma big_prod_mor_unique' `{cC : Category C} {I} {obj : I -> C} {pI : C} 
-  (HI : CategoryBigProd obj pI) {Q} (fQ_ : forall i, Q ~> obj i) :
-  forall (fAB fAB' : Q ~> pI),
+Lemma big_prod_mor_unique' `{cC : Category C} {J} {obj : J -> C} {pJ : C} 
+  (HI : CategoryBigProd obj pJ) {Q} (fQ_ : forall i, Q ~> obj i) :
+  forall (fAB fAB' : Q ~> pJ),
   (forall i, fAB  ∘ p_i i ≃ fQ_ i) ->
   (forall i, fAB' ∘ p_i i ≃ fQ_ i) ->
   fAB ≃ fAB'.
@@ -718,13 +742,13 @@ Proof.
   easy.
 Qed. 
 
-Program Definition category_big_prod_unique `{cC : Category C} {I} {obj : I->C} :
-  forall {pI pI'} (HI : CategoryBigProd obj pI) (HI' : CategoryBigProd obj pI'), 
-    Isomorphism pI pI' :=
-  fun pI pI' HI HI' =>
+Program Definition category_big_prod_unique `{cC : Category C} {J} {obj : J->C} :
+  forall {pJ pJ'} (HI : CategoryBigProd obj pJ) (HI' : CategoryBigProd obj pJ'), 
+    Isomorphism pJ pJ' :=
+  fun pJ pJ' HI HI' =>
   {|
-    forward := HI'.(big_prod_mor) pI p_i;
-    reverse := HI.(big_prod_mor) pI' p_i;
+    forward := HI'.(big_prod_mor) pJ p_i;
+    reverse := HI.(big_prod_mor) pJ' p_i;
   |}.
 Next Obligation.
   split; eapply (big_prod_mor_unique' _ p_i); rewrite 1?assoc.
@@ -734,9 +758,9 @@ Qed.
 
 Require Import FunctionalExtensionality.
 
-Definition big_prod {I} (obj : I -> Type) := forall (i : I), obj i.
+Definition big_prod {J} (obj : J -> Type) := forall (i : J), obj i.
 
-#[export, program] Instance TypBigProd {I} {obj : I -> Type} : 
+#[export, program] Instance TypBigProd {J} {obj : J -> Type} : 
   CategoryBigProd obj (big_prod obj) := {
   p_i := fun i => fun f => f i;
   big_prod_mor := fun Q fQ_ => fun q => fun i => fQ_ i q;
@@ -801,29 +825,29 @@ Next Obligation.
   all: rewrite right_unit; easy.
 Qed.
 
-Class CategoryBigCoprod `{cC : Category C} {I : Type} 
-  (obj : I -> C) (coprod_I : C) := {
-  big_coprod_obj := coprod_I;
-  iota_i : forall i, obj i ~> coprod_I;
+Class CategoryBigCoprod `{cC : Category C} {J : Type} 
+  (obj : J -> C) (coprod_J : C) := {
+  big_coprod_obj := coprod_J;
+  iota_i : forall i, obj i ~> coprod_J;
   big_coprod_mor : 
-    forall (Q : C) (fQ_ : forall i, obj i ~> Q), coprod_I ~> Q;
+    forall (Q : C) (fQ_ : forall i, obj i ~> Q), coprod_J ~> Q;
   big_coprod_mor_prop: 
     forall (Q : C) (fQ_ : forall i, obj i ~> Q),
     forall i, 
     iota_i i ∘ (big_coprod_mor Q fQ_) ≃ fQ_ i;
   big_coprod_mor_unique : 
     forall (Q : C) (fQ_ : forall i, obj i ~> Q)
-    (fAB' : coprod_I ~> Q), 
+    (fAB' : coprod_J ~> Q), 
     (forall i, fQ_ i ≃ iota_i i ∘ fAB') ->
     fAB' ≃ big_coprod_mor Q fQ_
 }.
 
-Inductive big_sum {I} (obj : I -> Type) :=
+Inductive big_sum {J} (obj : J -> Type) :=
   | in_i i (a : obj i) : big_sum obj.
 
 Arguments in_i {_ _} _ _.
 
-#[export, program] Instance TypBigCoprod {I} {obj : I -> Type} : 
+#[export, program] Instance TypBigCoprod {J} {obj : J -> Type} : 
   CategoryBigCoprod obj (big_sum obj) := {
   iota_i := fun i => fun oi => in_i i oi;
   big_coprod_mor := fun Q fQ_ => fun oi => match oi with
@@ -859,7 +883,7 @@ Notation "f @∏ g" := (cat_mor_prod f g) (at level 40).
 
 #[program, export] Instance Category_with_Products_of_CartesianMonoidalCategory {C cC mC}
   (ccc : @CartesianMonoidalCategory C cC mC) : Category_with_Products cC := {|
-  cat_prod := tensor.(obj_bimap);
+  cat_prod := mC.(tensor).(obj_bimap);
   cat_prod_product := tensor_cartesian;
 |}.
 

@@ -3,7 +3,20 @@ Require Import Setoid.
 From VyZX Require Import CoreData.
 From VyZX Require Import CoreRules.
 From VyZX Require Import PermutationRules.
-From ViCaR Require Export CategoryTypeclass.
+
+(* From ViCaR Require Import Category (Category, Bifunctor, NaturalBiIsomorphism, Isomorphism).
+From ViCaR Require Import Monoidal (MonoidalCategory).
+From ViCaR Require Import BraidedMonoidal (BraidedMonoidalCategory).
+From ViCaR Require Import SymmetricMonoidal (SymmetricMonoidalCategory).
+From ViCaR Require Import Dagger (DaggerCategory).
+From ViCaR Require Import DaggerMonoidal (DaggerMonoidalCategory). *)
+
+From ViCaR Require CategoryTypeclass.
+Import -(notations) CategoryTypeclass.
+
+(* From ViCaR Require Import CategoryTypeclass (Category, MonoidalCategory, 
+BraidedMonoidalCategory, SymmetricMonoidalCategory, DaggerBraidedMonoidalCategory, 
+DaggerCategory, DaggerSymmetricMonoidalCategory). *)
 
 
 Lemma proportional_equiv {n m : nat} : equivalence (ZX n m) proportional.
@@ -191,7 +204,7 @@ Definition ZXTensorBiFunctor : Bifunctor ZXCategory ZXCategory ZXCategory := {|
   morphism_bicompat := @stack_simplify;
 |}.
 
-#[export] Instance ZXMonoidalCategory : MonoidalCategory nat := {
+#[export] Instance ZXMonoidalCategory : MonoidalCategory ZXCategory := {
   tensor := ZXTensorBiFunctor;
   
   associator := fun n m o => {|
