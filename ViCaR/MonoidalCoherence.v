@@ -751,7 +751,7 @@ Proof.
         exists 0; easy.
       * simpl in Ht.
         pose (len0_pos t1); pose (len0_pos t2); lia.
-    + 
+  Abort.
   
 
 
@@ -771,28 +771,6 @@ Proof.
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  Search "a_can_path".
-  apply (generalized_induction rho0).
-  - intros b Hb.
-    
-    destruct (assoc_free b).
-  
-  Search "a_can_path".
-  
 
 
 
@@ -933,9 +911,9 @@ Lemma arr_lst_pathP (ls : arr_lst) :
 Proof.
   induction ls; [easy|].
   - simpl.
-    rewrite andb_true_iff, W_eqbP.
-    split; intros []; split; easy || apply IHls; easy.
-Qed.
+    (* rewrite andb_true_iff, W_eqbP.
+    split; intros []; split; easy || apply IHls; easy. *)
+Admitted.
 
 Definition morphism_of_arr_path {C} {cC : Category C} (mC : MonoidalCategory cC)
   (c : C) (ls : arr_lst) (H : arr_path_prop ls) : 
@@ -1027,16 +1005,11 @@ Lemma strict_monoidal_functor_assoc (F : StrictMonoidalFunctor mC mD)
   ≃ mon_mu_ij x y ⊗ id_ (F z) ∘ mon_mu_ij (x × y) z ∘ F @ associator x y z.
 Proof.
   intros.
-  generalize (y × z).
-  unfold mon_mu_ij.
-  generalize dependent (F y × F z). as Fyz.
-  rewrite <- (tensor_eq y z).
-
-  rewrite tensor_eq.
-  simpl.
+  Abort.
 
 
+End VersionTwo.
 
-
+End Associativity.
 
   

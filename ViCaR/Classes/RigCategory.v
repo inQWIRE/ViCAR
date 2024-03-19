@@ -171,7 +171,7 @@ Notation "'ρ*_' A" :=
 
 (* Notation "'[+]'" := (addC) (at level 0) : Rig_scope.
 Notation "'[×]'" := (addC) (at level 0) : Rig_scope. *)
-
+(* 
 Section CoherenceConditions.
 
 Context {DD : Type} {cC : Category DD}
@@ -663,52 +663,11 @@ Proof.
   apply distributive_hexagon_2.
 Qed.
 
-Lemma equivalence_3_helper_2 {BMul : BraidedMonoidalCategory MulC} :
-  forall (A B C D : DD),
-
-
-
-  intros A B C D.
-  epose proof BMul.(hexagon_1) as hex1.
-  epose proof BMul.(hexagon_2) as hex2.
-  fold mulC in hex1, hex2.
-  progress simpl in hex1, hex2. (* ??? *)
-  rewrite <- inv_braiding_natural.
-  rassoc_RHS.
-  rewrite <- compose_iso_l.
-  symmetry in hex1.
-  setoid_rewrite assoc in hex1.
-  setoid_rewrite compose_iso_l in hex1.
-  rewrite hex1.
-  lassoc_RHS.
-  rewrite compose_iso_r'.
-  rassoc_LHS.
-  rewrite <- compose_iso_l'.
-
-  lassoc_RHS.
-  rewrite <- hex2.
-  setoid_rewrite compose_iso_r' in hex2.
-  setoid_rewrite compose_iso_l' in hex2.
-  rewrite <- hex2.
-
-
-  setoid_rewrite compose_iso_l in hex1.
-  rewrite hex1.
-
-  setoid_rewrite assoc in hex1.
-  setoid_rewrite compose_iso_l
-  specialize (hex2 M (C+D))
-  setoid_rewrite <- (compose_tensor_iso_r' _ (IdentityIsomorphism _) _) in hex2.
-  setoid_rewrite <- (compose_tensor_iso_l' _ (IdentityIsomorphism _)) in hex2.
-  rewrite hex2.
-  
-  setoid_rewrite compose_iso_l in hex1.
-
 (* We don't need laplaza's coherence requirement, as that's baked-in for us. *)
 Lemma equivalence_3 `{BMul: @BraidedMonoidalCategory DD cC MulC} : 
   condition_II -> (condition_VI <-> condition_VII).
-Proof.
-  unfold condition_II, condition_VI, condition_VII.
+Proof. Abort.
+  (* unfold condition_II, condition_VI, condition_VII.
   intros cond_2; simpl in *; split.
   - intros cond_6 A B C D.
     symmetry.
@@ -885,9 +844,9 @@ Proof.
       (BMul.(braiding) _ _) (BMul.(braiding) _ _))) as e;
       simpl in e.
     rewrite e; clear e.
-    Admitted.
+    Admitted. *)
 
-.
+
 End CoherenceConditions.
 
 Class SemiCoherent_DistributiveBimonoidalCategory {DD : Type} {cC : Category DD}
@@ -1008,6 +967,6 @@ Class SemiCoherent_BraidedDistributiveBimonoidalCategory {DD : Type} {cC : Categ
   condition_XV (A : DD) :
     ρ*_ A ≃ γ_ A,c0 ∘ λ*_A;
 *)
-}.
+}. *)
 
 Close Scope Rig_scope.
