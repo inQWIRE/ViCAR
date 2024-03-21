@@ -1,4 +1,4 @@
-Require Export CategoryTypeclass.
+(* Require Export CategoryTypeclass.
 
 #[local] Set Universe Polymorphism.
 
@@ -49,9 +49,9 @@ Ltac fold_Category cC :=
   let cat_fold f :=
     (let base := base_fn @f in 
     let catted := catify @f in
-    change base with catted in *) in
+    change base with catted in * ) in
   try cat_fold @morphism; (* has issues, e.g., with ZX - 
-    might be fixable, but likely not necessary*)
+    might be fixable, but likely not necessary *)
   cat_fold @compose;
   cat_fold @c_identity;
   let cid := base_fn @c_identity in
@@ -96,11 +96,11 @@ Ltac fold_MonoidalCategory mC :=
   let cat_fold f :=
     (let base := cbase_fn @f in 
     let catted := catify @f in
-    change base with catted in *) in
+    change base with catted in * ) in
   let mcat_fold f :=
     (let base := mbase_fn @f in 
     let catted := mcatify @f in
-    change base with catted in *) in
+    change base with catted in * ) in
   let tens := mbase_fn @tensor in
     let ob_base := base_fn (@obj_bimap C C C cC cC cC tens) in
       change ob_base with mC.(tensor).(obj_bimap);
@@ -153,15 +153,15 @@ Ltac fold_BraidedMonoidalCategory bC :=
   let cat_fold f :=
     (let base := cbase_fn @f in 
     let catted := catify @f in
-    change base with catted in *) in
+    change base with catted in * ) in
   let mcat_fold f :=
     (let base := mbase_fn @f in 
     let catted := mcatify @f in
-    change base with catted in *) in
+    change base with catted in * ) in
   let bcat_fold f :=
     (let base := bbase_fn @f in 
     let catted := bcatify @f in
-    change base with catted in *) in
+    change base with catted in * ) in
   let braid := bbase_fn @braiding in
     let braidbase := constr:(ltac:(first [exact (ltac:(eval unfold braid in braid)) | exact braid])) in
     let braidforw := eval cbn in 
@@ -192,132 +192,9 @@ Ltac fold_all_braided_monoidal_categories :=
       fold_BraidedMonoidalCategory bC; subst x
   end.
 
-Ltac fold_CompactClosedCategory ccC :=
-  match type of ccC with @CompactClosedCategory ?C ?cC ?mC ?bC ?sC =>
-  let catify f := constr:(@f C cC) in
-  let mcatify f := constr:(@f C cC mC) in
-  let bcatify f := constr:(@f C cC mC bC) in
-  let cccatify f := constr:(@f C cC mC bC sC ccC) in
-  let base_fn f := 
-    (let t := eval cbn in f in constr:(t)) in
-  let cbase_fn f := (let raw := catify f in
-    let t := eval cbn in raw in constr:(t)) in
-  let mbase_fn f := (let raw := mcatify f in
-    let t := eval cbn in raw in constr:(t)) in
-  let bbase_fn f := (let raw := bcatify f in
-    let t := eval cbn in raw in constr:(t)) in
-  let ccbase_fn f := (let raw := cccatify f in
-    let t := eval cbn in raw in constr:(t)) in
-  let f_fold f :=
-    (let base := base_fn @f in 
-     change base with f) in
-  let cat_fold f :=
-    (let base := cbase_fn @f in 
-    let catted := catify @f in
-    change base with catted in *) in
-  let mcat_fold f :=
-    (let base := mbase_fn @f in 
-    let catted := mcatify @f in
-    change base with catted in *) in
-  let bcat_fold f :=
-    (let base := bbase_fn @f in 
-    let catted := bcatify @f in
-    change base with catted in *) in
-  let cccat_fold f :=
-    (let base := ccbase_fn @f in 
-    let catted := cccatify @f in
-    change base with catted in *) in
-  
-  let dua := ccbase_fn @dual in
-    first [
-      (unify dua (@id C) (*; idtac "would loop" *) )
-      | (
-    repeat progress (
-      let H := fresh in let x := fresh in 
-        evar (x : C);  (* TODO: Test this - last I tried it was uncooperative *)
-        let x' := eval unfold x in x in 
-        let duax := eval cbn in (dua x') in
-        pose (eq_refl : duax = ccC.(dual) x') as H;
-        erewrite H; clear x H))];
-  
-  cccat_fold @unit;
-  cccat_fold @counit;
-
-  let uni := ccbase_fn @unit in
-    repeat progress (let H := fresh in let x := fresh in
-      evar (x : C); 
-      let x' := eval unfold x in x in 
-      let unix := eval cbn in (uni x') in
-      pose (eq_refl : unix = 
-        ccC.(unit) x') as H;
-      erewrite H; clear x H);
-  
-  let couni := ccbase_fn @counit in
-    repeat progress (let H := fresh in let x := fresh in
-      evar (x : C); 
-      let x' := eval unfold x in x in 
-      let counix := eval cbn in (couni x') in
-      pose (eq_refl : counix = 
-        ccC.(counit) x') as H;
-      erewrite H; clear x H)
-  end.
-
-Ltac fold_all_compact_closed_categories :=
-  saturate_instances CompactClosedCategory;
-  repeat match goal with
-  | x := ?ccC : CompactClosedCategory ?C |- _ => 
-      fold_CompactClosedCategory ccC; subst x
-  end.
-
-
-Ltac fold_DaggerCategory dC :=
-  match type of dC with @DaggerCategory ?C ?cC =>
-  let catify f := constr:(@f C cC) in
-  let dcatify f := constr:(@f C cC dC) in
-  let base_fn f := 
-    (let t := eval cbn in f in constr:(t)) in
-  let cbase_fn f := (let raw := catify f in
-    let t := eval cbn in raw in constr:(t)) in
-  let dbase_fn f := (let raw := dcatify f in
-    let t := eval cbn in raw in constr:(t)) in
-  let f_fold f :=
-    (let base := base_fn @f in 
-     change base with f) in
-  let cat_fold f :=
-    (let base := cbase_fn @f in 
-    let catted := catify @f in
-    change base with catted in *) in
-  let dcat_fold f :=
-    (let base := dbase_fn @f in 
-    let catted := dcatify @f in
-    change base with catted in *) in
-  
-  dcat_fold @adjoint;
-
-  let adj := dbase_fn @adjoint in
-    repeat progress (let H := fresh in 
-    let x := fresh in let y := fresh in
-      evar (x : C); evar (y : C);
-      let x' := eval unfold x in x in 
-      let y' := eval unfold y in y in 
-      let adjxy := eval cbn in (adj x' y') in
-      pose (eq_refl : adjxy = 
-        dC.(adjoint) (A:=x') (B:=y')) as H;
-      erewrite H; clear x y H)
-  end.
-
-Ltac fold_all_dagger_categories :=
-  saturate_instances DaggerCategory;
-  repeat match goal with
-  | x := ?dC : DaggerCategory ?C |- _ => 
-      fold_DaggerCategory dC; subst x
-  end.
-
 Ltac to_Cat :=
   fold_all_categories; fold_all_monoidal_categories;
-  fold_all_braided_monoidal_categories; 
-  fold_all_compact_closed_categories;
-  fold_all_dagger_categories.
+  fold_all_braided_monoidal_categories.
 
 
 
@@ -1215,7 +1092,7 @@ Existing Instance mC0'.  Existing Instance mC1'.
 Existing Instance mC0''. Existing Instance mC1''.
 
 Lemma test_weak_fencepost : forall {C : Type}
-  `{Cat : Category C} `{MonCat : MonoidalCategory C}
+  {cC : Category C} {mC : MonoidalCategory cC}
   {a b m n o} (f : a ~> b) (g : m ~> n) (h : n ~> o),
   f ⊗ (g ∘ h) ≃ f ⊗ g ∘ (id_ b ⊗ h).
 Proof.
@@ -1227,7 +1104,7 @@ Proof.
 Qed.
 
 Lemma test_strong_fencepost : forall {C : Type}
-  `{Cat : Category C} `{MonCat : MonoidalCategory C}
+{cC : Category C} {mC : MonoidalCategory cC}
   {a b m n o} (f : a ~> b) (g : m ~> n) (h : n ~> o),
   f ⊗ (g ∘ h) ≃ f ⊗ g ∘ (id_ b ⊗ h).
 Proof.
@@ -1239,7 +1116,7 @@ Proof.
 Qed.
 
 Lemma test_strong_fencepost_no_id_1 : forall {C : Type}
-  `{Cat : Category C} `{MonCat : MonoidalCategory C}
+{cC : Category C} {mC : MonoidalCategory cC}
   {a b m n o} (f : a ~> b) (g : m ~> n) (h : n ~> o),
   f ⊗ (g ∘ h) ≃ f ⊗ g ∘ (id_ b ⊗ h).
 Proof.
@@ -1251,7 +1128,7 @@ Proof.
 Qed.
 
 (* Lemma test_strong_fencepost_no_id_2 : forall {C : Type}
-  `{Cat : Category C} `{MonCat : MonoidalCategory C}
+  {cC : Category C} {mC : MonoidalCategory cC}
   {a b m n o} (f : a ~> b) (g : m ~> n) (h : n ~> o),
   f ⊗ (g ∘ h ∘ id_ _) ⊗ (id_ a ⊗ id_ b) ≃ 
   f ⊗ g ⊗ (id_ a ⊗ id_ b) ∘ ((id_ b ⊗ h) ⊗ (id_ a ⊗ id_ b)).
@@ -1550,4 +1427,4 @@ Inductive rigcat_expr {C} `{mC : PreDistributiveBimonoidalCategory C}
 End CatExpr_hierarchy. *)
 
 End FutureDirections.
-
+ *)

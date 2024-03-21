@@ -4,21 +4,9 @@ Declare Scope Cat_scope.
 Delimit Scope Cat_scope with Cat.
 Local Open Scope Cat.
 
-Declare Scope Obj_scope.
-Delimit Scope Obj_scope with Obj.
-Local Open Scope Obj.
-
-Declare Scope Mor_scope.
-Delimit Scope Mor_scope with Mor.
-Local Open Scope Mor.
-
-Declare Scope Func_scope.
-Delimit Scope Func_scope with Func.
-Local Open Scope Func_scope.
-
 #[local] Set Universe Polymorphism.
 
-Reserved Notation "A ~> B" (at level 60).
+Reserved Notation "A ~> B" (at level 38).
 Reserved Notation "f ≃ g" (at level 70).
 Reserved Notation "A ≅ B" (at level 70).
 Reserved Notation "'id_' A" (at level 15).
@@ -30,64 +18,76 @@ Class Category (C : Type) : Type := {
     (* Morphism equivalence *)
     c_equiv {A B : C} : relation (A ~> B)
         where "f ≃ g" := (c_equiv f g) : Cat_scope;
-    c_equiv_rel {A B : C} : equivalence (A ~> B) c_equiv;
 
     compose {A B M : C} : 
         (A ~> B) -> (B ~> M) -> (A ~> M);
-    compose_compat {A B M : C} : 
-        forall (f g : A ~> B), f ≃ g ->
-        forall (h j : B ~> M), h ≃ j ->
-        compose f h ≃ compose g j;
-    assoc {A B M N : C}
-        (f : A ~> B) (g : B ~> M) (h : M ~> N) : 
-        compose (compose f g) h ≃ compose f (compose g h);
 
     c_identity (A : C) : A ~> A;
-    left_unit {A B : C} (f : A ~> B) : compose (c_identity A) f ≃ f;
-    right_unit {A B : C} (f : A ~> B) : compose f (c_identity B) ≃ f;
 }.
 
-Arguments morphism {_} (cC)%Cat (A B)%Obj : rename.
-Arguments c_equiv {_} (cC)%Cat {A B}%Obj (f g)%Mor : rename.
-Arguments c_equiv_rel {_} (cC)%Cat {A B}%Obj : rename.
-Arguments compose {_} (cC)%Cat {_ _ _}%Obj (f g)%Mor : rename.
-Arguments compose_compat {_} {cC}%Cat {_ _ _}%Obj (f g)%Mor _ (h j)%Mor : rename.
-Arguments assoc {_} {cC}%Cat {_ _ _ _}%Obj (f g h)%Mor : rename.
-Arguments c_identity {_} {cC}%Cat (A)%Obj : rename.
-Arguments left_unit {_} {cC}%Cat {A B}%Obj (f)%Mor : rename.
-Arguments right_unit {_} {cC}%Cat {A B}%Obj (f)%Mor : rename.
+Arguments morphism {_} (cC)%Cat (A B)%Cat : rename.
+Arguments c_equiv {_} (cC)%Cat {A B}%Cat (f g)%Cat : rename.
+Arguments compose {_} (cC)%Cat {_ _ _}%Cat (f g)%Cat : rename.
+Arguments c_identity {_} {cC}%Cat (A)%Cat : rename.
 
-Notation "'id_' A" := (c_identity A%Obj) 
-  (at level 15, A at next level, no associativity) : Mor_scope.
-Notation "A ~> B" := (morphism _%Cat A%Obj B%Obj)
-  (at level 60, B at next level, no associativity) : Cat_scope.
-Notation "f ≃ g" := (c_equiv _%Cat f%Mor g%Mor) 
+Notation "'id_' A" := (c_identity A%Cat) 
+  (at level 15, A at next level, no associativity) : Cat_scope.
+Notation "A ~> B" := (morphism _%Cat A%Cat B%Cat)
+  (at level 38, B at next level, no associativity) : Cat_scope.
+Notation "f ≃ g" := (c_equiv _%Cat f%Cat g%Cat) 
   (at level 70, g at next level) : Cat_scope. (* \simeq *)
-Notation "f ∘ g" := (compose _%Cat f%Mor g%Mor) 
-  (at level 65, g at next level, left associativity) : Mor_scope. (* \circ *)
+Notation "f ∘ g" := (compose _%Cat f%Cat g%Cat) 
+  (at level 39, g at next level, left associativity) : Cat_scope. (* \circ *)
 
+Class CategoryCoherence {C} (cC : Category C) : Type := {
+  to_base_struct_cat := cC;
+
+  c_equiv_rel {A B : C} : equivalence (A ~> B) cC.(c_equiv);
+
+  compose_compat {A B M : C} : 
+      forall (f g : A ~> B), f ≃ g ->
+      forall (h j : B ~> M), h ≃ j ->
+      f ∘ h ≃ g ∘ j;
+
+  assoc {A B M N : C}
+      (f : A ~> B) (g : B ~> M) (h : M ~> N) : 
+      (f ∘ g) ∘ h ≃ f ∘ (g ∘ h);
+
+  left_unit {A B : C} (f : A ~> B) : id_ A ∘ f ≃ f;
+  right_unit {A B : C} (f : A ~> B) : f ∘ id_ B ≃ f;
+}.
+
+Arguments c_equiv_rel {_} {cC}%Cat {cCh}%Cat {A B}%Cat : rename.
+Arguments assoc {_} {cC}%Cat {cCh}%Cat {_ _ _ _}%Cat (f g h)%Cat : rename.
+Arguments compose_compat {_} {cC}%Cat {cCh}%Cat {_ _ _}%Cat (f g)%Cat _ (h j)%Cat : rename.
+Arguments left_unit {_} {cC}%Cat {cCh}%Cat {A B}%Cat (f)%Cat : rename.
+Arguments right_unit {_} {cC}%Cat {cCh}%Cat {A B}%Cat (f)%Cat : rename.
+
+Coercion to_base_struct_cat : CategoryCoherence >-> Category.
 
 Add Parametric Relation {C : Type} {cC : Category C} 
-    (A B : C) : (A ~> B) cC.(c_equiv)
-  reflexivity proved by (equiv_refl (A ~> B) _ cC.(c_equiv_rel))
-  symmetry proved by (equiv_sym (A ~> B) _ cC.(c_equiv_rel))
-  transitivity proved by (equiv_trans (A ~> B) _ cC.(c_equiv_rel))
+  {cCh : CategoryCoherence cC} (A B : C) : (A ~> B) cC.(c_equiv)
+  reflexivity proved by (equiv_refl (A ~> B) _ cCh.(c_equiv_rel))
+  symmetry proved by (equiv_sym (A ~> B) _ cCh.(c_equiv_rel))
+  transitivity proved by (equiv_trans (A ~> B) _ cCh.(c_equiv_rel))
   as prop_equiv_rel.
 
-Add Parametric Morphism {C : Type} {cC : Category C} (n o m : C) : cC.(compose)
-  with signature (@c_equiv C cC n m) ==> (@c_equiv C cC m o) ==> cC.(c_equiv) as compose_mor.
-Proof. apply compose_compat; assumption. Qed.
+Add Parametric Morphism {C : Type} {cC : Category C} {cCh : CategoryCoherence cC}
+  (n o m : C) : cC.(compose)
+  with signature (@c_equiv C cC n m) ==> 
+    (@c_equiv C cC m o) ==> cC.(c_equiv) as compose_mor.
+Proof. apply compose_compat. Qed.
 
 
 Notation " 'is_inverse'  f  g" :=
-  (f%Mor ∘ g%Mor ≃ id_ _ /\ g%Mor ∘ f%Mor ≃ id_ _) 
+  (f%Cat ∘ g%Cat ≃ id_ _ /\ g%Cat ∘ f%Cat ≃ id_ _) 
   (at level 10, f at next level, g at next level) : Cat_scope.
 
 Lemma inverse_comm {C} {cC : Category C} {A B : C} (f : A ~> B) (g : B ~> A) : 
   is_inverse f g <-> is_inverse g f.
 Proof. easy. Qed.
 
-Lemma inverse_unique {C} {cC : Category C} {A B : C} 
+Lemma inverse_unique {C} {cC : Category C} {cCh : CategoryCoherence cC} {A B : C} 
   {f : A ~> B} {g g' : B ~> A} (Hg : is_inverse f g) (Hg' : is_inverse f g') :
   g ≃ g'.
 Proof.
@@ -102,25 +102,25 @@ Qed.
 Definition isomorphic {C : Type} {cC : Category C} (A B : C) :=
   exists (f : A ~> B) (g : B ~> A), is_inverse f g.
 
-Arguments isomorphic {_} {_}%Cat (_ _)%Obj.
+Arguments isomorphic {_} {_}%Cat (_ _)%Cat.
 
 Class Isomorphism {C : Type} {cC : Category C} (A B : C) := {
   forward : A ~> B;
   reverse : B ~> A;
   isomorphism_inverse : is_inverse forward reverse;
 }.
-Arguments Isomorphism {_} {_}%Cat (_ _)%Obj.
-Arguments forward {_} {_}%Cat {_ _}%Obj (f)%Mor : rename.
-Arguments reverse {_} {_}%Cat {_ _}%Obj (f)%Mor : rename.
+Arguments Isomorphism {_} {_}%Cat (_ _)%Cat.
+Arguments forward {_} {_}%Cat {_ _}%Cat (f)%Cat : rename.
+Arguments reverse {_} {_}%Cat {_ _}%Cat (f)%Cat : rename.
 (* Notation id_A I := (proj1 I.(isomorphism_inverse)).
 Notation id_B I := (proj2 I.(isomorphism_inverse)). *)
 Coercion forward : Isomorphism >-> morphism.
-Notation "f '^-1'" := (reverse f%Mor) (at level 25) : Mor_scope.
+Notation "f '^-1'" := (reverse f%Cat) (at level 25) : Cat_scope.
 
-Notation "A '<~>' B" := (Isomorphism A%Obj B%Obj) (at level 70) : Cat_scope.
-Notation "A ≅ B" := (isomorphic A%Obj B%Obj) (at level 70) : Cat_scope. (* \cong *)
+Notation "A '<~>' B" := (Isomorphism A%Cat B%Cat) (at level 70) : Cat_scope.
+Notation "A ≅ B" := (isomorphic A%Cat B%Cat) (at level 70) : Cat_scope. (* \cong *)
 
-Lemma isomorphic_iff_Isomorphism {C : Type} `{Category C} (A B : C) :
+Lemma isomorphic_iff_Isomorphism {C : Type} {cC : Category C} (A B : C) :
   isomorphic A B <-> exists _: Isomorphism A B, True.
 Proof.
   split.
@@ -132,29 +132,32 @@ Proof.
     exists f; exists g; auto.
 Qed.
 
-Lemma isomorphic_refl {C : Type} `{Category C} (A : C) : isomorphic A A.
+Lemma isomorphic_refl {C : Type} {cC : Category C} {cCh : CategoryCoherence cC}
+  (A : C) : isomorphic A A.
 Proof.
   exists (c_identity A).
   exists (c_identity A).
-  rewrite left_unit.
+  rewrite cCh.(left_unit).
   split; reflexivity.
 Qed.
 
-Lemma isomorphic_trans {C : Type} `{Category C} (A B M : C) : 
+Lemma isomorphic_trans {C : Type} {cC : Category C} {cCh : CategoryCoherence cC}
+  (A B M : C) : 
   isomorphic A B -> isomorphic B M -> isomorphic A M.
 Proof.
   intros [fAB [fBA [HfABA HfBAB]]] [fBM [fMB [HfBMB HfMBM]]].
   exists (fAB ∘ fBM).
   exists (fMB ∘ fBA).
   split;
-  rewrite assoc.
-  - rewrite <- (assoc fBM), HfBMB, left_unit, HfABA.
+  rewrite cCh.(assoc).
+  - rewrite <- (assoc fBM), HfBMB, cCh.(left_unit), HfABA.
     reflexivity.
-  - rewrite <- (assoc fBA), HfBAB, left_unit, HfMBM.
+  - rewrite <- (assoc fBA), HfBAB, cCh.(left_unit), HfMBM.
     reflexivity.
 Qed.
 
-Lemma isomorphic_sym {C : Type} `{Category C} (A B : C) : 
+Lemma isomorphic_sym {C : Type} {cC : Category C} {cCh : CategoryCoherence cC} 
+  (A B : C) : 
   isomorphic A B -> isomorphic B A.
 Proof.
   intros [fAB [fBA [HfABA HfBAB]]].
@@ -163,7 +166,8 @@ Proof.
   split; reflexivity.
 Qed.
 
-Add Parametric Relation {C : Type} `{Cat : Category C} : C (@isomorphic C Cat)
+Add Parametric Relation {C : Type} {cC : Category C} 
+  {cCh : CategoryCoherence cC} : C (@isomorphic C cC)
   reflexivity proved by isomorphic_refl
   symmetry proved by isomorphic_sym
   transitivity proved by isomorphic_trans
@@ -179,22 +183,23 @@ Class Functor {C D : Type} (cC: Category C) (cD : Category D) : Type := {
   morphism_compat {A B : C} (f g : A ~> B) : f ≃ g -> (morphism_map f) ≃ (morphism_map g);
 }.
 
-Arguments obj_map {_ _} {_ _}%Cat (F)%Func (A)%Obj : rename.
-Arguments morphism_map {_ _} {_ _}%Cat (F)%Func {A B}%Obj (f)%Mor : rename.
-Arguments id_map {_ _} {_ _}%Cat (F)%Func (A)%Obj : rename.
-Arguments compose_map {_ _} {_ _}%Cat (F)%Func {A B M}%Obj (f g)%Mor : rename.
-Arguments morphism_compat {_ _} {_ _}%Cat (F)%Func {A B}%Obj (f g)%Mor : rename.
+Arguments obj_map {_ _} {_ _}%Cat (F)%Cat (A)%Cat : rename.
+Arguments morphism_map {_ _} {_ _}%Cat (F)%Cat {A B}%Cat (f)%Cat : rename.
+Arguments id_map {_ _} {_ _}%Cat (F)%Cat (A)%Cat : rename.
+Arguments compose_map {_ _} {_ _}%Cat (F)%Cat {A B M}%Cat (f g)%Cat : rename.
+Arguments morphism_compat {_ _} {_ _}%Cat (F)%Cat {A B}%Cat (f g)%Cat : rename.
 
 Coercion obj_map : Functor >-> Funclass.
-Arguments morphism_map {_ _} {_ _}%Cat (_)%Func {_ _}%Obj (_)%Mor.
-Notation "F @ X" := (morphism_map F%Func X%Mor) (at level 55) : Mor_scope.
+Arguments morphism_map {_ _} {_ _}%Cat (_)%Cat {_ _}%Cat (_)%Cat.
+Notation "F @ X" := (morphism_map F%Cat X%Cat) (at level 38) : Cat_scope.
 
 Add Parametric Morphism {C D : Type} {cC : Category C} {cD : Category D}
   (F : Functor cC cD) (A B : C): F.(morphism_map)
   with signature (@c_equiv C cC A B) ==> (@c_equiv D cD (F A) (F B)) as functor_equiv_mor.
 Proof. apply morphism_compat. Qed.
 
-Add Parametric Morphism {C D : Type} `{cC : Category C} `{cD : Category D}
+Add Parametric Morphism {C D : Type} {cC : Category C} 
+  {cCh : CategoryCoherence cC} {cD : Category D} {cDh : CategoryCoherence cD}
   (F : Functor cC cD) : F.(obj_map)
   with signature (@isomorphic C cC) ==> (@isomorphic D cD) as functor_isomorphic_mor.
 Proof. 
@@ -220,18 +225,18 @@ Class Bifunctor {C1 C2 D : Type} (cC1: Category C1)
     f ≃ f' -> g ≃ g' -> morphism_bimap f g ≃ morphism_bimap f' g'
 }.
 
-Arguments obj_bimap {_ _ _} {_ _ _}%Cat (F)%Func (A1 A2)%Obj : rename.
-Arguments morphism_bimap {_ _ _} {_ _ _}%Cat (F)%Func 
-  {A1 B1 A2 B2}%Obj (f1 f2)%Mor : rename.
-Arguments id_bimap {_ _ _} {_ _ _}%Cat (F)%Func (A1 A2)%Obj : rename.
-Arguments compose_bimap {_ _ _} {_ _ _}%Cat (F)%Func 
-  {A1 B1 M1 A2 B2 M2}%Obj (f1 g1 f2 g2)%Mor : rename.
-Arguments morphism_bicompat {_ _ _} {_ _ _}%Cat (F)%Func
-  {A1 B1 A2 B2}%Obj (f1 f1' f2 f2')%Mor : rename.
+Arguments obj_bimap {_ _ _} {_ _ _}%Cat (F)%Cat (A1 A2)%Cat : rename.
+Arguments morphism_bimap {_ _ _} {_ _ _}%Cat (F)%Cat 
+  {A1 B1 A2 B2}%Cat (f1 f2)%Cat : rename.
+Arguments id_bimap {_ _ _} {_ _ _}%Cat (F)%Cat (A1 A2)%Cat : rename.
+Arguments compose_bimap {_ _ _} {_ _ _}%Cat (F)%Cat 
+  {A1 B1 M1 A2 B2 M2}%Cat (f1 g1 f2 g2)%Cat : rename.
+Arguments morphism_bicompat {_ _ _} {_ _ _}%Cat (F)%Cat
+  {A1 B1 A2 B2}%Cat (f1 f1' f2 f2')%Cat : rename.
 
 Coercion obj_bimap : Bifunctor >-> Funclass.
-Notation " F '@@' X , Y " := (morphism_bimap F%Func X%Mor Y%Mor) 
-  (at level 55) : Mor_scope.
+Notation " F '@@' X , Y " := (morphism_bimap F%Cat X%Cat Y%Cat) 
+  (at level 38) : Cat_scope.
 
 Add Parametric Morphism {C1 C2 D : Type} 
   {cC1 : Category C1} {cC2 : Category C2} {cD : Category D}
@@ -240,8 +245,10 @@ Add Parametric Morphism {C1 C2 D : Type}
     ==> (@c_equiv D cD (F A1 A2) (F B1 B2)) as bifunctor_equiv_mor.
 Proof. intros. apply morphism_bicompat; easy. Qed.
 
-Add Parametric Morphism {C1 C2 D : Type} `{cC1 : Category C1} `{cC2 : Category C2}
- `{cD : Category D} (F : Bifunctor cC1 cC2 cD) : F.(obj_bimap)
+Add Parametric Morphism {C1 C2 D : Type} {cC1 : Category C1} 
+  {cC1h : CategoryCoherence cC1} {cC2 : Category C2} 
+  {cC2h : CategoryCoherence cC2} {cD : Category D} {cDh : CategoryCoherence cD} 
+  (F : Bifunctor cC1 cC2 cD) : F.(obj_bimap)
   with signature (@isomorphic C1 cC1) ==> (@isomorphic C2 cC2) 
     ==> (@isomorphic D cD) as bifunctor_isometric_mor.
 Proof. 
@@ -261,7 +268,7 @@ Definition CommuteBifunctor {C1 C2 D : Type} `{cC1 : Category C1}
   morphism_bicompat := ltac:(intros; apply morphism_bicompat; easy);
 |}.
 
-Arguments CommuteBifunctor {_ _ _} {_ _ _}%Cat (_)%Func /.
+Arguments CommuteBifunctor {_ _ _} {_ _ _}%Cat (_)%Cat /.
 #[export] Typeclasses Transparent CommuteBifunctor.
 
 
@@ -273,11 +280,11 @@ Class NaturalTransformation {C D : Type} `{cC: Category C} `{cD : Category D}
   component_map_natural {A B : C} (f : A ~> B) :
     F @ f ∘ component_map B ≃ component_map A ∘ G @ f;
 }.
-Arguments NaturalTransformation {_ _} {_ _}%Cat (_ _)%Func.
-Arguments component_map {_ _} {_ _}%Cat {_ _}%Func (N)%Func (_)%Obj : rename.
-Arguments component_map_natural {_ _} {_ _}%Cat {_ _}%Func 
-  {N}%Func {_ _}%Obj (f)%Mor : rename.
-Notation "'α_' X" := (component_map _%Func X%Obj) (at level 20) : Mor_scope.
+Arguments NaturalTransformation {_ _} {_ _}%Cat (_ _)%Cat.
+Arguments component_map {_ _} {_ _}%Cat {_ _}%Cat (N)%Cat (_)%Cat : rename.
+Arguments component_map_natural {_ _} {_ _}%Cat {_ _}%Cat 
+  {N}%Cat {_ _}%Cat (f)%Cat : rename.
+Notation "'α_' X" := (component_map _%Cat X%Cat) (at level 20) : Cat_scope.
 
 Class NaturalIsomorphism {C D : Type} `{cC: Category C} `{cD : Category D}
   (F G : Functor cC cD) := {
@@ -285,12 +292,12 @@ Class NaturalIsomorphism {C D : Type} `{cC: Category C} `{cD : Category D}
   component_iso_natural (A B : C) (f : A ~> B) :
     F@f ∘ component_iso B ≃ component_iso A ∘ G@f;
 }.
-Arguments NaturalIsomorphism {_ _} {_ _}%Cat (_ _)%Func.
-Arguments component_iso {_ _} {_ _}%Cat {_ _}%Func (N)%Func (_)%Obj : rename.
-Arguments component_iso_natural {_ _} {_ _}%Cat {_ _}%Func 
-  {N}%Func {_ _}%Obj (f)%Mor : rename.
+Arguments NaturalIsomorphism {_ _} {_ _}%Cat (_ _)%Cat.
+Arguments component_iso {_ _} {_ _}%Cat {_ _}%Cat (N)%Cat (_)%Cat : rename.
+Arguments component_iso_natural {_ _} {_ _}%Cat {_ _}%Cat 
+  {N}%Cat {_ _}%Cat (f)%Cat : rename.
 
-Coercion component_iso : NaturalIsomorphism >-> Funclass. (* TODO: is this sensible? I think not *)
+Coercion component_iso : NaturalIsomorphism >-> Funclass.
 
 Definition NaturalTransformation_of_NaturalIsomorphism {C D : Type} 
   `{cC : Category C} `{cD : Category D} {F G : Functor cC cD}
@@ -298,9 +305,6 @@ Definition NaturalTransformation_of_NaturalIsomorphism {C D : Type}
   component_map := component_iso N;
   component_map_natural := ltac:(intros; apply component_iso_natural);
 |}.
-(* Just to simplify notation, I'm removing this for now... *)
-(* Coercion NaturalTransformation_of_NaturalIsomorphism : 
-  NaturalIsomorphism >-> NaturalTransformation. *)
 
 
 
@@ -313,13 +317,13 @@ Class NaturalBiTransformation {C1 C2 D : Type} `{cC1 : Category C1}
     (F @@ f1, f2) ∘ (component_bimap B1 B2) 
       ≃ (component_bimap A1 A2) ∘ (G @@ f1, f2)
 }.
-Arguments NaturalBiTransformation {_ _ _} {_ _ _}%Cat (_ _)%Func.
-Arguments component_bimap {_ _ _} {_ _ _}%Cat {_ _}%Func 
-  (N)%Func (_ _)%Obj : rename.
-Arguments component_bimap_natural {_ _ _} {_ _ _}%Cat {_ _}%Func 
-  {N}%Func {_ _ _ _}%Obj (f1 f2)%Mor : rename.
-Notation "'β_' X , Y" := (component_bimap _%Func X%Obj Y%Obj) 
-  (at level 20) : Mor_scope.
+Arguments NaturalBiTransformation {_ _ _} {_ _ _}%Cat (_ _)%Cat.
+Arguments component_bimap {_ _ _} {_ _ _}%Cat {_ _}%Cat 
+  (N)%Cat (_ _)%Cat : rename.
+Arguments component_bimap_natural {_ _ _} {_ _ _}%Cat {_ _}%Cat 
+  {N}%Cat {_ _ _ _}%Cat (f1 f2)%Cat : rename.
+Notation "'β_' X , Y" := (component_bimap _%Cat X%Cat Y%Cat) 
+  (at level 20) : Cat_scope.
 
 Class NaturalBiIsomorphism {C1 C2 D : Type} `{cC1 : Category C1} 
   `{cC2 : Category C2} `{cD : Category D} (F G : Bifunctor cC1 cC2 cD) := {
@@ -327,11 +331,11 @@ Class NaturalBiIsomorphism {C1 C2 D : Type} `{cC1 : Category C1}
   component_biiso_natural (A1 B1 : C1) (A2 B2 : C2) (f1 : A1 ~> B1) (f2 : A2 ~> B2) :
     (F @@ f1, f2) ∘ (component_biiso B1 B2) ≃ (component_biiso A1 A2) ∘ (G @@ f1, f2)
 }.
-Arguments NaturalBiIsomorphism {_ _ _} {_ _ _}%Cat (_ _)%Func.
-Arguments component_biiso {_ _ _} {_ _ _}%Cat {_ _}%Func 
-  (N)%Func (_ _)%Obj : rename.
-Arguments component_bimap_natural {_ _ _} {_ _ _}%Cat {_ _}%Func 
-  {N}%Func {_ _ _ _}%Obj (f1 f2)%Mor : rename.
+Arguments NaturalBiIsomorphism {_ _ _} {_ _ _}%Cat (_ _)%Cat.
+Arguments component_biiso {_ _ _} {_ _ _}%Cat {_ _}%Cat 
+  (N)%Cat (_ _)%Cat : rename.
+Arguments component_bimap_natural {_ _ _} {_ _ _}%Cat {_ _}%Cat 
+  {N}%Cat {_ _ _ _}%Cat (f1 f2)%Cat : rename.
 Coercion component_biiso : NaturalBiIsomorphism >-> Funclass.
 
 Definition NaturalBiTransformation_of_NaturalBiIsomorphism {C1 C2 D : Type} 
@@ -352,20 +356,24 @@ Definition NaturalBiTransformation_of_NaturalBiIsomorphism {C1 C2 D : Type}
 Definition OppositeCategory {C : Type} (cC : Category C) : Category C := {|
   morphism := fun A B => cC.(morphism) B A; 
   c_equiv := fun A B => @c_equiv C cC B A;
-  c_equiv_rel := fun A B => @c_equiv_rel C cC B A;
   compose := fun A B M fAB fBM => fBM ∘ fAB;
-  compose_compat := fun A B M f g Hfg h j Hhj => 
-    @compose_compat C cC M B A _ _ Hhj _ _ Hfg;
-  assoc := fun A B M N f g h => 
-    equiv_sym _ _ cC.(c_equiv_rel) _ _ (@assoc C cC N M B A h g f);
   c_identity := c_identity;
-  left_unit := fun A B => @right_unit C cC B A;
-  right_unit := fun A B => @left_unit C cC B A;
 |}.
 
 Notation "C '^op'" := (OppositeCategory C%Cat) 
-  (at level 40, left associativity) : Cat_scope.
+  (at level 34, left associativity) : Cat_scope.
 #[export] Typeclasses Transparent OppositeCategory.
+
+#[program] Definition OppositeCategoryCoherence {C : Type} {cC : Category C}
+  (cCh : CategoryCoherence cC) : CategoryCoherence (cC^op) := {|
+  c_equiv_rel := fun A B => @c_equiv_rel C cC cCh B A;
+  compose_compat := fun A B M f g Hfg h j Hhj => 
+    @compose_compat C cC cCh M B A _ _ Hhj _ _ Hfg;
+  assoc := fun A B M N f g h => 
+    equiv_sym _ _ cCh.(c_equiv_rel) _ _ (@assoc C cC cCh N M B A h g f);
+  left_unit := fun A B => @right_unit C cC cCh B A;
+  right_unit := fun A B => @left_unit C cC cCh B A;
+|}.
 
 Class ContraFunctor {C D : Type} (cC: Category C) (cD : Category D) : Type := {
   obj_contramap : C -> D;
@@ -378,17 +386,17 @@ Class ContraFunctor {C D : Type} (cC: Category C) (cD : Category D) : Type := {
     (morphism_contramap f) ≃ (morphism_contramap g);
 }.
 Arguments ContraFunctor {_ _} (_ _)%Cat.
-Arguments obj_contramap {_ _} {_ _}%Cat (F)%Func (A)%Obj : rename.
-Arguments morphism_contramap {_ _} {_ _}%Cat (F)%Func 
-  {A B}%Obj (f)%Mor : rename.
-Arguments id_contramap {_ _} {_ _}%Cat (F)%Func (A)%Obj : rename.
-Arguments compose_contramap {_ _} {_ _}%Cat (F)%Func 
-  {A B M}%Obj (f g)%Mor : rename.
-Arguments morphism_contracompat {_ _} {_ _}%Cat (F)%Func 
-  {A B}%Obj (f g)%Mor : rename.
+Arguments obj_contramap {_ _} {_ _}%Cat (F)%Cat (A)%Cat : rename.
+Arguments morphism_contramap {_ _} {_ _}%Cat (F)%Cat 
+  {A B}%Cat (f)%Cat : rename.
+Arguments id_contramap {_ _} {_ _}%Cat (F)%Cat (A)%Cat : rename.
+Arguments compose_contramap {_ _} {_ _}%Cat (F)%Cat 
+  {A B M}%Cat (f g)%Cat : rename.
+Arguments morphism_contracompat {_ _} {_ _}%Cat (F)%Cat 
+  {A B}%Cat (f g)%Cat : rename.
 Coercion obj_contramap : ContraFunctor >-> Funclass.
 Notation "F @' X" := (F.(morphism_contramap) X) 
-  (at level 55, no associativity) : Mor_scope.
+  (at level 55, no associativity) : Cat_scope.
 
 Add Parametric Morphism {C D : Type} {cC : Category C} {cD : Category D}
   (F : ContraFunctor cC cD) (A B : C): F.(morphism_contramap)
@@ -396,7 +404,8 @@ Add Parametric Morphism {C D : Type} {cC : Category C} {cD : Category D}
   (@c_equiv C cC A B) ==> (@c_equiv D cD (F B) (F A)) as contrafunctor_equiv_mor.
 Proof. apply morphism_contracompat. Qed.
 
-Add Parametric Morphism {C D : Type} `{cC : Category C} `{cD : Category D}
+Add Parametric Morphism {C D : Type} {cC : Category C} {cCh : CategoryCoherence cC} 
+  {cD : Category D} {cDh : CategoryCoherence cD}
   (F : ContraFunctor cC cD) : F.(obj_contramap)
   with signature 
   (@isomorphic C cC) ==> (@isomorphic D cD) as contrafunctor_isomorphic_mor.
@@ -483,7 +492,7 @@ Definition product_relation_equivalence {T U : Type} {simT : relation T} {simU :
   |}
 end end.
 
-#[local, program] Instance ProductCategory {C D : Type} 
+#[local] Instance ProductCategory {C D : Type} 
   (cC : Category C) (cD : Category D) : Category (C*D) := {
   morphism := fun AB MN =>
     prod (cC.(morphism) (fst AB) (fst MN)) (cD.(morphism) (snd AB) (snd MN));
@@ -492,11 +501,6 @@ end end.
     match AB with (A, B) =>
     match A'B' with (A', B') => 
       product_relation (@c_equiv C cC A A') (@c_equiv D cD B B')
-    end end;
-  c_equiv_rel := fun AB A'B' => 
-    match AB with (A, B) =>
-    match A'B' with (A', B') =>
-      product_relation_equivalence (@c_equiv_rel C cC A A') (@c_equiv_rel D cD B B')
     end end;
   compose := fun AB MN EF =>
     match AB with (A, B) =>
@@ -507,6 +511,18 @@ end end.
       (sAM ∘ sME, sBN ∘ sNF)
     end end end end end;
   c_identity := fun AB => match AB with (A, B) => (c_identity A, c_identity B) end;
+}.
+
+#[program] Instance ProductCategoryCoherence {C D : Type} 
+  {cC : Category C} {cD : Category D}
+  (cCh : CategoryCoherence cC) (cDh : CategoryCoherence cD) 
+  : CategoryCoherence (ProductCategory cC cD) := {
+  c_equiv_rel := fun AB A'B' => 
+    match AB with (A, B) =>
+    match A'B' with (A', B') =>
+      product_relation_equivalence (@c_equiv_rel C cC cCh A A') 
+        (@c_equiv_rel D cD cDh B B')
+    end end;
 }.
 Next Obligation.
   split; apply compose_compat; easy.
@@ -536,7 +552,8 @@ Definition ProductCategoryFunctor_of_Bifunctor {C1 C2 D : Type} `{cC1 : Category
 |}.
 
 Definition Bifunctor_of_ProductCategoryFunctor {C1 C2 D : Type} `{cC1 : Category C1} 
-  `{cC2 : Category C2} `{cD : Category D} (F : Functor (ProductCategory cC1 cC2) cD) : 
+  `{cC2 : Category C2} {cD : Category D} {cDh : CategoryCoherence cD} 
+  (F : Functor (ProductCategory cC1 cC2) cD) : 
   Bifunctor cC1 cC2 cD := {|
     obj_bimap := fun A B => F (A, B);
     morphism_bimap := fun A1 B1 A2 B2 fA1B1 fA2B2 => 
@@ -569,55 +586,63 @@ Qed. *)
 
 
 (* Some useful little lemmas *)
-Lemma compose_cancel_r : forall {C} {cC:Category C} {A B M : C} 
+Lemma compose_cancel_r : forall {C} {cC : Category C} 
+  {cCh : CategoryCoherence cC} {A B M : C} 
   (f g : A ~> B) (h : B ~> M), f ≃ g -> f ∘ h ≃ g ∘ h.
 Proof.
   intros.
   apply compose_compat; easy.
 Qed.
 
-Lemma compose_cancel_l : forall {C} {cC:Category C} {A B M : C} 
+Lemma compose_cancel_l : forall {C} {cC:Category C} 
+  {cCh : CategoryCoherence cC} {A B M : C} 
   (f : A ~> B) (g h : B ~> M), g ≃ h -> f ∘ g ≃ f ∘ h.
 Proof.
   intros.
   apply compose_compat; easy.
 Qed.
 
-Lemma iso_inv_r : forall {C} {cC:Category C} {A B : C} 
+Lemma iso_inv_r : forall {C} {cC:Category C} 
+  {cCh : CategoryCoherence cC} {A B : C} 
   (f : A <~> B), f ∘ f^-1 ≃ id_ A.
 Proof. intros; apply isomorphism_inverse. Qed.
 
-Lemma iso_inv_l : forall {C} {cC:Category C} {A B : C} 
+Lemma iso_inv_l : forall {C} {cC:Category C}
+  {cCh : CategoryCoherence cC} {A B : C} 
   (f : A <~> B), f^-1 ∘ f ≃ id_ B.
 Proof. intros; apply isomorphism_inverse. Qed.
 
 
-Lemma compose_iso_r : forall {C} {cC:Category C} {A B M : C} 
+Lemma compose_iso_r : forall {C} {cC:Category C} 
+  {cCh : CategoryCoherence cC} {A B M : C} 
   (f : A ~> B) (g : B <~> M) (h : A ~> M), 
     f ∘ g ≃ h <-> f ≃ h ∘ g^-1.
 Proof.
   intros; split; intro Heq.
-  - rewrite <- Heq, assoc, iso_inv_r, right_unit; easy.
-  - rewrite Heq, assoc, iso_inv_l, right_unit; easy.
+  - rewrite <- Heq, cCh.(assoc), iso_inv_r, right_unit; easy.
+  - rewrite Heq, cCh.(assoc), iso_inv_l, right_unit; easy.
 Qed.
 
-Lemma compose_iso_l : forall {C} {cC:Category C} {A B M : C} 
+Lemma compose_iso_l : forall {C} {cC:Category C} 
+  {cCh : CategoryCoherence cC} {A B M : C} 
   (f : A <~> B) (g : B ~> M) (h : A ~> M), 
     f ∘ g ≃ h <-> g ≃ f^-1 ∘ h.
 Proof.
   intros; split; intro Heq.
-  - rewrite <- Heq, <- assoc, iso_inv_l, left_unit; easy.
-  - rewrite Heq, <- assoc, iso_inv_r, left_unit; easy.
+  - rewrite <- Heq, <- cCh.(assoc), iso_inv_l, left_unit; easy.
+  - rewrite Heq, <- cCh.(assoc), iso_inv_r, left_unit; easy.
 Qed.
 
-Lemma compose_iso_r' : forall {C} {cC:Category C} {A B M : C} 
+Lemma compose_iso_r' : forall {C} {cC:Category C}
+  {cCh : CategoryCoherence cC} {A B M : C} 
   (f : A ~> B) (g : B <~> M) (h : A ~> M), 
     h ≃ f ∘ g <-> h ∘ g^-1 ≃ f.
 Proof.
   intros; split; symmetry; apply compose_iso_r; easy.
 Qed.
 
-Lemma compose_iso_l' : forall {C} {cC:Category C} {A B M : C} 
+Lemma compose_iso_l' : forall {C} {cC:Category C} 
+  {cCh : CategoryCoherence cC} {A B M : C} 
   (f : A <~> B) (g : B ~> M) (h : A ~> M), 
     h ≃ f ∘ g <-> f^-1 ∘ h ≃ g.
 Proof.
@@ -625,7 +650,8 @@ Proof.
 Qed.
 
 
-#[program] Definition FunctorIsomorphism {C D} {cC : Category C} {cD : Category D}
+#[program] Definition FunctorIsomorphism {C D} {cC : Category C} 
+  {cCh : CategoryCoherence cC} {cD : Category D} {cDh : CategoryCoherence cD}
   {A B : C} (F : Functor cC cD) (f : A <~> B) : F A <~> F B := {|
   forward := F @ f;
   reverse := F @ (f ^-1);
@@ -635,8 +661,9 @@ Next Obligation.
     (proj2 isomorphism_inverse), 2!id_map; easy.
 Qed.
 
-#[program] Definition BifunctorIsomorphism {C1 C2 D} 
-  {cC1 : Category C1} {cC2 : Category C2} {cD : Category D}
+#[program] Definition BifunctorIsomorphism {C1 C2 D} {cC1 : Category C1} 
+  {cC1h : CategoryCoherence cC1} {cC2 : Category C2} 
+  {cC2h : CategoryCoherence cC2} {cD : Category D} {cDh : CategoryCoherence cD}
   {A1 B1 : C1} {A2 B2 : C2} (F : Bifunctor cC1 cC2 cD) 
     (f1 : A1 <~> B1) (f2 : A2 <~> B2) : F A1 A2 <~> F B1 B2 := {|
   forward := F @@ f1, f2;
@@ -647,7 +674,8 @@ Next Obligation.
     2!(proj2 isomorphism_inverse), 2!id_bimap; easy.
 Qed.
 
-#[export] Instance IdentityIsomorphism {C} `{cC : Category C} (A : C) 
+#[export] Instance IdentityIsomorphism {C} {cC : Category C} 
+  {cCh : CategoryCoherence cC} (A : C) 
   : Isomorphism A A := {|
     forward := id_ A;
     reverse := id_ A;
@@ -655,7 +683,8 @@ Qed.
 |}.
 
 Lemma component_iso_natural_reverse : forall {C D} 
-  {cC : Category C} {cD : Category D} 
+  {cC : Category C} {cCh : CategoryCoherence cC} 
+  {cD : Category D} {cDh : CategoryCoherence cD}
   {F G : Functor cC cD} {N : NaturalIsomorphism F G} (A B : C) 
   (f : A ~> B),
   N A ^-1 ∘ F.(morphism_map) f ≃ G.(morphism_map) f ∘ N B ^-1.
@@ -669,9 +698,10 @@ Proof.
 Qed.
 
 Lemma component_biiso_natural_reverse : forall {C1 C2 D : Type} 
-  {cC1 : Category C1} {cC2 : Category C2}
-  {cD : Category D} {F G : Bifunctor cC1 cC2 cD}
-  {N : NaturalBiIsomorphism F G} 
+  {cC1 : Category C1} {cC1h : CategoryCoherence cC1} 
+  {cC2 : Category C2} {cC2h : CategoryCoherence cC2} 
+  {cD : Category D} {cDh : CategoryCoherence cD}
+  {F G : Bifunctor cC1 cC2 cD} {N : NaturalBiIsomorphism F G} 
   (A1 B1 : C1) (A2 B2 : C2) (f1 : A1 ~> B1) (f2 : A2 ~> B2),
   (N A1 A2) ^-1 ∘ F.(morphism_bimap) f1 f2
   ≃ G.(morphism_bimap) f1 f2 ∘ N B1 B2 ^-1.

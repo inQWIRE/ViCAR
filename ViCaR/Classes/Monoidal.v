@@ -4,214 +4,166 @@ Require Import Setoid.
 #[local] Set Universe Polymorphism.
 
 Local Open Scope Cat_scope.
-Local Open Scope Mor_scope.
-Local Open Scope Obj_scope.
 
-Declare Scope Mon_scope.
-Delimit Scope Mon_scope with Mon.
-Open Scope Mon_scope.
+Reserved Notation "x × y" (at level 34, left associativity). (* \times *)
+Reserved Notation "x ⊗ y" (at level 34, left associativity). (* \otimes *) 
+Reserved Notation "'λ_' x" (at level 20, no associativity). (* \lambda *) 
+Reserved Notation "'ρ_' x" (at level 20, no associativity). (* \rho *)  
+Reserved Notation "'α_' A , B , M" (at level 20, no associativity). (* \alpha *)
 
-
-(* 
-Removing the reservation to allow confining these to a particular scope.
-
-Reserved Notation "x × y" (at level 40, left associativity). (* \times *)
-Reserved Notation "x ⊗ y" (at level 40, left associativity). (* \otimes *) 
-Reserved Notation "'λ_' x" (at level 30, no associativity). (* \lambda *) 
-Reserved Notation "'ρ_' x" (at level 30, no associativity). (* \rho *)  
-*)
 Class MonoidalCategory {C : Type} (cC : Category C) : Type := {
-  tensor : Bifunctor cC cC cC;
-    (* where "x × y" := (tensor x y); *)
+  obj_tensor : C -> C -> C
+    where "x × y" := (obj_tensor x y);
+  mor_tensor {A1 A2 B1 B2 : C} (f : A1 ~> B1) (g : A2 ~> B2) : 
+    A1 × A2 ~> B1 × B2;
   mon_I : C;
-    (* where "x ⊗ y" := (tensor @@ x, y) ;*)
 
   associator (A B M : C) : 
-    tensor (tensor A B) M <~> tensor A (tensor B M);
+    (A × B) × M <~> A × (B × M);
 
-  left_unitor (A : C) : tensor mon_I A <~> A;
-    (* where "'λ_' x" := (left_unitor x); *)
+  left_unitor (A : C) : mon_I × A <~> A;
 
-  right_unitor (A : C) : tensor A mon_I <~> A;
-    (* where "'ρ_' x" := (right_unitor x); *)
+  right_unitor (A : C) : A × mon_I <~> A;
+}.
+Arguments obj_tensor {_} {_}%Cat (mC)%Cat (A B)%Cat : rename.
+Arguments mor_tensor {_} {_}%Cat (mC)%Cat {_ _ _ _}%Cat (_ _)%Cat : rename.
+Arguments mon_I {_} {_}%Cat (mC)%Cat : rename.
+Arguments associator {_} {_}%Cat {mC}%Cat (_ _ _)%Cat : rename.
+Arguments left_unitor {_} {_}%Cat {mC}%Cat (_)%Cat : rename.
+Arguments right_unitor {_} {_}%Cat {mC}%Cat (_)%Cat : rename.
+
+Notation "'I'" := (mon_I _%Cat) (at level 0) : Cat_scope.
+Notation "A '×' B" := (obj_tensor _%Cat A%Cat B%Cat)
+  (at level 34, left associativity) : Cat_scope. (* \times *)
+Notation "f '⊗' g" := 
+  (mor_tensor _%Cat f%Cat g%Cat) 
+  (at level 34, left associativity) : Cat_scope . (* \otimes *)  
+Notation "'α_' A , B , M" := 
+  (associator A%Cat B%Cat M%Cat)
+  (at level 20, no associativity) : Cat_scope. (* \alpha *)
+Notation "'λ_' x" := (left_unitor x) 
+  (at level 20, no associativity) : Cat_scope. (* \lambda *) 
+Notation "'ρ_' x" := (right_unitor x) 
+  (at level 20, no associativity) : Cat_scope. (* \rho *) 
+
+
+
+Class MonoidalCategoryCoherence {C : Type} {cC : Category C}
+  {cCh : CategoryCoherence cC} (mC : MonoidalCategory cC) : Type := {
+  to_base_struct_moncat := mC;
+  tensor_id (A1 A2 : C) : (id_ A1) ⊗ (id_ A2) ≃ id_ (A1 × A2);
+  tensor_compose {A1 B1 M1 A2 B2 M2 : C} 
+    (f1 : A1 ~> B1) (g1 : B1 ~> M1) 
+    (f2 : A2 ~> B2) (g2 : B2 ~> M2) :
+    (f1 ∘ g1) ⊗ (f2 ∘ g2) ≃ f1 ⊗ f2 ∘ g1 ⊗ g2;
+  tensor_compat {A1 B1 A2 B2 : C}
+    (f f' : A1 ~> B1) (g g' : A2 ~> B2) :
+    f ≃ f' -> g ≃ g' -> f ⊗ g ≃ f' ⊗ g';
 
   (* Coherence conditions for α, λ, ρ *)
   associator_cohere {A B M N P Q : C} 
     (f : A ~> B) (g : M ~> N) (h : P ~> Q) : 
-    associator A M P ∘ (tensor @@ f, (tensor @@ g, h)) 
-    ≃ (tensor @@ (tensor @@ f, g), h) ∘ associator B N Q;
+    α_ A, M, P ∘ (f ⊗ (g ⊗ h)) 
+    ≃ ((f ⊗ g) ⊗ h) ∘ α_ B, N, Q;
   left_unitor_cohere {A B : C} (f : A ~> B) : 
-    left_unitor A ∘ f ≃ (tensor @@ id_ mon_I, f) ∘ left_unitor B;
+    λ_ A ∘ f ≃ (id_ I ⊗ f) ∘ λ_ B;
   right_unitor_cohere {A B : C} (f : A ~> B) : 
-    right_unitor A ∘ f ≃ (tensor @@ f, id_ mon_I) ∘ right_unitor B;
+    ρ_ A ∘ f ≃ (f ⊗ id_ I) ∘ ρ_ B;
 
   (* Commutative diagrams *)
   triangle (A B : C) : 
-    associator A mon_I B ∘ (tensor @@ id_ A, left_unitor B)
-    ≃ tensor @@ right_unitor A, id_ B;
+    α_ A, I, B ∘ (id_ A ⊗ λ_ B)
+    ≃ ρ_ A ⊗ id_ B;
   pentagon (A B M N : C) : 
-    (tensor @@ associator A B M, id_ N) 
-    ∘ associator A (tensor B M) N
-    ∘ (tensor @@ id_ A, associator B M N)
-    ≃ associator (tensor A B) M N ∘ associator A B (tensor M N);
+    (α_ A, B, M ⊗ id_ N) 
+    ∘ α_ A, (B × M), N
+    ∘ (id_ A ⊗ α_ B, M, N)
+    ≃ α_ (A × B), M, N ∘ α_ A, B, (M × N);
 }.
 
-Arguments MonoidalCategory {_} (_)%Cat.
-Arguments tensor {_} {_}%Cat (mC)%Cat : rename.
-Arguments mon_I {_} {_}%Cat (mC)%Cat : rename.
-Arguments associator {_} {_}%Cat {mC}%Cat (_ _ _)%Obj : rename.
-Arguments left_unitor {_} {_}%Cat {mC}%Cat (_)%Obj : rename.
-Arguments right_unitor {_} {_}%Cat {mC}%Cat (_)%Obj : rename.
-Arguments associator_cohere {_} {_}%Cat {mC}%Cat 
-  {_ _ _ _ _ _}%Obj (_ _ _)%Mor : rename.
-Arguments left_unitor_cohere {_} {_}%Cat {mC}%Cat {_ _}%Obj (_)%Mor : rename.
-Arguments right_unitor_cohere {_} {_}%Cat {mC}%Cat {_ _}%Obj (_)%Mor : rename.
-Arguments triangle {_} {_}%Cat {mC}%Cat (_ _)%Obj: rename.
-Arguments pentagon {_} {_}%Cat {mC}%Cat (_ _ _ _)%Obj : rename.
+Coercion to_base_struct_moncat : MonoidalCategoryCoherence >-> MonoidalCategory.
 
-Notation "'I'" := (mon_I _%Cat) (at level 0) : Mon_scope.
-Notation "A '×' B" := (tensor _%Cat A%Obj B%Obj)
-  (at level 40, left associativity) : Mon_scope. (* \times *)
-Notation "f '⊗' g" := 
-  (morphism_bimap (tensor _%Cat) f%Obj g%Obj) 
-  (at level 40, left associativity) : Mon_scope . (* \otimes *)  
-Notation "'λ_' x" := (left_unitor x) 
-  (at level 20, no associativity) : Mon_scope. (* \lambda *) 
-Notation "'ρ_' x" := (right_unitor x) 
-  (at level 20, no associativity) : Mon_scope. (* \rho *) 
+Arguments associator_cohere {_} {_ _ _}%Cat {mCh}%Cat 
+  {_ _ _ _ _ _}%Cat (_ _ _)%Cat : rename.
+Arguments left_unitor_cohere {_} {_ _ _}%Cat {mCh}%Cat {_ _}%Cat (_)%Cat : rename.
+Arguments right_unitor_cohere {_} {_ _ _}%Cat {mCh}%Cat {_ _}%Cat (_)%Cat : rename.
+Arguments triangle {_} {_ _ _}%Cat {mCh}%Cat (_ _)%Cat: rename.
+Arguments pentagon {_} {_ _ _}%Cat {mCh}%Cat (_ _ _ _)%Cat : rename.
 
-Add Parametric Morphism {C : Type}
-  {cC : Category C} {mC: MonoidalCategory cC}
-  (A1 B1 A2 B2 : C) : mC.(tensor).(morphism_bimap)
+Add Parametric Morphism {C : Type} {cC : Category C} 
+  {mC : MonoidalCategory cC} {cCh : CategoryCoherence cC} 
+  {mCh : MonoidalCategoryCoherence mC} {A1 B1 A2 B2 : C} : (mor_tensor mCh)
   with signature 
   (cC.(c_equiv) (A:=A1) (B:=B1)) ==> 
   (cC.(c_equiv) (A:=A2) (B:=B2)) ==> 
-  cC.(c_equiv) as stack_equiv_mor.
+  cC.(c_equiv) as mor_tensor_equiv_mor.
+Proof. intros. apply tensor_compat; assumption. Qed.
+
+Section TensorBifunctor.
+
+Context {C : Type} {cC : Category C} (mC : MonoidalCategory cC)
+  {cCh : CategoryCoherence cC} {mCh : MonoidalCategoryCoherence mC}.
+
+#[export, program] Instance TensorIsomorphism {A1 B1 A2 B2} 
+  (f1 : A1 <~> B1) (f2 : A2 <~> B2) : A1 × A2 <~> B1 × B2 := {
+  forward := f1 ⊗ f2;
+  reverse := f1^-1 ⊗ f2^-1;
+}.
+Next Obligation.
+  rewrite <- 2!mCh.(tensor_compose), 2!iso_inv_r, 2!iso_inv_l, 2!tensor_id.
+  easy.
+Qed.
+
+#[export] Instance tensor : Bifunctor cC cC cC := {
+  obj_bimap := mC.(obj_tensor);
+  morphism_bimap := fun A1 B1 B1 B2 => mC.(mor_tensor);
+  id_bimap := tensor_id;
+  compose_bimap := fun A1 B1 M1 A2 B2 M2 => tensor_compose;
+  morphism_bicompat := fun A1 B1 A2 B2 => tensor_compat;
+}.
+
+Add Parametric Morphism (A1 B1 A2 B2 : C) : tensor.(morphism_bimap)
+  with signature 
+  (cC.(c_equiv) (A:=A1) (B:=B1)) ==> 
+  (cC.(c_equiv) (A:=A2) (B:=B2)) ==> 
+  cC.(c_equiv) as tensor_equiv_mor.
 Proof. intros. apply morphism_bicompat; assumption. Qed.
 
 
-Add Parametric Morphism {C : Type}
-  {cC : Category C} {mC : MonoidalCategory cC} : mC.(tensor).(obj_bimap)
+Add Parametric Morphism : tensor.(obj_bimap)
   with signature 
   (@isomorphic C cC) ==> 
   (@isomorphic C cC) ==> 
   @isomorphic C cC as stack_isomorphic_mor.
 Proof. intros A B [fAB [fBA [HfAB HfBA]]] M N [fMN [fNM [HfMN HfNM]]].
   exists (fAB ⊗ fMN); exists (fBA ⊗ fNM).
-  rewrite <- 2!compose_bimap, HfAB, HfBA, HfMN, HfNM.
-  rewrite 2!id_bimap; easy.
+  simpl.
+  rewrite <- 2!mCh.(tensor_compose), HfAB, HfBA, HfMN, HfNM.
+  rewrite 2!mCh.(tensor_id); easy.
 Qed.
 
-Fixpoint n_times_r {C} {cC : Category C} {mC : MonoidalCategory cC} 
-    (n : nat) (A : C) : C :=
-  match n with 
-  | O => I
-  | S n' => A × (n_times_r n' A)
-  end.
+End TensorBifunctor.
 
-Fixpoint n_times_l {C} {cC : Category C} {mC : MonoidalCategory cC}
-    (n : nat) (A : C) : C :=
-  match n with 
-  | O => I
-  | S n' => (n_times_l n' A) × A
-  end.
+Arguments tensor {_} {_}%Cat (mC)%Cat {_ _}%Cat.
+Arguments TensorIsomorphism {_} {_ mC cCh mCh}%Cat {_ _ _ _}%Cat (_ _)%Cat.
 
-Fixpoint n_tensor_r {C} {cC : Category C} {mC : MonoidalCategory cC} 
-    {A B : C} (n : nat) (f : A ~> B) 
-  : (n_times_r n A ~> n_times_r n B) :=
-  match n with
-  | O => id_ I
-  | S n' => f ⊗ (n_tensor_r n' f)
-  end.
+Section TensorIsomorphismRewrites.
 
-Fixpoint n_tensor_l {C} {cC : Category C} {mC : MonoidalCategory cC} 
-    {A B : C} (n : nat) (f : A ~> B) 
-  : (n_times_l n A ~> n_times_l n B) :=
-  match n with
-  | O => id_ I
-  | S n' => (n_tensor_l n' f) ⊗ f
-  end.
+Context {C : Type} {cC : Category C} {mC : MonoidalCategory cC}
+  {cCh : CategoryCoherence cC} {mCh : MonoidalCategoryCoherence mC}.
 
-Arguments n_times_r {_} {_ _}%Cat _ _%Obj.
-Arguments n_times_l {_} {_ _}%Cat _ _%Obj.
-Arguments n_tensor_r {_} {_ _}%Cat {_ _}%Obj _ _%Mor.
-Arguments n_tensor_l {_} {_ _}%Cat {_ _}%Obj _ _%Mor.
-
-Add Parametric Morphism {C : Type} 
-  {cC : Category C} {mC : MonoidalCategory cC} : (@n_times_r C cC mC)
-  with signature 
-  (@eq nat) ==> (@isomorphic C cC) ==> (@isomorphic C cC) 
-  as n_times_r_isomorphic_mor.
-Proof.
-  intros n A B [fAB [fBA HAB]].
-  exists (n_tensor_r n fAB); exists (n_tensor_r n fBA).
-  induction n; simpl.
-  - rewrite left_unit; split; easy.
-  - rewrite <- 2!compose_bimap, (proj1 HAB), (proj2 HAB),
-      (proj1 IHn), (proj2 IHn), 2!id_bimap.
-    split; easy.
-Qed.
-
-Add Parametric Morphism {C : Type} 
-  {cC : Category C} {mC : MonoidalCategory cC} : (@n_times_l C cC mC)
-  with signature 
-  (@eq nat) ==> (@isomorphic C cC) ==> (@isomorphic C cC) 
-  as n_times_l_isomorphic_mor.
-Proof.
-  intros n A B [fAB [fBA HAB]].
-  exists (n_tensor_l n fAB); exists (n_tensor_l n fBA).
-  induction n; simpl.
-  - rewrite left_unit; split; easy.
-  - rewrite <- 2!compose_bimap, (proj1 HAB), (proj2 HAB),
-      (proj1 IHn), (proj2 IHn), 2!id_bimap.
-    split; easy.
-Qed.
-
-Add Parametric Morphism {C : Type} 
-  {cC : Category C} {mC : MonoidalCategory cC} {A B : C} {n : nat} : 
-  (@n_tensor_r C cC mC A B n) 
-  with signature 
-  (@c_equiv C cC A B) 
-    ==> (@c_equiv C cC (n_times_r n A) (n_times_r n B))
-  as n_tensor_r_equiv_mor.
-Proof.
-  intros f g Hfg.
-  induction n.
-  - easy.
-  - apply morphism_bicompat; assumption.
-Qed.
-
-Add Parametric Morphism {C : Type} 
-  {cC : Category C} {mC : MonoidalCategory cC} {A B : C} {n : nat} : 
-  (@n_tensor_l C cC mC A B n) 
-  with signature 
-  (@c_equiv C cC A B) 
-    ==> (@c_equiv C cC (n_times_l n A) (n_times_l n B))
-  as n_tensor_l_equiv_mor.
-Proof.
-  intros f g Hfg.
-  induction n.
-  - easy.
-  - apply morphism_bicompat; assumption.
-Qed.
-
-
-Lemma compose_tensor_iso_r : forall {C} {cC : Category C} 
-  {mC : MonoidalCategory cC}
-  {A B1 M1 B2 M2 : C} (f : A ~> B1 × B2) 
+Lemma compose_tensor_iso_r : forall {A B1 M1 B2 M2 : C} (f : A ~> B1 × B2) 
   (g1 : B1 <~> M1) (g2 : B2 <~> M2) (h : A ~> M1 × M2), 
     f ∘ g1⊗g2 ≃ h <-> f ≃ h ∘ (g1^-1 ⊗ g2^-1).
 Proof.
   intros; split; intro Heq.
-  - rewrite <- Heq, assoc, <- compose_bimap, 
-      2!iso_inv_r, id_bimap, right_unit; easy.
-  - rewrite Heq, assoc, <- compose_bimap, 
-      2!iso_inv_l, id_bimap, right_unit; easy.
+  - rewrite <- Heq, cCh.(assoc), <- mCh.(tensor_compose),
+      2!iso_inv_r, mCh.(tensor_id), cCh.(right_unit); easy.
+  - rewrite Heq, cCh.(assoc), <- mCh.(tensor_compose),
+    2!iso_inv_l, mCh.(tensor_id), cCh.(right_unit); easy. 
 Qed.
 
-Lemma compose_tensor_iso_r' : forall {C} {cC : Category C} 
-  {mC : MonoidalCategory cC}
-  {A B1 M1 B2 M2 : C} (f : A ~> B1 × B2) 
+Lemma compose_tensor_iso_r' : forall {A B1 M1 B2 M2 : C} (f : A ~> B1 × B2) 
   (g1 : B1 <~> M1) (g2 : B2 <~> M2) (h : A ~> M1 × M2), 
   h ≃ f ∘ g1⊗g2 <-> h ∘ (g1^-1 ⊗ g2^-1) ≃ f.
 Proof.
@@ -219,30 +171,26 @@ Proof.
   split; symmetry; apply compose_tensor_iso_r; easy.
 Qed.
 
-Lemma compose_tensor_iso_l : forall {C} {cC : Category C} 
-  {mC : MonoidalCategory cC}
-  {A1 B1 M A2 B2 : C} (f1 : A1 <~> B1) (f2 : A2 <~> B2)
+Lemma compose_tensor_iso_l : forall {A1 B1 M A2 B2 : C} 
+  (f1 : A1 <~> B1) (f2 : A2 <~> B2) 
   (g : B1 × B2 ~> M) (h : A1 × A2 ~> M), 
   f1⊗f2 ∘ g ≃ h <-> g ≃ (f1^-1 ⊗ f2^-1) ∘ h.
 Proof.
   intros; split; intro Heq.
-  - rewrite <- Heq, <- assoc, <- compose_bimap,
-      2!iso_inv_l, id_bimap, left_unit; easy.
-  - rewrite Heq, <- assoc, <- compose_bimap, 
-      2!iso_inv_r, id_bimap, left_unit; easy.
+  - rewrite <- Heq, <- cCh.(assoc), <- mCh.(tensor_compose),
+      2!iso_inv_l, mCh.(tensor_id), cCh.(left_unit); easy.
+  - rewrite Heq, <- cCh.(assoc), <- mCh.(tensor_compose),
+      2!iso_inv_r, mCh.(tensor_id), cCh.(left_unit); easy. 
 Qed.
 
-Lemma compose_tensor_iso_l' : forall {C} {cC : Category C} 
-  {mC : MonoidalCategory cC}
-  {A1 B1 M A2 B2 : C} (f1 : A1 <~> B1) (f2 : A2 <~> B2)
+Lemma compose_tensor_iso_l' : forall {A1 B1 M A2 B2 : C} 
+  (f1 : A1 <~> B1) (f2 : A2 <~> B2)
   (g : B1 × B2 ~> M) (h : A1 × A2 ~> M), 
   h ≃ f1⊗f2 ∘ g <-> (f1^-1 ⊗ f2^-1) ∘ h ≃ g.
 Proof.
   intros; split; symmetry; apply compose_tensor_iso_l; easy.
 Qed.
 
+End TensorIsomorphismRewrites.
 
-Local Close Scope Mon_scope.
-Local Close Scope Obj_scope.
-Local Close Scope Mor_scope.
 Local Close Scope Cat_scope.
