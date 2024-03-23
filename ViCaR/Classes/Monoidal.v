@@ -14,7 +14,7 @@ Reserved Notation "'α_' A , B , M" (at level 20, no associativity). (* \alpha *
 Class MonoidalCategory {C : Type} (cC : Category C) : Type := {
   obj_tensor : C -> C -> C
     where "x × y" := (obj_tensor x y);
-  mor_tensor {A1 A2 B1 B2 : C} (f : A1 ~> B1) (g : A2 ~> B2) : 
+  mor_tensor {A1 B1 A2 B2 : C} (f : A1 ~> B1) (g : A2 ~> B2) : 
     A1 × A2 ~> B1 × B2;
   mon_I : C;
 
@@ -42,15 +42,21 @@ Notation "'α_' A , B , M" :=
   (associator A%Cat B%Cat M%Cat)
   (at level 20, no associativity) : Cat_scope. (* \alpha *)
 Notation "'λ_' x" := (left_unitor x) 
-  (at level 20, no associativity) : Cat_scope. (* \lambda *) 
-Notation "'ρ_' x" := (right_unitor x) 
-  (at level 20, no associativity) : Cat_scope. (* \rho *) 
-
+  (at level 20, no associativity) : Cat_scope. (* \lambda \^- \^1 *) 
+Notation "'ρ_' x" := (right_unitor x)
+  (at level 20, no associativity) : Cat_scope. (* \rho \^- \^1 *) 
+(* Notation "'α⁻¹_' A , B , M" := 
+  ((associator A%Cat B%Cat M%Cat).(reverse))
+  (at level 20, no associativity) : Cat_scope. (* \alpha \^- \^1 *)
+Notation "'λ⁻¹_' x" := ((left_unitor x).(reverse)) 
+  (at level 20, no associativity) : Cat_scope. (* \lambda \^- \^1 *) 
+Notation "'ρ⁻¹_' x" := ((right_unitor x).(reverse)) 
+  (at level 20, no associativity) : Cat_scope. (* \rho \^- \^1 *) 
+ *)
 
 
 Class MonoidalCategoryCoherence {C : Type} {cC : Category C}
   {cCh : CategoryCoherence cC} (mC : MonoidalCategory cC) : Type := {
-  to_base_struct_moncat := mC;
   tensor_id (A1 A2 : C) : (id_ A1) ⊗ (id_ A2) ≃ id_ (A1 × A2);
   tensor_compose {A1 B1 M1 A2 B2 M2 : C} 
     (f1 : A1 ~> B1) (g1 : B1 ~> M1) 
@@ -81,7 +87,6 @@ Class MonoidalCategoryCoherence {C : Type} {cC : Category C}
     ≃ α_ (A × B), M, N ∘ α_ A, B, (M × N);
 }.
 
-Coercion to_base_struct_moncat : MonoidalCategoryCoherence >-> MonoidalCategory.
 
 Arguments associator_cohere {_} {_ _ _}%Cat {mCh}%Cat 
   {_ _ _ _ _ _}%Cat (_ _ _)%Cat : rename.
@@ -92,7 +97,7 @@ Arguments pentagon {_} {_ _ _}%Cat {mCh}%Cat (_ _ _ _)%Cat : rename.
 
 Add Parametric Morphism {C : Type} {cC : Category C} 
   {mC : MonoidalCategory cC} {cCh : CategoryCoherence cC} 
-  {mCh : MonoidalCategoryCoherence mC} {A1 B1 A2 B2 : C} : (mor_tensor mCh)
+  {mCh : MonoidalCategoryCoherence mC} {A1 B1 A2 B2 : C} : (mor_tensor mC)
   with signature 
   (cC.(c_equiv) (A:=A1) (B:=B1)) ==> 
   (cC.(c_equiv) (A:=A2) (B:=B2)) ==> 
@@ -110,7 +115,7 @@ Context {C : Type} {cC : Category C} (mC : MonoidalCategory cC)
   reverse := f1^-1 ⊗ f2^-1;
 }.
 Next Obligation.
-  rewrite <- 2!mCh.(tensor_compose), 2!iso_inv_r, 2!iso_inv_l, 2!tensor_id.
+  rewrite <- 2!(tensor_compose), 2!iso_inv_r, 2!iso_inv_l, 2!tensor_id.
   easy.
 Qed.
 
@@ -138,8 +143,8 @@ Add Parametric Morphism : tensor.(obj_bimap)
 Proof. intros A B [fAB [fBA [HfAB HfBA]]] M N [fMN [fNM [HfMN HfNM]]].
   exists (fAB ⊗ fMN); exists (fBA ⊗ fNM).
   simpl.
-  rewrite <- 2!mCh.(tensor_compose), HfAB, HfBA, HfMN, HfNM.
-  rewrite 2!mCh.(tensor_id); easy.
+  rewrite <- 2!(tensor_compose), HfAB, HfBA, HfMN, HfNM.
+  rewrite 2!(tensor_id); easy.
 Qed.
 
 End TensorBifunctor.
@@ -157,10 +162,10 @@ Lemma compose_tensor_iso_r : forall {A B1 M1 B2 M2 : C} (f : A ~> B1 × B2)
     f ∘ g1⊗g2 ≃ h <-> f ≃ h ∘ (g1^-1 ⊗ g2^-1).
 Proof.
   intros; split; intro Heq.
-  - rewrite <- Heq, cCh.(assoc), <- mCh.(tensor_compose),
-      2!iso_inv_r, mCh.(tensor_id), cCh.(right_unit); easy.
-  - rewrite Heq, cCh.(assoc), <- mCh.(tensor_compose),
-    2!iso_inv_l, mCh.(tensor_id), cCh.(right_unit); easy. 
+  - rewrite <- Heq, (assoc), <- (tensor_compose),
+      2!iso_inv_r, (tensor_id), (right_unit); easy.
+  - rewrite Heq, (assoc), <- (tensor_compose),
+    2!iso_inv_l, (tensor_id), (right_unit); easy. 
 Qed.
 
 Lemma compose_tensor_iso_r' : forall {A B1 M1 B2 M2 : C} (f : A ~> B1 × B2) 
@@ -177,10 +182,10 @@ Lemma compose_tensor_iso_l : forall {A1 B1 M A2 B2 : C}
   f1⊗f2 ∘ g ≃ h <-> g ≃ (f1^-1 ⊗ f2^-1) ∘ h.
 Proof.
   intros; split; intro Heq.
-  - rewrite <- Heq, <- cCh.(assoc), <- mCh.(tensor_compose),
-      2!iso_inv_l, mCh.(tensor_id), cCh.(left_unit); easy.
-  - rewrite Heq, <- cCh.(assoc), <- mCh.(tensor_compose),
-      2!iso_inv_r, mCh.(tensor_id), cCh.(left_unit); easy. 
+  - rewrite <- Heq, <- (assoc), <- (tensor_compose),
+      2!iso_inv_l, (tensor_id), (left_unit); easy.
+  - rewrite Heq, <- (assoc), <- (tensor_compose),
+      2!iso_inv_r, (tensor_id), (left_unit); easy. 
 Qed.
 
 Lemma compose_tensor_iso_l' : forall {A1 B1 M A2 B2 : C} 

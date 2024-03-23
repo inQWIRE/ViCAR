@@ -6,7 +6,7 @@ Require Import Setoid.
 
 Local Open Scope Cat_scope.
 
-(* Reserved Notation "'B_' x , y" (at level 39). *)
+
 Class BraidedMonoidalCategory {C : Type} {cC : Category C} 
   (mC : MonoidalCategory cC) : Type := {
   braiding (A B : C) : A × B <~> B × A;
@@ -20,7 +20,6 @@ Class BraidedMonoidalCategoryCoherence {C} {cC : Category C}
   {mC : MonoidalCategory cC} {cCh : CategoryCoherence cC}
   {mCh : MonoidalCategoryCoherence mC} (bC : BraidedMonoidalCategory mC)
   : Type := {
-  to_base_struct_cat_braid := bC;
   braiding_natural {A1 B1 A2 B2} (f1 : A1 ~> B1) (f2 : A2 ~> B2) :
     f1 ⊗ f2 ∘ B_ B1, B2 ≃ B_ A1, A2 ∘ f2 ⊗ f1;
 
@@ -73,22 +72,22 @@ Proof.
   rewrite <- (compose_tensor_iso_r' _ (IdentityIsomorphism _)).
   simpl.
   rewrite 2!compose_iso_r.
-  rewrite !cCh.(assoc).
+  rewrite !(assoc).
   rewrite <- compose_iso_l.
   rewrite (compose_tensor_iso_r _ (IdentityIsomorphism _)).
-  rewrite cCh.(assoc), compose_iso_l'.
+  rewrite (assoc), compose_iso_l'.
   symmetry in hex2.
-  rewrite cCh.(assoc) in hex2.
+  rewrite (assoc) in hex2.
   rewrite compose_iso_l in hex2.
   rewrite hex2.
   simpl.
-  rewrite <- !cCh.(assoc).
+  rewrite <- !(assoc).
   apply compose_cancel_r.
   pose proof (hexagon_1 B A M) as hex1.
   rewrite assoc, <- compose_iso_l'.
   rewrite <- (compose_tensor_iso_l' _ (IdentityIsomorphism _)).
   simpl.
-  rewrite <- 3!cCh.(assoc).
+  rewrite <- 3!(assoc).
   rewrite <- 2!compose_iso_r.
   rewrite <- hex1.
   easy.

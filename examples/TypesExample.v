@@ -1,7 +1,7 @@
 Require Import Setoid.
 Require Import Logic.
 From ViCaR Require Export CategoryTypeclass.
-From ViCaR Require Import RigCategory.
+(* From ViCaR Require Import RigCategory. *)
 
 Local Notation "f '\o' g" := (fun A => g (f A)) 
   (at level 45, left associativity).

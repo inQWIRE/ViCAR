@@ -7,8 +7,8 @@ Local Open Scope Cat.
 #[local] Set Universe Polymorphism.
 
 Reserved Notation "A ~> B" (at level 38).
-Reserved Notation "f ≃ g" (at level 70).
-Reserved Notation "A ≅ B" (at level 70).
+Reserved Notation "f ≃ g" (at level 70). (* \simeq *)
+Reserved Notation "A ≅ B" (at level 70). (* \cong *)
 Reserved Notation "'id_' A" (at level 15).
 
 Class Category (C : Type) : Type := {
@@ -40,7 +40,7 @@ Notation "f ∘ g" := (compose _%Cat f%Cat g%Cat)
   (at level 39, g at next level, left associativity) : Cat_scope. (* \circ *)
 
 Class CategoryCoherence {C} (cC : Category C) : Type := {
-  to_base_struct_cat := cC;
+  (* to_base_struct_cat := cC; *)
 
   c_equiv_rel {A B : C} : equivalence (A ~> B) cC.(c_equiv);
 
@@ -63,13 +63,13 @@ Arguments compose_compat {_} {cC}%Cat {cCh}%Cat {_ _ _}%Cat (f g)%Cat _ (h j)%Ca
 Arguments left_unit {_} {cC}%Cat {cCh}%Cat {A B}%Cat (f)%Cat : rename.
 Arguments right_unit {_} {cC}%Cat {cCh}%Cat {A B}%Cat (f)%Cat : rename.
 
-Coercion to_base_struct_cat : CategoryCoherence >-> Category.
+(* Coercion to_base_struct_cat : CategoryCoherence >-> Category. *)
 
 Add Parametric Relation {C : Type} {cC : Category C} 
   {cCh : CategoryCoherence cC} (A B : C) : (A ~> B) cC.(c_equiv)
-  reflexivity proved by (equiv_refl (A ~> B) _ cCh.(c_equiv_rel))
-  symmetry proved by (equiv_sym (A ~> B) _ cCh.(c_equiv_rel))
-  transitivity proved by (equiv_trans (A ~> B) _ cCh.(c_equiv_rel))
+  reflexivity proved by (equiv_refl (A ~> B) _ (c_equiv_rel))
+  symmetry proved by (equiv_sym (A ~> B) _ (c_equiv_rel))
+  transitivity proved by (equiv_trans (A ~> B) _ (c_equiv_rel))
   as prop_equiv_rel.
 
 Add Parametric Morphism {C : Type} {cC : Category C} {cCh : CategoryCoherence cC}
@@ -115,7 +115,8 @@ Arguments reverse {_} {_}%Cat {_ _}%Cat (f)%Cat : rename.
 (* Notation id_A I := (proj1 I.(isomorphism_inverse)).
 Notation id_B I := (proj2 I.(isomorphism_inverse)). *)
 Coercion forward : Isomorphism >-> morphism.
-Notation "f '^-1'" := (reverse f%Cat) (at level 25) : Cat_scope.
+Notation "f '^-1'" := (reverse f%Cat) (at level 25, only parsing) : Cat_scope.
+Notation "f '⁻¹'" := (reverse f%Cat) (at level 25) : Cat_scope. (* \^- \^1 *)
 
 Notation "A '<~>' B" := (Isomorphism A%Cat B%Cat) (at level 70) : Cat_scope.
 Notation "A ≅ B" := (isomorphic A%Cat B%Cat) (at level 70) : Cat_scope. (* \cong *)
@@ -132,12 +133,19 @@ Proof.
     exists f; exists g; auto.
 Qed.
 
+Lemma left_unit' {C : Type} {cC : Category C} {cCh : CategoryCoherence cC}
+  {A B : C} (f : A ~> B) : id_ _ ∘ f ≃ f.
+Proof.
+  rewrite (left_unit).
+  easy. 
+Qed.
+
 Lemma isomorphic_refl {C : Type} {cC : Category C} {cCh : CategoryCoherence cC}
   (A : C) : isomorphic A A.
 Proof.
   exists (c_identity A).
   exists (c_identity A).
-  rewrite cCh.(left_unit).
+  rewrite left_unit.
   split; reflexivity.
 Qed.
 
@@ -149,10 +157,10 @@ Proof.
   exists (fAB ∘ fBM).
   exists (fMB ∘ fBA).
   split;
-  rewrite cCh.(assoc).
-  - rewrite <- (assoc fBM), HfBMB, cCh.(left_unit), HfABA.
+  rewrite (assoc).
+  - rewrite <- (assoc fBM), HfBMB, (left_unit), HfABA.
     reflexivity.
-  - rewrite <- (assoc fBA), HfBAB, cCh.(left_unit), HfMBM.
+  - rewrite <- (assoc fBA), HfBAB, (left_unit), HfMBM.
     reflexivity.
 Qed.
 
@@ -191,7 +199,7 @@ Arguments morphism_compat {_ _} {_ _}%Cat (F)%Cat {A B}%Cat (f g)%Cat : rename.
 
 Coercion obj_map : Functor >-> Funclass.
 Arguments morphism_map {_ _} {_ _}%Cat (_)%Cat {_ _}%Cat (_)%Cat.
-Notation "F @ X" := (morphism_map F%Cat X%Cat) (at level 38) : Cat_scope.
+Notation "F @ f" := (morphism_map F%Cat f%Cat) (at level 38) : Cat_scope.
 
 Add Parametric Morphism {C D : Type} {cC : Category C} {cD : Category D}
   (F : Functor cC cD) (A B : C): F.(morphism_map)
@@ -276,7 +284,6 @@ Arguments CommuteBifunctor {_ _ _} {_ _ _}%Cat (_)%Cat /.
 Class NaturalTransformation {C D : Type} `{cC: Category C} `{cD : Category D}
   (F G : Functor cC cD) := {
   component_map (A : C) : F A ~> G A;
-    (* where "'α_' X" := (component_map X); *)
   component_map_natural {A B : C} (f : A ~> B) :
     F @ f ∘ component_map B ≃ component_map A ∘ G @ f;
 }.
@@ -284,7 +291,6 @@ Arguments NaturalTransformation {_ _} {_ _}%Cat (_ _)%Cat.
 Arguments component_map {_ _} {_ _}%Cat {_ _}%Cat (N)%Cat (_)%Cat : rename.
 Arguments component_map_natural {_ _} {_ _}%Cat {_ _}%Cat 
   {N}%Cat {_ _}%Cat (f)%Cat : rename.
-Notation "'α_' X" := (component_map _%Cat X%Cat) (at level 20) : Cat_scope.
 
 Class NaturalIsomorphism {C D : Type} `{cC: Category C} `{cD : Category D}
   (F G : Functor cC cD) := {
@@ -323,7 +329,7 @@ Arguments component_bimap {_ _ _} {_ _ _}%Cat {_ _}%Cat
 Arguments component_bimap_natural {_ _ _} {_ _ _}%Cat {_ _}%Cat 
   {N}%Cat {_ _ _ _}%Cat (f1 f2)%Cat : rename.
 Notation "'β_' X , Y" := (component_bimap _%Cat X%Cat Y%Cat) 
-  (at level 20) : Cat_scope.
+  (at level 20) : Cat_scope. (* \beta *)
 
 Class NaturalBiIsomorphism {C1 C2 D : Type} `{cC1 : Category C1} 
   `{cC2 : Category C2} `{cD : Category D} (F G : Bifunctor cC1 cC2 cD) := {
@@ -361,7 +367,9 @@ Definition OppositeCategory {C : Type} (cC : Category C) : Category C := {|
 |}.
 
 Notation "C '^op'" := (OppositeCategory C%Cat) 
-  (at level 34, left associativity) : Cat_scope.
+  (at level 34, left associativity, only parsing) : Cat_scope.
+Notation "C 'ᵒᵖ'" := (OppositeCategory C%Cat) 
+  (at level 34, left associativity) : Cat_scope. (* \^o \^p *)
 #[export] Typeclasses Transparent OppositeCategory.
 
 #[program] Definition OppositeCategoryCoherence {C : Type} {cC : Category C}
@@ -370,7 +378,7 @@ Notation "C '^op'" := (OppositeCategory C%Cat)
   compose_compat := fun A B M f g Hfg h j Hhj => 
     @compose_compat C cC cCh M B A _ _ Hhj _ _ Hfg;
   assoc := fun A B M N f g h => 
-    equiv_sym _ _ cCh.(c_equiv_rel) _ _ (@assoc C cC cCh N M B A h g f);
+    equiv_sym _ _ (c_equiv_rel) _ _ (@assoc C cC cCh N M B A h g f);
   left_unit := fun A B => @right_unit C cC cCh B A;
   right_unit := fun A B => @left_unit C cC cCh B A;
 |}.
@@ -565,26 +573,6 @@ Definition Bifunctor_of_ProductCategoryFunctor {C1 C2 D : Type} `{cC1 : Category
 
 End ProductCategories.
 
-(* Lemma equiv_of_iso_compose_l {C : Type} `{cC : Category C} {A A' B : C}
-  (I : Isomorphism A A') (f g : A' ~> B) (H : I ∘ f ≃ I ∘ g) :
-  f ≃ g. 
-Proof.
-  rewrite <- (left_unit (f:=f)), <- (left_unit (f:=g)).
-  rewrite <- (id_B I), 2!assoc, H.
-  easy.
-Qed.
-
-Lemma equiv_of_iso_compose_r {C : Type} `{cC : Category C} {A B' B : C}
-  (I : Isomorphism B' B) (f g : A ~> B') (H : f ∘ I ≃ g ∘ I) :
-  f ≃ g. 
-Proof.
-  rewrite <- (right_unit (f:=f)), <- (right_unit (f:=g)).
-  rewrite <- (id_A I), <- 2!assoc, H.
-  easy.
-Qed. *)
-
-
-
 (* Some useful little lemmas *)
 Lemma compose_cancel_r : forall {C} {cC : Category C} 
   {cCh : CategoryCoherence cC} {A B M : C} 
@@ -613,14 +601,35 @@ Lemma iso_inv_l : forall {C} {cC:Category C}
 Proof. intros; apply isomorphism_inverse. Qed.
 
 
+Lemma equiv_of_iso_compose_l {C : Type} `{cC : Category C} 
+  {cCh : CategoryCoherence cC} {A A' B : C}
+  (I : Isomorphism A A') (f g : A' ~> B) (H : I ∘ f ≃ I ∘ g) :
+  f ≃ g. 
+Proof.
+  rewrite <- (left_unit f), <- (left_unit g).
+  rewrite <- (iso_inv_l I), 2!assoc, H.
+  easy.
+Qed.
+
+Lemma equiv_of_iso_compose_r {C : Type} `{cC : Category C} 
+  {cCh : CategoryCoherence cC} {A B' B : C}
+  (I : Isomorphism B' B) (f g : A ~> B') (H : f ∘ I ≃ g ∘ I) :
+  f ≃ g. 
+Proof.
+  rewrite <- (right_unit f), <- (right_unit g).
+  rewrite <- (iso_inv_r I), <- 2!assoc, H.
+  easy.
+Qed.
+
+
 Lemma compose_iso_r : forall {C} {cC:Category C} 
   {cCh : CategoryCoherence cC} {A B M : C} 
   (f : A ~> B) (g : B <~> M) (h : A ~> M), 
     f ∘ g ≃ h <-> f ≃ h ∘ g^-1.
 Proof.
   intros; split; intro Heq.
-  - rewrite <- Heq, cCh.(assoc), iso_inv_r, right_unit; easy.
-  - rewrite Heq, cCh.(assoc), iso_inv_l, right_unit; easy.
+  - rewrite <- Heq, (assoc), iso_inv_r, right_unit; easy.
+  - rewrite Heq, (assoc), iso_inv_l, right_unit; easy.
 Qed.
 
 Lemma compose_iso_l : forall {C} {cC:Category C} 
@@ -629,8 +638,8 @@ Lemma compose_iso_l : forall {C} {cC:Category C}
     f ∘ g ≃ h <-> g ≃ f^-1 ∘ h.
 Proof.
   intros; split; intro Heq.
-  - rewrite <- Heq, <- cCh.(assoc), iso_inv_l, left_unit; easy.
-  - rewrite Heq, <- cCh.(assoc), iso_inv_r, left_unit; easy.
+  - rewrite <- Heq, <- (assoc), iso_inv_l, left_unit; easy.
+  - rewrite Heq, <- (assoc), iso_inv_r, left_unit; easy.
 Qed.
 
 Lemma compose_iso_r' : forall {C} {cC:Category C}
