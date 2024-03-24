@@ -157,6 +157,18 @@ Section TensorIsomorphismRewrites.
 Context {C : Type} {cC : Category C} {mC : MonoidalCategory cC}
   {cCh : CategoryCoherence cC} {mCh : MonoidalCategoryCoherence mC}.
 
+Lemma tensor_cancel_l : forall {A1 B1 A2 B2} (f : A1 ~> B1) (g g' : A2 ~> B2),
+  g ≃ g' -> f ⊗ g ≃ f ⊗ g'.
+Proof.
+  intros; apply tensor_compat; easy.
+Qed.
+
+Lemma tensor_cancel_r : forall {A1 B1 A2 B2} (f f' : A1 ~> B1) (g : A2 ~> B2),
+  f ≃ f' -> f ⊗ g ≃ f' ⊗ g.
+Proof.
+  intros; apply tensor_compat; easy.
+Qed.
+
 Lemma compose_tensor_iso_r : forall {A B1 M1 B2 M2 : C} (f : A ~> B1 × B2) 
   (g1 : B1 <~> M1) (g2 : B2 <~> M2) (h : A ~> M1 × M2), 
     f ∘ g1⊗g2 ≃ h <-> f ≃ h ∘ (g1^-1 ⊗ g2^-1).

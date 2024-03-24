@@ -252,21 +252,21 @@ Ltac is_weak_fenced f :=
      -> is_weak_fence (g ∘ h).
 *)
 
-Ltac right_associate f := 
+Ltac right_associate_term f := 
   match f with 
-  | ((?g ∘ ?h) ∘ ?i)%Cat => right_associate (g ∘ (h ∘ i))%Cat
+  | ((?g ∘ ?h) ∘ ?i)%Cat => right_associate_term (g ∘ (h ∘ i))%Cat
   | (?g ∘ ?h)%Cat => (* g shouldn't be a composition *)
-      let RAh := right_associate h in
+      let RAh := right_associate_term h in
         constr:((g ∘ RAh)%Cat)
   | _ => constr:(f)
   end.
 
 (* TODO: Test this! *)
-Ltac left_associate f := 
+Ltac left_associate_term f := 
   match f with 
-  | (?g ∘ (?h ∘ ?i))%Cat => left_associate ((g ∘ h) ∘ i)%Cat
+  | (?g ∘ (?h ∘ ?i))%Cat => left_associate_term ((g ∘ h) ∘ i)%Cat
   | (?g ∘ ?h)%Cat => (* h shouldn't be a composition *)
-      let LAg := left_associate g in
+      let LAg := left_associate_term g in
         constr:((LAg ∘ h)%Cat)
   | _ => constr:(f)
   end.
@@ -376,7 +376,7 @@ Ltac weak_fencepost_form_debug f :=
       let Nh := weak_fencepost h in 
       let _ := match goal with _ => 
         idtac "... getting" g "∘" h "into" end in
-      let res := right_associate (cC.(compose) Ng Nh) in
+      let res := right_associate_term (cC.(compose) Ng Nh) in
       let _ := match goal with _ => 
         idtac "    " res end in
       constr:(res)
@@ -404,7 +404,7 @@ Ltac weak_fencepost_form f :=
   | @compose ?C ?cC _ _ _ ?g ?h => 
       let Ng := weak_fencepost g in
       let Nh := weak_fencepost h in 
-      right_associate (cC.(compose) Ng Nh)
+      right_associate_term (cC.(compose) Ng Nh)
   | @mor_tensor ?C ?cC ?mC _ _ _ _ ?g ?h =>
       let Ng := weak_fencepost g in
       let Nh := weak_fencepost h in 
@@ -426,6 +426,12 @@ Lemma assoc_compat_helper {A B M N : C} :
 Proof.
   intros; rewrite assoc; easy.
 Qed.
+
+Lemma assoc_compat_helper' {A B M N : C}
+  : forall  (f : A ~> B) 
+  (g : B ~> M) (h : M ~> N) (fgh : A ~> N),
+  (f ∘ g) ∘ h ≃ fgh -> f ∘ (g ∘ h) ≃ fgh.
+Proof. intros; rewrite <- assoc; easy. Qed.
 
 Lemma compose_compat_right {A B M : C} :
   forall (f : A ~> B) (g g' : B ~> M),
@@ -529,24 +535,56 @@ Close Scope Cat_scope.
 End HelperLemmas.
 
 
-(* Shows the goal f ≃ right_associate f by mirroring the code
-   path of right_associate with `apply`s. *)
-Ltac show_equiv_right_associate f :=
-  let rec show_equiv_right_associate f :=
+(* Shows the goal f ≃ right_associate_term f by mirroring the code
+   path of right_associate_term with `apply`s. *)
+Ltac show_equiv_right_associate_term f :=
+  let rec show_equiv_right_associate_term f :=
   match f with 
   | ((?g ∘ ?h) ∘ ?i)%Cat => 
-    (* RHS is `right_associate (g ∘ (h ∘ i))` *)
+    (* RHS is `right_associate_term (g ∘ (h ∘ i))` *)
     apply assoc_compat_helper;
-    show_equiv_right_associate ((g ∘ (h ∘ i))%Cat)
+    show_equiv_right_associate_term ((g ∘ (h ∘ i))%Cat)
   | (?g ∘ ?h)%Cat => (* g shouldn't be a composition *)
-      (* RHS is `(g ∘ right_associate h)` *)
+      (* RHS is `(g ∘ right_associate_term h)` *)
       apply compose_compat_right;
-      show_equiv_right_associate h
+      show_equiv_right_associate_term h
   | _ => 
     (* RHS is `constr:(f)` *)
     reflexivity
   end
-  in show_equiv_right_associate f.
+  in show_equiv_right_associate_term f.
+
+(* Shows the goal f ≃ left_associate_term f by mirroring the code
+   path of left_associate_term with `apply`s. *)
+Ltac show_equiv_left_associate_term f :=
+  let rec show_left f :=
+  match f with  
+  | (?g ∘ (?h ∘ ?i))%Cat => 
+    (* RHS is `left_associate_term ((g ∘ h) ∘ i)%Cat` *)
+    apply assoc_compat_helper';
+    show_left (((g ∘ h) ∘ i)%Cat)
+  | (?g ∘ ?h)%Cat => (* h shouldn't be a composition *)
+    (* RHS is `(left_associate_term g ∘ h)` *) 
+    apply compose_cancel_r;
+    show_left g
+  | _ => 
+    (* RHS is `constr:(f)` *)
+    reflexivity
+  end
+  in show_left f.
+
+Ltac rassoc t :=
+  let H := fresh in 
+  let rt := right_associate_term t in
+  assert (H: (t ≃ rt)%Cat) by (show_equiv_right_associate_term t);
+  rewrite H; clear H.
+
+Ltac lassoc t :=
+  let H := fresh in 
+  let rt := left_associate_term t in
+  assert (H: (t ≃ rt)%Cat) by (show_equiv_left_associate_term t);
+  rewrite H; clear H.
+
 
 (* Shows the goal f ≃ merge_stack_composition f by mirroring the 
    code path of merge_stacked_composition with `apply`s. *)
@@ -590,11 +628,11 @@ Ltac show_equiv_weak_fencepost_form f :=
   | @compose ?C ?cC _ _ _ ?g ?h => 
       let Ng := weak_fencepost g in
       let Nh := weak_fencepost h in 
-      let res := right_associate (cC.(compose) Ng Nh) in
+      let res := right_associate_term (cC.(compose) Ng Nh) in
       apply (compose_compat_trans_helper (cC:=cC) g Ng h Nh res 
         ltac:(show_equiv_weak_fencepost_form g)
         ltac:(show_equiv_weak_fencepost_form h)
-        ltac:(show_equiv_right_associate (cC.(compose) Ng Nh)))
+        ltac:(show_equiv_right_associate_term (cC.(compose) Ng Nh)))
   | @mor_tensor ?C ?cC ?mC _ _ _ _ ?g ?h =>
       let Ng := weak_fencepost g in
       let Nh := weak_fencepost h in 
@@ -665,9 +703,9 @@ Ltac unfold_tensor_stack_no_id f :=
   let rec unfold_tensor_stack f :=
   lazymatch f with 
     (* TODO: is this case smart to have? *)
-  | @mor_tensor _ ?cC ?mC 
+  (* | @mor_tensor _ ?cC ?mC 
     ?gA _ ?hA _ (id_ ?gA)%Cat (id_ ?hA)%Cat => 
-      constr:(cC.(c_identity) (mC.(obj_tensor) gA hA))
+      constr:(cC.(c_identity) (mC.(obj_tensor) gA hA)) *)
   
   | @mor_tensor _ ?cC ?mC  
     ?gA ?gA ?hA ?hB (id_ ?gA)%Cat ?h => 
@@ -701,7 +739,7 @@ Ltac strong_fencepost_form_of_weak f :=
   | (?g ∘ ?h)%Cat => 
       let ug := strong_fence g in
       let uh := strong_fence h in
-      right_associate (ug ∘ uh)%Cat
+      right_associate_term (ug ∘ uh)%Cat
   | _ => 
       unfold_tensor_stack f
   end
@@ -714,7 +752,7 @@ Ltac strong_fencepost_form_of_weak_no_id f :=
   | (?g ∘ ?h)%Cat => 
       let ug := strong_fence g in
       let uh := strong_fence h in
-      right_associate (ug ∘ uh)%Cat
+      right_associate_term (ug ∘ uh)%Cat
   | _ => 
       unfold_tensor_stack_no_id f
   end
@@ -782,10 +820,10 @@ Ltac show_equiv_unfold_tensor_stack_no_id f :=
   let rec show_unfold f :=
   lazymatch f with 
     (* TODO: is this case smart to have? *)
-  | @mor_tensor _ ?cC ?mC  
+  (* | @mor_tensor _ ?cC ?mC  
     ?gA ?gA ?hA ?hA (id_ ?gA)%Cat (id_ ?hA)%Cat => 
       (* constr:(cC.(c_identity) (mC.(tensor) gA hA)) *)
-      apply (tensor_id gA hA)
+      apply (tensor_id gA hA) *)
   
   | @mor_tensor _ ?cC ?mC ?gA ?gA ?hA ?hB (id_ ?gA)%Cat ?h => 
       let uh := unfold_tensor_stack h in 
@@ -825,11 +863,11 @@ Ltac show_equiv_unfold_tensor_stack_no_id_debug f :=
   let rec show_unfold f :=
   lazymatch f with 
     (* TODO: is this case smart to have? *)
-  | @mor_tensor _ ?cC ?mC ?gA _ ?hA _ (id_ ?gA)%Cat (id_ ?hA)%Cat => 
+  (* | @mor_tensor _ ?cC ?mC ?gA _ ?hA _ (id_ ?gA)%Cat (id_ ?hA)%Cat => 
       idtac "id id case:"; print_state;
       (* constr:(cC.(c_identity) (mC.(tensor) gA hA)) *)
       apply (tensor_id gA hA)
-      ; idtac "worked"
+      ; idtac "worked" *)
   
   | @mor_tensor _ ?cC ?mC ?gA ?gA ?hA ?hB (id_ ?gA)%Cat ?h => 
       let uh := unfold_tensor_stack h in 
@@ -876,13 +914,13 @@ Ltac show_equiv_strong_fencepost_form_of_weak f :=
   | (?g ∘ ?h)%Cat => 
       let ug := strong_fence g in
       let uh := strong_fence h in
-      let rassoc := right_associate (ug ∘ uh)%Cat in
-      (* right_associate (ug ∘ uh)%Cat *)
+      let rassoc := right_associate_term (ug ∘ uh)%Cat in
+      (* right_associate_term (ug ∘ uh)%Cat *)
       apply (compose_compat_trans_helper
         g ug  h uh rassoc
         ltac:(show_strong_fence g)
         ltac:(show_strong_fence h)
-        ltac:(show_equiv_right_associate (ug ∘ uh)%Cat)
+        ltac:(show_equiv_right_associate_term (ug ∘ uh)%Cat)
       )
   | _ => 
       (* unfold_tensor_stack f *)
@@ -898,13 +936,13 @@ Ltac show_equiv_strong_fencepost_form_of_weak_no_id f :=
   | (?g ∘ ?h)%Cat => 
       let ug := strong_fence g in
       let uh := strong_fence h in
-      let rassoc := right_associate (ug ∘ uh)%Cat in
-      (* right_associate (ug ∘ uh)%Cat *)
+      let rassoc := right_associate_term (ug ∘ uh)%Cat in
+      (* right_associate_term (ug ∘ uh)%Cat *)
       apply (compose_compat_trans_helper
         g ug  h uh rassoc
         ltac:(show_strong_fence g)
         ltac:(show_strong_fence h)
-        ltac:(show_equiv_right_associate (ug ∘ uh)%Cat)
+        ltac:(show_equiv_right_associate_term (ug ∘ uh)%Cat)
       )
   | _ => 
       (* unfold_tensor_stack f *)
@@ -919,13 +957,13 @@ Ltac show_equiv_strong_fencepost_form_of_weak_no_id_debug f :=
   | (?g ∘ ?h)%Cat => 
       let ug := strong_fence g in
       let uh := strong_fence h in
-      let rassoc := right_associate (ug ∘ uh)%Cat in
-      (* right_associate (ug ∘ uh)%Cat *)
+      let rassoc := right_associate_term (ug ∘ uh)%Cat in
+      (* right_associate_term (ug ∘ uh)%Cat *)
       apply (compose_compat_trans_helper
         g ug  h uh rassoc
         ltac:(show_strong_fence g)
         ltac:(show_strong_fence h)
-        ltac:(show_equiv_right_associate (ug ∘ uh)%Cat)
+        ltac:(show_equiv_right_associate_term (ug ∘ uh)%Cat)
       )
   | _ => 
       (* unfold_tensor_stack f *)
@@ -973,47 +1011,779 @@ Ltac strong_fencepost_no_id_debug f :=
   setoid_rewrite H;
   clear H.
 
+
+Ltac right_associate_term' f := 
+  let rec rassoc f := 
+  lazymatch f with 
+  | ((?g ∘ ?h) ∘ ?i)%Cat => rassoc (g ∘ (h ∘ i))%Cat
+  | (?g ∘ ?h)%Cat => (* g shouldn't be a composition *)
+      let RAh := rassoc h in
+        constr:((g ∘ RAh)%Cat)
+  | @mor_tensor _ ?cC ?mC _ _ _ _ ?g ?h =>
+       let RAg := rassoc g in let RAh := rassoc h in 
+         constr:(mC.(mor_tensor) RAg RAh)
+  | _ => constr:(f)
+  end
+  in rassoc f.
+
+Ltac show_equiv_right_associate_term' term :=
+  let rec show_equiv_right_associate_term f :=
+  try easy;
+  lazymatch f with 
+  | ((?g ∘ ?h) ∘ ?i)%Cat => 
+    (* RHS is `right_associate_term (g ∘ (h ∘ i))` *)
+    apply assoc_compat_helper;
+    show_equiv_right_associate_term ((g ∘ (h ∘ i))%Cat)
+  | (?g ∘ ?h)%Cat => (* g shouldn't be a composition *)
+      (* RHS is `(g ∘ right_associate_term h)` *)
+      apply compose_compat_right;
+      show_equiv_right_associate_term h
+  | @mor_tensor _ ?cC ?mC _ _ _ _ ?g ?h =>
+      apply (tensor_compat);
+        [ltac:(show_equiv_right_associate_term g) |
+        ltac:(show_equiv_right_associate_term h)]
+  | _ => 
+    (* RHS is `constr:(f)` *)
+    reflexivity
+  end
+  in show_equiv_right_associate_term term.
+
+Ltac rassoc' t :=
+  let H := fresh in 
+  let rt := right_associate_term' t in
+  assert (H: (t ≃ rt)%Cat) by (show_equiv_right_associate_term' t);
+  rewrite H; clear H.
+
+
+Ltac partnered_in_RA_term_nofail t s term :=
+  let rec partnered t s term :=
+  match term with
+  | (?g ∘ (?h ∘ ?i))%Cat => 
+    let _ := lazymatch goal with _ => 
+      unify t g; unify s h end
+    in constr:((g ∘ h ∘ i)%Cat)
+  | (?g ∘ (?h ∘ ?i))%Cat => 
+    let subpart := constr:((h ∘ i)%Cat) in 
+    let ptnered := partnered t s subpart in
+    constr:((g ∘ ptnered)%Cat)
+  | _ => constr:(term)
+  end
+  in partnered t s term.
+
+Ltac partnered_in_term_nofail t s term :=
+  let raterm := right_associate_term' term in 
+  partnered_in_RA_term_nofail t s raterm.
+
+
+
+Ltac partnered_in_RA_term t s term :=
+  let rec partnered t s term :=
+  match term with
+  | (?g ∘ (?h ∘ ?i))%Cat => 
+    let _ := lazymatch goal with _ => 
+      unify t g; unify s h end in
+    constr:((g ∘ h ∘ i)%Cat)
+  | (?g ∘ (?h ∘ ?i))%Cat => 
+    let subpart := constr:((h ∘ i)%Cat) in 
+    let ptnered := partnered t s subpart in
+    constr:((g ∘ ptnered)%Cat)
+  | (?g ∘ ?h)%Cat => 
+    let _ := lazymatch goal with _ => 
+      unify t g; unify s h end in
+    constr:((g ∘ h)%Cat)
+  | @mor_tensor _ ?cC ?mC _ _ _ _ ?f ?g =>
+    let out := match goal with 
+    | _ => let mf := partnered f in 
+      constr:(mC.(mor_tensor) mf g)
+    | _ => let mg := partnered g in 
+      constr:(mC.(mor_tensor) f mg)
+    end
+    in constr:(out)
+  end
+  in partnered t s term.
+
+Ltac partnered_in_term t s term :=
+  let raterm := right_associate_term' term in 
+  partnered_in_RA_term t s raterm.
+
+Ltac try_partnered_in_term t s term :=
+  let out := match goal with
+  | |- _ => 
+    let raterm := right_associate_term' term in 
+    partnered_in_RA_term t s raterm
+  | |- _ => constr:(term)
+  end in constr:(out).
+  
+Ltac show_equiv_partnered_in_RA_term t s term :=
+  let rec show_part t s term := 
+  match term with
+  | (?g ∘ (?h ∘ ?i))%Cat => 
+    let _ := lazymatch goal with _ => 
+      unify t g; unify s h end in
+    (* constr:((g ∘ h ∘ i)%Cat) *)
+    symmetry; apply assoc
+  | (?g ∘ (?h ∘ ?i))%Cat => 
+    let subpart := constr:((h ∘ i)%Cat) in 
+    (* constr:((g ∘ ptnered)%Cat) *)
+    apply compose_cancel_l;
+    show_part t s subpart
+  | (?g ∘ ?h)%Cat => 
+    (* let _ := lazymatch goal with _ => 
+      unify t g; unify s h end in
+    constr:((g ∘ h)%Cat) *)
+    reflexivity
+  | @mor_tensor _ ?cC ?mC _ _ _ _ ?f ?g =>
+    apply (tensor_compat); 
+    [ first [reflexivity | show_part f] | first [reflexivity | show_part g] ]
+  end
+  in show_part t s term.
+
+Ltac show_equiv_partnered_in_term t s term :=
+  let raterm := right_associate_term' term in 
+  transitivity raterm;
+  [ show_equiv_right_associate_term' term
+  | show_equiv_partnered_in_RA_term t s raterm ].
+
+Ltac partner_in_term t s term := 
+  let ptnered := partnered_in_term t s term in
+  let H := fresh in 
+  assert (H : (term ≃ ptnered)%Cat) 
+    by (show_equiv_partnered_in_term t s term);
+  setoid_rewrite H;
+  clear H.
+
+
+Ltac show_equiv_partnered_in_RA_term_debug t s term :=
+  let rec show_part t s term := 
+  match term with
+  | (?g ∘ (?h ∘ ?i))%Cat => 
+    let _ := lazymatch goal with _ => 
+      unify t g; unify s h end in
+    (* constr:((g ∘ h ∘ i)%Cat) *)
+    idtac "unified; associating"; 
+    print_state;
+    symmetry; apply assoc
+  | (?g ∘ (?h ∘ ?i))%Cat => 
+    idtac "starting cancelling";
+    let subpart := constr:((h ∘ i)%Cat) in 
+    (* constr:((g ∘ ptnered)%Cat) *)
+    idtac "cancelling" g "down to" subpart; 
+    apply compose_cancel_l;
+    print_state;
+    show_part t s subpart
+  | (?g ∘ ?h)%Cat => 
+    (* let _ := lazymatch goal with _ => 
+      unify t g; unify s h end in
+    constr:((g ∘ h)%Cat) *)
+    idtac "ended; reflexivity"; 
+    print_state;
+    reflexivity
+  | @mor_tensor _ ?cC ?mC _ _ _ _ ?f ?g =>
+    apply (tensor_compat); 
+    [ first [reflexivity | show_part f] | first [reflexivity | show_part g] ]
+  end
+  in show_part t s term.
+
+Ltac show_equiv_partnered_in_term_debug t s term :=
+  let raterm := right_associate_term' term in 
+  transitivity raterm;
+  [ 
+    (* idtac "rassoc:"; 
+    print_state;  *)
+    show_equiv_right_associate_term' term 
+  | 
+    idtac "partnr:"; 
+    print_state; 
+    show_equiv_partnered_in_RA_term_debug t s raterm ].
+
+Ltac partner_in_term_debug t s term := 
+  let ptnered := partnered_in_term t s term in
+  let H := fresh in 
+  assert (H : (term ≃ ptnered)%Cat) 
+    by (show_equiv_partnered_in_term_debug t s term);
+  setoid_rewrite H;
+  clear H.
+
+
+Ltac gen_partnered_in_RA_term test term :=
+  let rec partnered test term :=
+  match term with
+  | (?g ∘ (?h ∘ ?i))%Cat => 
+    let _ := lazymatch goal with _ => 
+      test g h end in
+    constr:((g ∘ h ∘ i)%Cat)
+  | (?g ∘ (?h ∘ ?i))%Cat => 
+    let subpart := constr:((h ∘ i)%Cat) in 
+    let ptnered := partnered test subpart in
+    constr:((g ∘ ptnered)%Cat)
+  | (?g ∘ ?h)%Cat => 
+    let _ := lazymatch goal with _ => 
+      test g h end in
+    constr:((g ∘ h)%Cat)
+  | @mor_tensor _ ?cC ?mC _ _ _ _ ?f ?g =>
+    let out := match goal with 
+    | _ => let mf := partnered test f in 
+      constr:(mC.(mor_tensor) mf g)
+    | _ => let mg := partnered test g in 
+      constr:(mC.(mor_tensor) f mg)
+    end
+    in constr:(out)
+  end
+  in partnered test term.
+
+Ltac gen_partnered_in_term test term :=
+  let raterm := right_associate_term' term in 
+  gen_partnered_in_RA_term test raterm.
+
+Ltac try_gen_partnered_in_term test term :=
+  let out := match goal with
+  | |- _ => 
+    let raterm := right_associate_term' term in 
+    gen_partnered_in_RA_term test raterm
+  | |- _ => constr:(term)
+  end in constr:(out).
+  
+Ltac show_equiv_gen_partnered_in_RA_term test term :=
+  let rec show_part test term := 
+  match term with
+  | (?g ∘ (?h ∘ ?i))%Cat => 
+    let _ := lazymatch goal with _ => 
+      test g h end in
+    (* constr:((g ∘ h ∘ i)%Cat) *)
+    symmetry; apply assoc
+  | (?g ∘ (?h ∘ ?i))%Cat => 
+    let subpart := constr:((h ∘ i)%Cat) in 
+    (* constr:((g ∘ ptnered)%Cat) *)
+    apply compose_cancel_l;
+    show_part test subpart
+  | (?g ∘ ?h)%Cat => 
+    (* let _ := lazymatch goal with _ => 
+      unify t g; unify s h end in
+    constr:((g ∘ h)%Cat) *)
+    reflexivity
+  | @mor_tensor _ ?cC ?mC _ _ _ _ ?f ?g =>
+    apply (tensor_compat); 
+    [ first [reflexivity | show_part test f] | first [reflexivity | show_part test g] ]
+  end
+  in show_part test term.
+
+Ltac show_equiv_gen_partnered_in_term test term :=
+  let raterm := right_associate_term' term in 
+  transitivity raterm;
+  [ show_equiv_right_associate_term' term
+  | show_equiv_gen_partnered_in_RA_term test raterm ].
+
+Ltac gen_partner_in_term test term := 
+  let ptnered := gen_partnered_in_term test term in
+  let H := fresh in 
+  assert (H : (term ≃ ptnered)%Cat) 
+    by (show_equiv_gen_partnered_in_term test term);
+  setoid_rewrite H;
+  clear H.
+
+Ltac gen_partner_in_term_then test term tac := 
+  let ptnered := gen_partnered_in_term test term in
+  let H := fresh in 
+  assert (H : (term ≃ ptnered)%Cat) 
+    by (show_equiv_gen_partnered_in_term test term);
+  setoid_rewrite H;
+  clear H;
+  tac ptnered.
+
+Ltac rep_gen_partner_in_term test term tac := 
+  let ptnered := gen_partnered_in_term test term in
+  let H := fresh in 
+  assert (H : (term ≃ ptnered)%Cat) 
+    by (show_equiv_gen_partnered_in_term test term);
+  setoid_rewrite H;
+  clear H;
+  first [rep_gen_partner_in_term test term | tac term].
+
+Ltac test_iso_inv_l t s :=
+  let comp := constr:((t ∘ s)%Cat) in 
+  lazymatch comp with
+  | (reverse ?f ∘ forward ?f)%Cat => idtac
+  end.
+
+Ltac test_iso_inv_r t s :=
+  let comp := constr:((t ∘ s)%Cat) in 
+  lazymatch comp with
+  | (forward ?f ∘ reverse ?f)%Cat => idtac
+  end.
+
+Ltac test_iso_inv_lr t s :=
+  let comp := constr:((t ∘ s)%Cat) in 
+  lazymatch comp with
+  | (reverse ?f ∘ forward ?f)%Cat => idtac
+  | (forward ?f ∘ reverse ?f)%Cat => idtac
+  end.
+
+
+Ltac cancel_ids_term term :=
+  let rec clean term :=
+  lazymatch term with
+  | (compose ?cC (id_ _) (id_ ?A))%Cat => 
+      constr:(cC.(c_identity) A)
+  | (id_ _ ∘ ?g)%Cat => 
+      let r := clean g in constr:(r)
+  | (?g ∘ id_ _)%Cat => 
+      let r := clean g in constr:(r)
+  | (?f ∘ ?g)%Cat => 
+      let fr := clean f in let gr := clean g in 
+      constr:((fr ∘ gr)%Cat)
+  | @mor_tensor ?C ?cC ?mC _ _ _ _ ?f ?g =>
+      let fr := clean f in let gr := clean g in 
+      constr:((mC.(mor_tensor) fr gr)%Cat)
+  | _ => constr:(term)
+  end
+  in clean term.
+
+Ltac show_equiv_cancel_ids_term term := 
+  let rec show_clean term :=
+  lazymatch term with
+  | (id_ _ ∘ id_ ?A)%Cat => 
+      (* constr:((id_ A)%Cat) *)
+      apply left_unit
+  | (id_ _ ∘ ?g)%Cat => 
+      (* let r := clean g in constr:(r) *)
+      transitivity g;
+      [ apply left_unit | show_clean g ]
+  | (?g ∘ id_ _)%Cat => 
+      (* let r := clean g in constr:(r) *)
+      transitivity g;
+      [ apply right_unit | show_clean g ]
+  | (id_ _ ∘ ?g)%Cat => 
+      (* let r := clean g in constr:(r) *)
+      transitivity g;
+      [ apply left_unit | show_clean g ]
+      (* constr:((id_ A)%Cat) *)
+  | (?f ∘ ?g)%Cat => 
+      (* let fr := clean f in let gr := clean g in 
+      constr:((fr ∘ gr)%Cat) *)
+      apply compose_compat;
+      [ show_clean f | show_clean g ]
+  | @mor_tensor ?C ?cC ?mC _ _ _ _ ?f ?g =>
+      (* let fr := clean f in let gr := clean g in 
+      constr:((mC.(mor_tensor) fr gr)%Cat) *)
+      apply tensor_compat;
+      [ show_clean f | show_clean g ]
+  | _ => reflexivity
+  end
+  in show_clean term.
+
+Ltac cancel_ids_in term :=
+  let c := cancel_ids_term term in 
+  let H := fresh in 
+  assert (H : (term ≃ c)%Cat) by (show_equiv_cancel_ids_term term);
+  setoid_rewrite H;
+  clear H.
+
+Ltac cancel_all_ids_term term :=
+  let clean := cancel_ids_term in 
+  let rec deep_clean term :=
+  let r := clean term in 
+  let out := match goal with 
+  | _ => let _ := match goal with _ => unify r term end in
+    constr:(term)
+  | _ => let rr := deep_clean r in constr:(rr)
+  end in constr:(out)
+  in deep_clean term.
+
+
+(* This ends up being faster than the functionally-equivlant 
+  "repeat (cancel_ids_in term)" 
+  (found ~20% faster on small example with 2 rounds needed)*)
+Ltac cancel_all_ids term :=
+  let c := cancel_ids_term term in 
+  tryif unify c term then idtac else
+  let H := fresh in 
+  assert (H : (term ≃ c)%Cat) by (show_equiv_cancel_ids_term term);
+  setoid_rewrite H;
+  clear H;
+  cancel_all_ids c.
+
+Ltac cancel_liso term := 
+  gen_partner_in_term test_iso_inv_l term;
+  rewrite ?iso_inv_l.
+
+Ltac cancel_lisos term := 
+  repeat cancel_liso term.
+
+(* These don't work because term changes before cancel_all_ids. 
+   This could be fixed with a highly-modified gen_partner, but 
+   for now the cases we care about (LHS, RHS) can be done specially. *)
+(* Ltac cancel_lisos' term := 
+  cancel_lisos term; cancel_all_ids term. *)
+
+Ltac cancel_riso term := 
+  gen_partner_in_term test_iso_inv_r term;
+  rewrite ?iso_inv_r.
+
+Ltac cancel_risos term := 
+  repeat cancel_riso term.
+
+(* Ltac cancel_risos' term := 
+  cancel_risos term; cancel_all_ids term. *)
+
+Ltac cancel_lriso term := 
+  gen_partner_in_term test_iso_inv_lr term;
+  rewrite ?iso_inv_l, ?iso_inv_r.
+
+Ltac cancel_lrisos term := 
+  repeat cancel_lriso term.
+
+(* Ltac cancel_lrisos' term := 
+  cancel_lrisos term; cancel_all_ids term. *)
+
+
+
+
+Ltac lassoc_n_term_rec n base t :=
+  match n with 
+  | O => constr:((base ∘ t)%Cat)
+  | S ?n' => match t with
+    | (?g ∘ ?h)%Cat =>
+        let base' := constr:((base ∘ g)%Cat) in
+        (* let rest := constr:((h ∘ i)%Cat) in  *)
+        lassoc_n_term_rec n' base' h
+    | _ => constr:((base ∘ t)%Cat)
+    end
+  end.
+
+Ltac lassoc_n_term n t :=
+  match n with 
+  | O => constr:(t)
+  | S ?n' => match t with
+    | (?g ∘ ?h)%Cat =>
+        lassoc_n_term_rec n' g h
+    end
+  end.
+
+
+Ltac lassoc_n_term_rec_debug n base t :=
+  match n with 
+  | O => constr:((base ∘ t)%Cat)
+  | S ?n' => 
+    let _ := match goal with _ => idtac "at" n' base t end in
+    match t with
+    | (?g ∘ ?h)%Cat =>
+        let base' := constr:((base ∘ g)%Cat) in
+        (* let rest := constr:((h ∘ i)%Cat) in  *)
+        lassoc_n_term_rec n' base' h
+    | _ => constr:((base ∘ t)%Cat)
+    end
+  end.
+
+Ltac lassoc_n_term_debug n t :=
+  match n with 
+  | O => constr:(t)
+  | S ?n' => match t with
+    | (?g ∘ ?h)%Cat =>
+        lassoc_n_term_rec_debug n' g h
+    end
+  end.
+
+(* Shows base ∘ t ≃ lassoc_n_term_rec n base t 
+  (relies on there being enough compositions of t, of course)*)
+Ltac show_equiv_lassoc_n_term_rec n base t :=
+  match n with 
+  | O => (* constr:((base ∘ t)%Cat) *)
+    reflexivity
+  | S ?n' => match t with
+    | (?g ∘ ?h)%Cat =>
+      let base' := constr:((base ∘ g)%Cat) in
+      (* let rest := constr:((h ∘ i)%Cat) in  *)
+      (* lassoc_n_term_rec n' base' h *)
+      transitivity ((base ∘ g ∘ h)%Cat);
+      [ symmetry; apply assoc | 
+        show_equiv_lassoc_n_term_rec n' base' h]
+    | _ => reflexivity
+    end
+  end.
+
+Ltac show_equiv_lassoc_n_term n t := 
+  match n with 
+  | O => (* constr:(t) *)
+    reflexivity
+  | S ?n' => match t with
+    | (?g ∘ ?h)%Cat =>
+        show_equiv_lassoc_n_term_rec n g h
+    end
+  end.
+
+
+
+Ltac __next_Sn_of_comp n t := 
+  lazymatch t with
+  | (?g ∘ ?h)%Cat =>
+    match n with
+    | O => constr:(g)
+    | S ?n' => let rest := __next_Sn_of_comp n' h in 
+        constr:((g ∘ rest)%Cat)
+    end
+  | ?g => match n with O => constr:(g) end
+  end.
+
+Ltac __next_n_of_comp n t := 
+  match n with
+  | S ?n' => __next_Sn_of_comp n' t
+  end.
+
+Ltac n_partnered_in_RA_term pat n term :=
+  let rec n_partnered term :=
+  match term with
+  | _ => let nextn := __next_n_of_comp n term in 
+    let _ := match goal with _ => unify nextn pat end in
+    lassoc_n_term n term 
+  | (?g ∘ ?h)%Cat => let npart := n_partnered h in 
+      constr:((g ∘ npart)%Cat)
+  | mor_tensor ?mC ?f ?g =>
+    let out :=
+    match goal with
+    | _ => let mf := n_partnered f in
+      constr:((mC.(mor_tensor) mf g))
+    | _ => let mg := n_partnered g in
+      constr:((mC.(mor_tensor) f mg))
+    end in constr:(out)
+  end in 
+  n_partnered term.
+
+Ltac n_partnered_in_term pat n term :=
+  let raterm := right_associate_term' term in 
+  n_partnered_in_RA_term pat n raterm.
+
+Ltac n_partnered_in_RA_term_debug pat n term :=
+  let rec n_partnered term :=
+  match term with
+  | _ => let nextn := __next_n_of_comp n term in 
+    let _ := match goal with _ => 
+      idtac "trying" nextn; 
+      unify nextn pat; 
+      idtac "unified" end in
+    lassoc_n_term_debug n term 
+  | (?g ∘ ?h)%Cat => 
+    let _ := match goal with _ => idtac "moving into" h end in 
+    let npart := n_partnered h in 
+      constr:((g ∘ npart)%Cat)
+  | mor_tensor ?mC ?f ?g =>
+    let _ := match goal with _ => idtac "searching tensor" end in   
+    let out :=
+    match goal with
+    | _ => let mf := n_partnered f in
+      let _ := match goal with _ => idtac "found in top" f "=~=>" mf end in 
+      constr:((mC.(mor_tensor) mf g))
+    | _ => let mg := n_partnered g in
+      let _ := match goal with _ => idtac "found in bot" g "=~=>" mg end in 
+      constr:((mC.(mor_tensor) f mg))
+    end in constr:(out)
+  end in 
+  n_partnered term.
+
+Ltac n_partnered_in_term_debug pat n term :=
+  let raterm := right_associate_term' term in 
+  n_partnered_in_RA_term_debug pat n raterm.
+
+Ltac show_equiv_n_partnered_in_RA_term pat n term :=
+  let rec show_n_partnered term :=
+  match term with
+  | _ => 
+    show_equiv_lassoc_n_term n term  
+    (* let nextn := __next_n_of_comp n term in 
+    let _ := match goal with _ => unify nextn pat end in
+    lassoc_n_term n term  *)
+  | (?g ∘ ?h)%Cat => 
+    apply compose_cancel_l;
+    show_n_partnered h
+  | mor_tensor ?mC ?f ?g =>
+    first [
+      apply tensor_cancel_r; show_n_partnered f
+    | apply tensor_cancel_l; show_n_partnered g ]
+  end in 
+  show_n_partnered term.
+
+Ltac show_equiv_n_partnered_in_term pat n term :=
+  let raterm := right_associate_term' term in 
+  transitivity raterm;
+  [ show_equiv_right_associate_term' term
+  | show_equiv_n_partnered_in_RA_term pat n raterm ].
+
+Ltac n_partner_in_term pat n term :=
+  let npart := n_partnered_in_term pat n term in 
+  tryif unify npart term then idtac else
+  let H := fresh in 
+  assert (H : (term ≃ npart)%Cat) by 
+    (show_equiv_n_partnered_in_term pat n term);
+  setoid_rewrite H;
+  clear H.
+
+Ltac n_partner_in_term_debug pat n term :=
+  let npart := n_partnered_in_term_debug pat n term in 
+  tryif unify npart term then idtac else
+  let H := fresh in 
+  assert (H : (term ≃ npart)%Cat) by 
+    (show_equiv_n_partnered_in_term pat n term);
+  setoid_rewrite H;
+  clear H.
+
+Ltac __count_comps t :=
+  lazymatch t with
+  | (?g ∘ ?h)%Cat => let n' := __count_comps h in constr:(S n')
+  | _ => constr:(O)
+  end.
+
+Ltac __count_comp_terms t :=
+  lazymatch t with
+  | (?g ∘ ?h)%Cat => let n' := __count_comp_terms h in constr:(S n')
+  | _ => constr:(S O)
+  end.
+
+(* Section on handy versions of these tactics: *)
+
+Ltac apply_to_LHS tac :=
+  lazymatch goal with |- (?LHS ≃ ?RHS)%Cat => tac LHS end.
+
+Ltac apply_to_RHS tac := 
+  lazymatch goal with |- (?LHS ≃ ?RHS)%Cat => tac RHS end.
+
+Ltac apply_to_LRHS tac := 
+  lazymatch goal with |- (?LHS ≃ ?RHS)%Cat => 
+  (try tac LHS); (try tac RHS) end.
+  
+
+Ltac rassoc_LHS := apply_to_LHS rassoc.
+  (* match goal with |- (?LHS ≃ ?RHS)%Cat => rassoc LHS end. *)
+Ltac rassoc_RHS := apply_to_RHS rassoc.
+  (* match goal with |- (?LHS ≃ ?RHS)%Cat => rassoc RHS end. *)
+Ltac rassoc_LRHS := apply_to_LRHS rassoc.
+
+Ltac rassoc'_LHS := apply_to_LHS rassoc'.
+Ltac rassoc'_RHS := apply_to_RHS rassoc'.
+Ltac rassoc'_LRHS := apply_to_LRHS rassoc'.
+
+Ltac lassoc_LHS := apply_to_LHS lassoc.
+  (* match goal with |- (?LHS ≃ ?RHS)%Cat => lassoc LHS end. *)
+Ltac lassoc_RHS := apply_to_RHS lassoc.
+  (* match goal with |- (?LHS ≃ ?RHS)%Cat => lassoc RHS end. *)
+Ltac lassoc_LRHS := apply_to_LRHS lassoc.
+
+
+Ltac partner_LHS t s := 
+  let func := partner_in_term t s in   
+  apply_to_LHS func.
+
+Ltac partner_RHS t s := 
+  let func := partner_in_term t s in   
+  apply_to_RHS func.
+
+Ltac partner_LRHS t s := 
+  let func := partner_in_term t s in   
+  apply_to_LRHS func.
+
+Ltac gen_partner_LHS test := 
+  let func := gen_partner_in_term test in   
+  apply_to_LHS func.
+
+Ltac gen_partner_RHS test := 
+  let func := gen_partner_in_term test in   
+  apply_to_RHS func.
+
+Ltac gen_partner_LRHS test := 
+  let func := gen_partner_in_term test in   
+  apply_to_LRHS func.
+
+Ltac cancel_id_LHS := apply_to_LHS cancel_ids_in.
+Ltac cancel_id_RHS := apply_to_RHS cancel_ids_in.
+Ltac cancel_id_LRHS := apply_to_LRHS cancel_ids_in.
+
+Ltac cancel_ids_LHS := apply_to_LHS cancel_all_ids.
+Ltac cancel_ids_RHS := apply_to_RHS cancel_all_ids.
+Ltac cancel_ids_LRHS := apply_to_LRHS cancel_all_ids.
+
+Ltac cancel_lisos_LHS := apply_to_LHS cancel_lisos; cancel_ids_LHS.
+Ltac cancel_lisos_RHS := apply_to_RHS cancel_lisos; cancel_ids_RHS.
+Ltac cancel_lisos_LRHS := apply_to_LRHS cancel_lisos; cancel_ids_LRHS.
+
+Ltac cancel_risos_LHS := apply_to_LHS cancel_risos; cancel_ids_LHS.
+Ltac cancel_risos_RHS := apply_to_RHS cancel_risos; cancel_ids_RHS.
+Ltac cancel_risos_LRHS := apply_to_LRHS cancel_risos; cancel_ids_LRHS.
+
+Ltac cancel_lrisos_LHS := apply_to_LHS cancel_lrisos; cancel_ids_LHS.
+Ltac cancel_lrisos_RHS := apply_to_RHS cancel_lrisos; cancel_ids_RHS.
+Ltac cancel_lrisos_LRHS := apply_to_LRHS cancel_lrisos; cancel_ids_LRHS.
+
+Ltac weak_fencepost_LHS := apply_to_LHS weak_fencepost.
+Ltac weak_fencepost_RHS := apply_to_RHS weak_fencepost.
+Ltac weak_fencepost_LRHS := apply_to_LRHS weak_fencepost.
+
+Ltac strong_fencepost_LHS := apply_to_LHS strong_fencepost_no_id.
+Ltac strong_fencepost_RHS := apply_to_RHS strong_fencepost_no_id.
+Ltac strong_fencepost_LRHS := apply_to_LRHS strong_fencepost_no_id.
+
+
+Ltac cancel_ids := cancel_ids_LRHS.
+Ltac cancel_isos := cancel_lrisos_LRHS.
+
+Ltac cat_cleanup := repeat (cancel_isos; cancel_ids).
+
+Ltac cat_easy := cat_cleanup; rassoc_LRHS; easy || rewrite !tensor_id; easy.
+
+
+
+Tactic Notation "LHS" tactic(tac) := apply_to_LHS tac.
+Tactic Notation "RHS" tactic(tac) := apply_to_RHS tac.
+Tactic Notation "LRHS" tactic(tac) := apply_to_LRHS tac.
+
+Tactic Notation "partners_rw" open_constr(lem) "within" constr(term) :=
+  let e := fresh in let e' := fresh in 
+  epose proof @lem as e;
+  repeat (rename e into e'; epose proof (e' _) as e; clear e');
+  match type of e with
+  | (?g ≃ _)%Cat =>
+  let rg := right_associate_term g in 
+  let n := __count_comp_terms rg in 
+  n_partner_in_term rg n term;
+  let lg := left_associate_term g in 
+  tryif unify g lg then idtac else (
+    let H := fresh in 
+    print_state;
+    assert (H : (g ≃ lg)%Cat) by (show_equiv_left_associate_term g);
+    try setoid_rewrite H in e;
+    clear H);
+  setoid_rewrite e;
+  clear e
+  end.
+
+Tactic Notation "partners_rw" open_constr(lem) :=
+  match goal with 
+  |- (?LHS ≃ ?RHS)%Cat =>
+  first [
+    partners_rw lem within LHS 
+  | partners_rw lem within RHS ]
+  end.
+
+
 Section Testing.
 Local Open Scope Cat_scope.
 Variables (C : Type) (cC cC' cC'' : Category C)
-  (cCh : CategoryCoherence cC) (cC'h : CategoryCoherence cC') 
-  (cC''h : CategoryCoherence cC'')
-  (mC0   mC1   : @MonoidalCategory C cC)
-  (mC0'  mC1'  : @MonoidalCategory C cC')
-  (mC0'' mC1'' : @MonoidalCategory C cC'')
-  (mC0h   : MonoidalCategoryCoherence mC0)
-  (mC0'h  : MonoidalCategoryCoherence mC0')
-  (mC0''h : MonoidalCategoryCoherence mC0'')
-  (mC1h   : MonoidalCategoryCoherence mC1)
-  (mC1'h  : MonoidalCategoryCoherence mC1')
-  (mC1''h : MonoidalCategoryCoherence mC1'')
+  (cCh : CategoryCoherence cC) (cC'h : CategoryCoherence cC') (cC''h : CategoryCoherence cC'')
+  (mC0   mC1   : @MonoidalCategory C cC) (mC0'  mC1'  : @MonoidalCategory C cC') (mC0'' mC1'' : @MonoidalCategory C cC'')
+  (mC0h   : MonoidalCategoryCoherence mC0) (mC0'h  : MonoidalCategoryCoherence mC0') (mC0''h : MonoidalCategoryCoherence mC0'')
+  (mC1h   : MonoidalCategoryCoherence mC1) (mC1'h  : MonoidalCategoryCoherence mC1') (mC1''h : MonoidalCategoryCoherence mC1'')
   (A B M N : C)
-  (f   f0   : cC.(morphism)   A B) 
-  (g   g0   : cC.(morphism)   B M) 
-  (h   h0   : cC.(morphism)   A M)
-  (i   i0   : cC.(morphism)   M N)
-  (j   j0   : cC.(morphism)   B M)
-  (k   k0   : cC.(morphism)   A M)
-  (f'  f0'  : cC'.(morphism)  A B) 
-  (g'  g0'  : cC'.(morphism)  B M) 
-  (h'  h0'  : cC'.(morphism)  A M)
-  (i'  i0'  : cC'.(morphism)  M N)
-  (j'  j0'  : cC'.(morphism)  B M)
-  (k'  k0'  : cC'.(morphism)  A M)
-  (f'' f0'' : cC''.(morphism) A B) 
-  (g'' g0'' : cC''.(morphism) B M) 
-  (h'' h0'' : cC''.(morphism) A M)
-  (i'' i0'' : cC''.(morphism) M N)
-  (j'' j0'' : cC''.(morphism) B M)
-  (k'' k0'' : cC''.(morphism) A M).
+  (f   f0   : cC.(morphism)   A B) (g   g0   : cC.(morphism)   B M)  (h   h0   : cC.(morphism)   A M) (i   i0   : cC.(morphism)   M N)
+  (* (j   j0   : cC.(morphism)   B M) (k   k0   : cC.(morphism)   A M) (f'  f0'  : cC'.(morphism)  A B) (g'  g0'  : cC'.(morphism)  B M) 
+  (h'  h0'  : cC'.(morphism)  A M) (i'  i0'  : cC'.(morphism)  M N) (j'  j0'  : cC'.(morphism)  B M) (k'  k0'  : cC'.(morphism)  A M)
+  (f'' f0'' : cC''.(morphism) A B) (g'' g0'' : cC''.(morphism) B M) (h'' h0'' : cC''.(morphism) A M) (i'' i0'' : cC''.(morphism) M N)
+  (j'' j0'' : cC''.(morphism) B M) (k'' k0'' : cC''.(morphism) A M) *)
+  .
 (* Goal True. *)
 
-Existing Instance cC.
-Existing Instance cC'.
-Existing Instance cC''.
+Existing Instance cC. Existing Instance cC'. Existing Instance cC''.
 Existing Instance mC0.   Existing Instance mC1.
 Existing Instance mC0'.  Existing Instance mC1'.
 Existing Instance mC0''. Existing Instance mC1''.
+
+
 
 
 Lemma test_weak_fencepost : forall
@@ -1053,21 +1823,105 @@ Proof.
   easy.
 Qed.
 
-Lemma test_strong_fencepost_no_id_2 : forall 
+(* Require Import Program.Tactics. *)
+
+
+
+Lemma test_strong_fencepost_no_id_2' : forall 
   {a b m n o} (f : a ~> b) (g : m ~> n) (h : n ~> o),
-  f ⊗ (g ∘ h ∘ id_ _) ⊗ (id_ a ⊗ id_ b) ≃ 
+  f ⊗ (g ∘ id_ _ ∘ h ∘ id_ _) ⊗ (id_ a ⊗ id_ b) ≃ 
   f ⊗ g ⊗ (id_ a ⊗ id_ b) ∘ ((id_ b ⊗ h) ⊗ (id_ a ⊗ id_ b)).
 Proof.
   intros.
-  match goal with
-  |- ?T ≃ ?T' => strong_fencepost_no_id T
-  ; strong_fencepost_no_id T'
-  end.
-  (* rewrite !tensor_id, !right_unit, !left_unit. *)
+  do 2 partners_rw right_unit.
+  LHS weak_fencepost.
+  rewrite tensor_id.
   easy.
 Qed.
 
+Lemma test_strong_fencepost_no_id_2 : forall 
+  {a b m n o} (f : a ~> b) (g : m ~> n) (h : n ~> o),
+  f ⊗ (g ∘ (id_ _ ∘ h) ∘ (id_ _ ∘ id_ _)) ⊗ (id_ a ⊗ id_ b) ≃ 
+  f ⊗ g ⊗ (id_ a ⊗ id_ b) ∘ ((id_ b ⊗ h) ⊗ (id_ a ⊗ id_ b)).
+Proof.
+  intros.
+  rewrite !right_unit.
+  partners_rw right_unit.
+  LHS weak_fencepost.
+  cat_easy.
+Qed.
+
+Lemma gen_partner_test : forall {C} {cC:Category C} 
+  {cCh : CategoryCoherence cC} {A B1 M1 B2 M2 : C} 
+  (g1 : B1 <~> M1) (f: M1 ~> B2) (g2 : B2 <~> M2),
+    g1 ∘ f ∘ g2 ∘ g2^-1 ≃ g1 ∘ f.
+Proof.
+  intros.
+  cancel_isos.
+  cat_easy.
+Qed.
+
 Goal True.
+
+
+assert ((id_ _ ∘ id_ _ ∘ id_ _ ∘ f ∘ (g ∘ i)) ≃ f ∘ g ∘ i) by cat_easy.
+
+
+Ltac test_show_partnered t s term :=
+  let ptnered := partnered_in_term t s term in
+  let H := fresh in 
+  assert (H : (term ≃ ptnered)%Cat) by (show_equiv_partnered_in_term t s term);
+  (* setoid_rewrite H; *)
+  clear H.
+Ltac test_show_partnered_debug t s term :=
+  let ptnered := partnered_in_term t s term in
+  let H := fresh in 
+  assert (H : (term ≃ ptnered)%Cat) by (show_equiv_partnered_in_term_debug t s term);
+  (* setoid_rewrite H; *)
+  clear H.
+
+test_show_partnered f g (f ∘ g).
+test_show_partnered g i (f ∘ (g ∘ i)).
+test_show_partnered f g (f ∘ (g ∘ i)).
+
+test_show_partnered f g (id_ _ ∘ id_ _ ∘ id_ _ ∘ f ∘ (g ∘ i)).
+test_show_partnered f g (id_ _ ∘ id_ _ ∘ id_ _ ∘ f ∘ g ∘ i).
+test_show_partnered f g (id_ _ ∘ id_ _ ∘ id_ _ ∘ f ∘ g ∘ i ∘ id_ _ ∘ id_ _).
+
+
+Ltac test_partnered t s term :=
+  let ptnrd := partnered_in_term t s term in
+  (* idtac term "≈≈>" ptnrd. *)
+  (* For compile: *)
+  idtac.
+
+test_partnered f g (f ∘ g).
+test_partnered g i (f ∘ (g ∘ i)).
+Fail test_partnered f i (f ∘ (g ∘ i)).
+test_partnered f g (f ∘ (g ∘ i)).
+
+test_partnered f g (id_ _ ∘ id_ _ ∘ id_ _ ∘ f ∘ (g ∘ i)).
+test_partnered f g (id_ _ ∘ id_ _ ∘ id_ _ ∘ f ∘ g ∘ i).
+test_partnered f g (id_ _ ∘ id_ _ ∘ id_ _ ∘ f ∘ g ∘ i ∘ id_ _ ∘ id_ _).
+
+
+Ltac test_partnered_nf t s term :=
+  let ptnrd := partnered_in_term_nofail t s term in
+  (* idtac term "≈≈>" ptnrd. *)
+  (* For compile: *)
+  idtac.
+
+test_partnered_nf f g (f ∘ g).
+test_partnered_nf g i (f ∘ (g ∘ i)).
+test_partnered_nf f i (f ∘ (g ∘ i)).
+test_partnered_nf f g (f ∘ (g ∘ i)).
+
+test_partnered_nf f g (id_ _ ∘ id_ _ ∘ id_ _ ∘ f ∘ (g ∘ i)).
+test_partnered_nf f g (id_ _ ∘ id_ _ ∘ id_ _ ∘ f ∘ g ∘ i).
+test_partnered_nf f g (id_ _ ∘ id_ _ ∘ id_ _ ∘ f ∘ g ∘ i ∘ id_ _ ∘ id_ _).
+
+
+
 
 
 Local Ltac test_show_unfold_no_id_of_wf f :=
