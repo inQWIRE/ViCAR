@@ -37,7 +37,7 @@ Notation "A ~> B" := (morphism _%Cat A%Cat B%Cat)
 Notation "f ≃ g" := (c_equiv _%Cat f%Cat g%Cat) 
   (at level 70, g at next level) : Cat_scope. (* \simeq *)
 Notation "f ∘ g" := (compose _%Cat f%Cat g%Cat) 
-  (at level 39, g at next level, left associativity) : Cat_scope. (* \circ *)
+  (at level 40, g at next level, left associativity) : Cat_scope. (* \circ *)
 
 Class CategoryCoherence {C} (cC : Category C) : Type := {
   (* to_base_struct_cat := cC; *)
@@ -317,7 +317,6 @@ Definition NaturalTransformation_of_NaturalIsomorphism {C D : Type}
 Class NaturalBiTransformation {C1 C2 D : Type} `{cC1 : Category C1} 
   `{cC2 : Category C2} `{cD : Category D} (F G : Bifunctor cC1 cC2 cD) := {
   component_bimap (A1 : C1) (A2 : C2) : F A1 A2 ~> G A1 A2;
-    (* where "'β_' X , Y" := (component_bimap X Y); *)
   component_bimap_natural {A1 B1 : C1} {A2 B2 : C2}
     (f1 : A1 ~> B1) (f2 : A2 ~> B2) :
     (F @@ f1, f2) ∘ (component_bimap B1 B2) 
@@ -328,8 +327,6 @@ Arguments component_bimap {_ _ _} {_ _ _}%Cat {_ _}%Cat
   (N)%Cat (_ _)%Cat : rename.
 Arguments component_bimap_natural {_ _ _} {_ _ _}%Cat {_ _}%Cat 
   {N}%Cat {_ _ _ _}%Cat (f1 f2)%Cat : rename.
-Notation "'β_' X , Y" := (component_bimap _%Cat X%Cat Y%Cat) 
-  (at level 20) : Cat_scope. (* \beta *)
 
 Class NaturalBiIsomorphism {C1 C2 D : Type} `{cC1 : Category C1} 
   `{cC2 : Category C2} `{cD : Category D} (F G : Bifunctor cC1 cC2 cD) := {

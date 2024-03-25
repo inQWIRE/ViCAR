@@ -5,7 +5,7 @@ From Coq Require Export ZArith.
 Ltac Zify.zify_post_hook ::= PreOmega.Z.div_mod_to_equations.
 
 From VyZX Require Export PermutationAutomation PermutationFacts PermutationInstances.
-From ViCaR Require Export CategoryTypeclass.
+From ViCaR Require Export CategoryTypeclassCompatibility.
 From QuantumLib Require Export Matrix.
 Require Import ExamplesAutomation.
 

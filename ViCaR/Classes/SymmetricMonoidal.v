@@ -8,7 +8,7 @@ Local Open Scope Cat.
 
 Class SymmetricMonoidalCategory {C : Type} {cC : Category C}
   {mC : MonoidalCategory cC} (bC : BraidedMonoidalCategory mC) : Type := {
-  symmetry (A B : C) : B_ A,B ≃ (B_ B,A)^-1;
+  symmetry (A B : C) : β_ A,B ≃ (β_ B,A)^-1;
 
   BraidedMonoidalCategory_of_SymmetricMonoidalCategory := bC;
 }.

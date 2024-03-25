@@ -60,13 +60,13 @@ Ltac fold_Category cC :=
         let x' := eval unfold x in x in 
         let cidx := eval cbn in (cid x') in 
         pose (eq_refl : cidx = cC.(c_identity) x') as H;
-        erewrite H; clear x H));
+        erewrite H in *; clear x H));
   let eqbase := base_fn @c_equiv in
   let eqcat := catify @c_equiv in
-  change eqbase with eqcat; (* I think this is a no-op *)
+  change eqbase with eqcat in *; (* I think this is a no-op *)
   repeat (progress match goal with
   |- eqbase ?A ?B ?f ?g 
-    => change (eqbase A B f g) with (eqcat A B f g)
+    => change (eqbase A B f g) with (eqcat A B f g) in *
   end);
   try let H' := fresh in 
     enough (H':(@c_equiv _ _ _ _ _ _)) by (eapply H')
@@ -92,7 +92,7 @@ Ltac fold_MonoidalCategory mC :=
     let t := eval cbn in raw in constr:(t)) in
   let f_fold f :=
     (let base := base_fn @f in 
-     change base with f) in
+     change base with f in *) in
   let cat_fold f :=
     (let base := cbase_fn @f in 
     let catted := catify @f in
@@ -102,10 +102,10 @@ Ltac fold_MonoidalCategory mC :=
     let catted := mcatify @f in
     change base with catted in * ) in
   let tens_obj := base_fn (@obj_tensor C cC mC) in
-    change tens_obj with mC.(obj_tensor);
+    change tens_obj with (@obj_tensor C cC mC) in *;
   let tens_mor := base_fn (@mor_tensor C cC mC) in
-    change tens_mor with mC.(mor_tensor);
-  mcat_fold @I;
+    change tens_mor with (@mor_tensor C cC mC) in *;
+  mcat_fold @mon_I;
   let lunit := mbase_fn @left_unitor in
     repeat progress (
       let H := fresh in let x := fresh in 
@@ -113,7 +113,7 @@ Ltac fold_MonoidalCategory mC :=
       let x' := eval unfold x in x in 
       let lunitx := eval cbn in ((lunit x').(forward)) in
       pose (eq_refl : lunitx = (mC.(left_unitor) x').(forward)) as H;
-      erewrite H; clear x H);
+      erewrite H in *; clear x H);
   let runit := mbase_fn @right_unitor in 
     repeat progress (
       let H := fresh in let x := fresh in 
@@ -121,7 +121,7 @@ Ltac fold_MonoidalCategory mC :=
       let x' := eval unfold x in x in 
       let runitx := eval cbn in ((runit x').(forward)) in
       pose (eq_refl : runitx = (mC.(right_unitor) x').(forward)) as H;
-      erewrite H; clear x H)
+      erewrite H in *; clear x H)
   end.
 
 Ltac fold_all_monoidal_categories :=
@@ -161,26 +161,46 @@ Ltac fold_BraidedMonoidalCategory bC :=
     let catted := bcatify @f in
     change base with catted in * ) in
   let braid := bbase_fn @braiding in
-    let braidbase := constr:(ltac:(first [exact (ltac:(eval unfold braid in braid)) | exact braid])) in
-    let braidforw := eval cbn in 
-      (fun A B => (braidbase.(component_biiso) A B).(forward)) in
-    repeat progress (let H := fresh in let y := fresh in let x := fresh in
-      evar (y : C); evar (x : C); 
-      let x' := eval unfold x in x in let y' := eval unfold y in y in
-      let braidforwxy := eval cbn in (braidforw x' y') in
-      pose (eq_refl : braidforwxy = 
-        (bC.(braiding).(component_biiso) x' y').(forward)) as H;
-      erewrite H; clear x y H);
+    change braid with (@braiding C cC mC bC);
+    let braidbase := constr:(
+      ltac:(first [exact (ltac:(eval unfold braid in braid)) 
+      | exact braid])) in
     
-    let braidrev := eval cbn in
-      (fun A B => (braidbase.(component_biiso) A B).(reverse)) in
-    repeat progress (let H := fresh in let y := fresh in let x := fresh in
-      evar (y : C); evar (x : C); 
-      let x' := eval unfold x in x in let y' := eval unfold y in y in
-      let braidrevxy := eval cbn in (braidrev x' y') in
-      pose (eq_refl : braidrevxy = 
-        (bC.(braiding).(component_biiso) x' y').(reverse)) as H;
-      erewrite H; clear x y H)
+    let braidforw := eval simpl in 
+      (fun A B => (braidbase A B).(forward)) in
+    first [
+      progress (
+        match braidforw with
+        | fun n m => ?f n m => 
+          change (f ?k ?l) with ((bC.(braiding) k l).(forward))
+        end
+      ) 
+    | repeat progress (let H := fresh in let y := fresh in let x := fresh in
+        evar (y : C); evar (x : C); 
+        let x' := eval unfold x in x in let y' := eval unfold y in y in
+        let braidforwxy := eval simpl in (braidforw x' y') in
+        pose (eq_refl : braidforwxy = 
+          (bC.(braiding) x' y').(forward)) as H;
+        erewrite H; clear x y H)
+    ];
+
+    let braidrev := eval simpl in 
+      (fun A B => (braidbase A B).(reverse)) in
+    first [
+      progress (
+        match braidrev with
+        | fun n m => ?f n m =>
+          change (f ?k ?l) with ((bC.(braiding) k l).(reverse))
+        end
+      ) 
+    | repeat progress (let H := fresh in let y := fresh in let x := fresh in
+        evar (y : C); evar (x : C); 
+        let x' := eval unfold x in x in let y' := eval unfold y in y in
+        let braidrevxy := eval simpl in (braidrev x' y') in
+        pose (eq_refl : braidrevxy = 
+          (bC.(braiding) x' y').(reverse)) as H;
+        erewrite H; clear x y H)
+    ]
   end.
 
 Ltac fold_all_braided_monoidal_categories :=
@@ -193,6 +213,194 @@ Ltac fold_all_braided_monoidal_categories :=
 Ltac to_Cat :=
   fold_all_categories; fold_all_monoidal_categories;
   fold_all_braided_monoidal_categories.
+
+
+
+Ltac fold_Category_in cC H :=
+  match type of cC with Category ?C =>
+  let catify f := constr:(@f C cC) in
+  let base_fn f := (let raw := catify f in
+    let t := eval cbn in raw in constr:(t)) in
+  let cat_fold f :=
+    (let base := base_fn @f in 
+    let catted := catify @f in
+    change base with catted in H) in
+  try cat_fold @morphism; 
+  cat_fold @compose;
+  cat_fold @c_identity;
+  let cid := base_fn @c_identity in
+    (repeat progress (
+      let H := fresh in let x := fresh in evar (x : C); 
+        let x' := eval unfold x in x in 
+        let cidx := eval cbn in (cid x') in 
+        pose (eq_refl : cidx = cC.(c_identity) x') as H;
+        erewrite H in *; clear x H));
+  let eqbase := base_fn @c_equiv in
+  let eqcat := catify @c_equiv in
+  change eqbase with eqcat in H; (* I think this is a no-op *)
+  repeat (progress match goal with
+  |- eqbase ?A ?B ?f ?g 
+    => change (eqbase A B f g) with (eqcat A B f g) in H
+  end);
+  try let H' := fresh in 
+    enough (H':(@c_equiv _ _ _ _ _ _)) by (eapply H')
+  end.
+
+Ltac fold_all_categories_in H :=
+  saturate_instances Category;
+  repeat match goal with
+  | x := ?cC : Category ?C |- _ => (* idtac x ":=" cC ": Category" C ; *) 
+      fold_Category_in cC H; subst x
+  (* | x : Category ?C |- _ => idtac x; fold_Category x; subst x *)
+  end.
+
+Ltac fold_MonoidalCategory_in mC H :=
+  match type of mC with @MonoidalCategory ?C ?cC =>
+  let catify f := constr:(@f C cC) in
+  let mcatify f := constr:(@f C cC mC) in
+  let base_fn f := 
+    (let t := eval cbn in f in constr:(t)) in
+  let cbase_fn f := (let raw := catify f in
+    let t := eval cbn in raw in constr:(t)) in
+  let mbase_fn f := (let raw := mcatify f in
+    let t := eval cbn in raw in constr:(t)) in
+  let f_fold f :=
+    (let base := base_fn @f in 
+     change base with f in H) in
+  let cat_fold f :=
+    (let base := cbase_fn @f in 
+    let catted := catify @f in
+    change base with catted in H) in
+  let mcat_fold f :=
+    (let base := mbase_fn @f in 
+    let catted := mcatify @f in
+    change base with catted in H) in
+  let tens_obj := base_fn (@obj_tensor C cC mC) in
+    change tens_obj with (@obj_tensor C cC mC) in H;
+  let tens_mor := base_fn (@mor_tensor C cC mC) in
+    change tens_mor with (@mor_tensor C cC mC) in H;
+  mcat_fold @mon_I;
+  let lunit := mbase_fn @left_unitor in
+    repeat progress (
+      let Hx := fresh in let x := fresh in 
+      evar (x : C);  (* TODO: Test this - last I tried it was uncooperative *)
+      let x' := eval unfold x in x in 
+      let lunitx := eval cbn in ((lunit x').(forward)) in
+      pose (eq_refl : lunitx = (mC.(left_unitor) x').(forward)) as Hx;
+      erewrite Hx in H; clear x Hx);
+    repeat progress (
+      let Hx := fresh in let x := fresh in 
+      evar (x : C);  (* TODO: Test this - last I tried it was uncooperative *)
+      let x' := eval unfold x in x in 
+      let lunitx := eval cbn in ((lunit x').(reverse)) in
+      pose (eq_refl : lunitx = (mC.(left_unitor) x').(reverse)) as Hx;
+      erewrite Hx in H; clear x Hx);
+  let runit := mbase_fn @right_unitor in 
+    repeat progress (
+      let Hx := fresh in let x := fresh in 
+      evar (x : C);  (* TODO: Test this - last I tried it was uncooperative *)
+      let x' := eval unfold x in x in 
+      let runitx := eval cbn in ((runit x').(forward)) in
+      pose (eq_refl : runitx = (mC.(right_unitor) x').(forward)) as Hx;
+      erewrite Hx in H; clear x Hx);
+    repeat progress (
+      let Hx := fresh in let x := fresh in 
+      evar (x : C);  (* TODO: Test this - last I tried it was uncooperative *)
+      let x' := eval unfold x in x in 
+      let runitx := eval cbn in ((runit x').(reverse)) in
+      pose (eq_refl : runitx = (mC.(right_unitor) x').(reverse)) as Hx;
+      erewrite Hx in H; clear x Hx)
+  end.
+
+Ltac fold_all_monoidal_categories_in H :=
+  saturate_instances MonoidalCategory;
+  repeat match goal with
+  | x := ?mC : MonoidalCategory ?C |- _ => (* idtac x ":=" cC ": Category" C ; *) 
+      fold_MonoidalCategory_in mC H; subst x
+  (* | x : Category ?C |- _ => idtac x; fold_Category x; subst x *)
+  end.
+
+Ltac fold_BraidedMonoidalCategory_in bC H :=
+  match type of bC with @BraidedMonoidalCategory ?C ?cC ?mC =>
+  let catify f := constr:(@f C cC) in
+  let mcatify f := constr:(@f C cC mC) in
+  let bcatify f := constr:(@f C cC mC bC) in
+  let base_fn f := 
+    (let t := eval cbn in f in constr:(t)) in
+  let cbase_fn f := (let raw := catify f in
+    let t := eval cbn in raw in constr:(t)) in
+  let mbase_fn f := (let raw := mcatify f in
+    let t := eval cbn in raw in constr:(t)) in
+  let bbase_fn f := (let raw := bcatify f in
+    let t := eval cbn in raw in constr:(t)) in
+  let f_fold f :=
+    (let base := base_fn @f in 
+     change base with f in H) in
+  let cat_fold f :=
+    (let base := cbase_fn @f in 
+    let catted := catify @f in
+    change base with catted in H) in
+  let mcat_fold f :=
+    (let base := mbase_fn @f in 
+    let catted := mcatify @f in
+    change base with catted in H) in
+  let bcat_fold f :=
+    (let base := bbase_fn @f in 
+    let catted := bcatify @f in
+    change base with catted in H) in
+  let braid := bbase_fn @braiding in
+    change braid with (@braiding C cC mC bC);
+    let braidbase := constr:(
+      ltac:(first [exact (ltac:(eval unfold braid in braid)) 
+      | exact braid])) in
+    
+    let braidforw := eval simpl in 
+      (fun A B => (braidbase A B).(forward)) in
+    first [
+      progress (
+        match braidforw with
+        | fun n m => ?f n m => 
+          change (f ?k ?l) with ((bC.(braiding) k l).(forward)) in H
+        end
+      ) 
+    | repeat progress (let Hx := fresh in let y := fresh in let x := fresh in
+        evar (y : C); evar (x : C); 
+        let x' := eval unfold x in x in let y' := eval unfold y in y in
+        let braidforwxy := eval simpl in (braidforw x' y') in
+        pose (eq_refl : braidforwxy = 
+          (bC.(braiding) x' y').(forward)) as Hx;
+        erewrite Hx in H; clear x y Hx)
+    ];
+
+    let braidrev := eval simpl in 
+      (fun A B => (braidbase A B).(reverse)) in
+    first [
+      progress (
+        match braidrev with
+        | fun n m => ?f n m =>
+          change (f ?k ?l) with ((bC.(braiding) k l).(reverse)) in H
+        end
+      ) 
+    | repeat progress (let Hx := fresh in let y := fresh in let x := fresh in
+        evar (y : C); evar (x : C); 
+        let x' := eval unfold x in x in let y' := eval unfold y in y in
+        let braidrevxy := eval simpl in (braidrev x' y') in
+        pose (eq_refl : braidrevxy = 
+          (bC.(braiding) x' y').(reverse)) as Hx;
+        erewrite Hx in H; clear x y Hx)
+    ]
+  end.
+
+Ltac fold_all_braided_monoidal_categories_in H :=
+  saturate_instances BraidedMonoidalCategory;
+  repeat match goal with
+  | x := ?bC : BraidedMonoidalCategory ?C |- _ => 
+      fold_BraidedMonoidalCategory_in bC H; subst x
+  end.
+
+Ltac to_Cat_in H :=
+  fold_all_categories_in H; fold_all_monoidal_categories_in H;
+  fold_all_braided_monoidal_categories_in H.
 
 
 
@@ -1759,6 +1967,36 @@ Tactic Notation "partners_rw" open_constr(lem) :=
   first [
     partners_rw lem within LHS 
   | partners_rw lem within RHS ]
+  end.
+
+Tactic Notation "partners_rw_to_Cat" open_constr(lem) "within" constr(term) :=
+  let e := fresh in let e' := fresh in 
+  epose proof @lem as e;
+  to_Cat_in e;
+  repeat (rename e into e'; epose proof (e' _) as e; clear e');
+  match type of e with
+  | (?g ≃ _)%Cat =>
+  let rg := right_associate_term g in 
+  let n := __count_comp_terms rg in 
+  n_partner_in_term rg n term;
+  let lg := left_associate_term g in 
+  tryif unify g lg then idtac else (
+    let H := fresh in 
+    print_state;
+    assert (H : (g ≃ lg)%Cat) by (show_equiv_left_associate_term g);
+    try setoid_rewrite H in e;
+    clear H);
+  setoid_rewrite e;
+  clear e
+  end.
+
+
+Tactic Notation "partners_rw_to_Cat" open_constr(lem) :=
+  match goal with 
+  |- (?LHS ≃ ?RHS)%Cat =>
+  first [
+    partners_rw_to_Cat lem within LHS 
+  | partners_rw_to_Cat lem within RHS ]
   end.
 
 
