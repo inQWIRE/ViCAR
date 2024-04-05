@@ -1,8 +1,10 @@
-# ViCaR
+# ViCAR
 
-Verified Categorical String Diagrams in Roq
+**Vi**sualizing **C**ategories with **A**utomated **R**ewriting in Coq
 
-## Building ViCaR
+## ACT Submission: See this tag
+
+## Building ViCAR
 
 Tested with Coq 8.14-8.18.
 
