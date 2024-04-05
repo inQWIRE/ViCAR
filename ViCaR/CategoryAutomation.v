@@ -404,7 +404,7 @@ Ltac to_Cat_in H :=
 
 
 
-(* Section on Fenceposting *)
+(* Section on foliateing *)
 
 Ltac tensor_free f :=
   try match f with
@@ -574,14 +574,14 @@ Ltac merge_stacked_composition gh :=
   end end
   in merge_stacked_composition gh. 
 
-Ltac weak_fencepost_form_debug f :=
-  let rec weak_fencepost f :=
+Ltac weak_foliate_form_debug f :=
+  let rec weak_foliate f :=
   match f with
   | @compose ?C ?cC _ _ _ ?g ?h => 
       let _ := match goal with _ => 
         idtac "splitting on ∘ into" g "and" h "..." end in
-      let Ng := weak_fencepost g in
-      let Nh := weak_fencepost h in 
+      let Ng := weak_foliate g in
+      let Nh := weak_foliate h in 
       let _ := match goal with _ => 
         idtac "... getting" g "∘" h "into" end in
       let res := right_associate_term (cC.(compose) Ng Nh) in
@@ -591,8 +591,8 @@ Ltac weak_fencepost_form_debug f :=
   | @mor_tensor ?C ?cC ?mC _ _ _ _ ?g ?h =>
       let _ := match goal with _ => 
         idtac "splitting on ⊗ into" g "and" h "..." end in
-      let Ng := weak_fencepost g in
-      let Nh := weak_fencepost h in 
+      let Ng := weak_foliate g in
+      let Nh := weak_foliate h in 
       let _ := match goal with _ => 
         idtac "... getting" g "⊗" h "into" end in
       let res := merge_stacked_composition ((mC.(mor_tensor) Ng Nh)%Cat) in
@@ -604,23 +604,23 @@ Ltac weak_fencepost_form_debug f :=
         idtac "INFO:" f "is const or unsupported" end in
       constr:(f)
   end
-  in weak_fencepost f.
+  in weak_foliate f.
 
-Ltac weak_fencepost_form f :=
-  let rec weak_fencepost f :=
+Ltac weak_foliate_form f :=
+  let rec weak_foliate f :=
   match f with
   | @compose ?C ?cC _ _ _ ?g ?h => 
-      let Ng := weak_fencepost g in
-      let Nh := weak_fencepost h in 
+      let Ng := weak_foliate g in
+      let Nh := weak_foliate h in 
       right_associate_term (cC.(compose) Ng Nh)
   | @mor_tensor ?C ?cC ?mC _ _ _ _ ?g ?h =>
-      let Ng := weak_fencepost g in
-      let Nh := weak_fencepost h in 
+      let Ng := weak_foliate g in
+      let Nh := weak_foliate h in 
       merge_stacked_composition ((mC.(mor_tensor) Ng Nh)%Cat)
   | _ => (* f "is const or unsupported" *)
       constr:(f)
   end
-  in weak_fencepost f.
+  in weak_foliate f.
 
 Section HelperLemmas.
 
@@ -827,33 +827,33 @@ Ltac show_equiv_merge_stacked_composition gh :=
   end end
   in show_equiv_merge_stacked_composition gh. 
 
-(* Shows the goal f ≃ weak_fencepost_form f by mirroring the code
-   path of weak_fencepost_form with `apply`s. *)
-Ltac show_equiv_weak_fencepost_form f :=
-  let weak_fencepost := weak_fencepost_form in 
-  let rec show_equiv_weak_fencepost_form f :=
+(* Shows the goal f ≃ weak_foliate_form f by mirroring the code
+   path of weak_foliate_form with `apply`s. *)
+Ltac show_equiv_weak_foliate_form f :=
+  let weak_foliate := weak_foliate_form in 
+  let rec show_equiv_weak_foliate_form f :=
   match f with
   | @compose ?C ?cC _ _ _ ?g ?h => 
-      let Ng := weak_fencepost g in
-      let Nh := weak_fencepost h in 
+      let Ng := weak_foliate g in
+      let Nh := weak_foliate h in 
       let res := right_associate_term (cC.(compose) Ng Nh) in
       apply (compose_compat_trans_helper (cC:=cC) g Ng h Nh res 
-        ltac:(show_equiv_weak_fencepost_form g)
-        ltac:(show_equiv_weak_fencepost_form h)
+        ltac:(show_equiv_weak_foliate_form g)
+        ltac:(show_equiv_weak_foliate_form h)
         ltac:(show_equiv_right_associate_term (cC.(compose) Ng Nh)))
   | @mor_tensor ?C ?cC ?mC _ _ _ _ ?g ?h =>
-      let Ng := weak_fencepost g in
-      let Nh := weak_fencepost h in 
+      let Ng := weak_foliate g in
+      let Nh := weak_foliate h in 
       let res := merge_stacked_composition ((mC.(mor_tensor) Ng Nh)%Cat) in
       apply (stack_compat_trans_helper (cC:=cC) g Ng h Nh res 
-        ltac:(show_equiv_weak_fencepost_form g)
-        ltac:(show_equiv_weak_fencepost_form h)
+        ltac:(show_equiv_weak_foliate_form g)
+        ltac:(show_equiv_weak_foliate_form h)
         ltac:(show_equiv_merge_stacked_composition ((mC.(mor_tensor) Ng Nh))%Cat))
   | _ => (* f "is const or unsupported" *)
       (* constr:(f) *)
       reflexivity
   end
-  in show_equiv_weak_fencepost_form f.
+  in show_equiv_weak_foliate_form f.
 
 (* TODO: Generalize these to fold_compose base *)
 (* If f = f0 ∘ (f1 ∘ (...)), this gives f0 ⊗ id_ B ∘ (f1 ⊗ id_ B ∘ (...))
@@ -938,10 +938,10 @@ Ltac unfold_tensor_stack_no_id f :=
   end
   in unfold_tensor_stack f.
 
-(* Returns the strong fencepost term of a weakly fenceposted term 
+(* Returns the strong foliate term of a weakly foliateed term 
    (in fact, not even requiring the term be right-associated, though
-    the resulting fencepost will be. )*)
-Ltac strong_fencepost_form_of_weak f :=
+    the resulting foliate will be. )*)
+Ltac strong_foliate_form_of_weak f :=
   let rec strong_fence f :=
   lazymatch f with
   | (?g ∘ ?h)%Cat => 
@@ -954,7 +954,7 @@ Ltac strong_fencepost_form_of_weak f :=
   in strong_fence f.
 
 (* Additionally avoids taking id ⊗ id to id ⊗ id ∘ id ⊗ id and similar *)
-Ltac strong_fencepost_form_of_weak_no_id f :=
+Ltac strong_foliate_form_of_weak_no_id f :=
   let rec strong_fence f :=
   lazymatch f with
   | (?g ∘ ?h)%Cat => 
@@ -1115,8 +1115,8 @@ Ltac show_equiv_unfold_tensor_stack_no_id_debug f :=
   in show_unfold f.
 
 
-Ltac show_equiv_strong_fencepost_form_of_weak f :=
-  let strong_fence := strong_fencepost_form_of_weak in
+Ltac show_equiv_strong_foliate_form_of_weak f :=
+  let strong_fence := strong_foliate_form_of_weak in
   let rec show_strong_fence f :=
   lazymatch f with
   | (?g ∘ ?h)%Cat => 
@@ -1137,8 +1137,8 @@ Ltac show_equiv_strong_fencepost_form_of_weak f :=
   in show_strong_fence f.
 
 
-Ltac show_equiv_strong_fencepost_form_of_weak_no_id f :=
-  let strong_fence := strong_fencepost_form_of_weak_no_id in
+Ltac show_equiv_strong_foliate_form_of_weak_no_id f :=
+  let strong_fence := strong_foliate_form_of_weak_no_id in
   let rec show_strong_fence f :=
   lazymatch f with
   | (?g ∘ ?h)%Cat => 
@@ -1158,8 +1158,8 @@ Ltac show_equiv_strong_fencepost_form_of_weak_no_id f :=
   end
   in show_strong_fence f.
 
-Ltac show_equiv_strong_fencepost_form_of_weak_no_id_debug f :=
-  let strong_fence := strong_fencepost_form_of_weak_no_id in
+Ltac show_equiv_strong_foliate_form_of_weak_no_id_debug f :=
+  let strong_fence := strong_foliate_form_of_weak_no_id in
   let rec show_strong_fence f :=
   lazymatch f with
   | (?g ∘ ?h)%Cat => 
@@ -1179,43 +1179,43 @@ Ltac show_equiv_strong_fencepost_form_of_weak_no_id_debug f :=
   end
   in show_strong_fence f.
 
-Ltac weak_fencepost f :=
-  let wf := weak_fencepost_form f in
+Ltac weak_foliate f :=
+  let wf := weak_foliate_form f in
   let H := fresh in 
-  assert (H: (f ≃ wf)%Cat) by (show_equiv_weak_fencepost_form f);
+  assert (H: (f ≃ wf)%Cat) by (show_equiv_weak_foliate_form f);
   setoid_rewrite H;
   clear H.
 
-Ltac strong_fencepost f :=
-  let wf := weak_fencepost_form f in
-  let sf := strong_fencepost_form_of_weak wf in
+Ltac strong_foliate f :=
+  let wf := weak_foliate_form f in
+  let sf := strong_foliate_form_of_weak wf in
   let H := fresh in 
   assert (H: (f ≃ sf)%Cat) by (
     transitivity wf;
-    [ show_equiv_weak_fencepost_form f 
-    | show_equiv_strong_fencepost_form_of_weak wf]);
+    [ show_equiv_weak_foliate_form f 
+    | show_equiv_strong_foliate_form_of_weak wf]);
   setoid_rewrite H;
   clear H.
 
-Ltac strong_fencepost_no_id f :=
-  let wf := weak_fencepost_form f in
-  let sf := strong_fencepost_form_of_weak_no_id wf in
+Ltac strong_foliate_no_id f :=
+  let wf := weak_foliate_form f in
+  let sf := strong_foliate_form_of_weak_no_id wf in
   let H := fresh in 
   assert (H: (f ≃ sf)%Cat) by (
     transitivity wf;
-    [ show_equiv_weak_fencepost_form f 
-    | show_equiv_strong_fencepost_form_of_weak_no_id wf]);
+    [ show_equiv_weak_foliate_form f 
+    | show_equiv_strong_foliate_form_of_weak_no_id wf]);
   setoid_rewrite H;
   clear H.
 
-Ltac strong_fencepost_no_id_debug f :=
-  let wf := weak_fencepost_form f in
-  let sf := strong_fencepost_form_of_weak_no_id wf in
+Ltac strong_foliate_no_id_debug f :=
+  let wf := weak_foliate_form f in
+  let sf := strong_foliate_form_of_weak_no_id wf in
   let H := fresh in 
   assert (H: (f ≃ sf)%Cat) by (
     transitivity wf;
-    [ show_equiv_weak_fencepost_form f 
-    | show_equiv_strong_fencepost_form_of_weak_no_id_debug wf]);
+    [ show_equiv_weak_foliate_form f 
+    | show_equiv_strong_foliate_form_of_weak_no_id_debug wf]);
   setoid_rewrite H;
   clear H.
 
@@ -1887,6 +1887,11 @@ Ltac partner_LRHS t s :=
   let func := partner_in_term t s in   
   apply_to_LRHS func.
 
+Ltac partner t s :=
+  first 
+    [ partner_LHS t s
+    | partner_RHS t s].
+
 Ltac gen_partner_LHS test := 
   let func := gen_partner_in_term test in   
   apply_to_LHS func.
@@ -1919,21 +1924,29 @@ Ltac cancel_lrisos_LHS := apply_to_LHS cancel_lrisos; cancel_ids_LHS.
 Ltac cancel_lrisos_RHS := apply_to_RHS cancel_lrisos; cancel_ids_RHS.
 Ltac cancel_lrisos_LRHS := apply_to_LRHS cancel_lrisos; cancel_ids_LRHS.
 
-Ltac weak_fencepost_LHS := apply_to_LHS weak_fencepost.
-Ltac weak_fencepost_RHS := apply_to_RHS weak_fencepost.
-Ltac weak_fencepost_LRHS := apply_to_LRHS weak_fencepost.
+Ltac weak_foliate_LHS := apply_to_LHS weak_foliate.
+Ltac weak_foliate_RHS := apply_to_RHS weak_foliate.
+Ltac weak_foliate_LRHS := apply_to_LRHS weak_foliate.
 
-Ltac strong_fencepost_LHS := apply_to_LHS strong_fencepost_no_id.
-Ltac strong_fencepost_RHS := apply_to_RHS strong_fencepost_no_id.
-Ltac strong_fencepost_LRHS := apply_to_LRHS strong_fencepost_no_id.
+Ltac strong_foliate_LHS := apply_to_LHS strong_foliate_no_id.
+Ltac strong_foliate_RHS := apply_to_RHS strong_foliate_no_id.
+Ltac strong_foliate_LRHS := apply_to_LRHS strong_foliate_no_id.
 
 
 Ltac cancel_ids := cancel_ids_LRHS.
 Ltac cancel_isos := cancel_lrisos_LRHS.
+Ltac weak_foliate_goal := weak_foliate_LRHS.
+Ltac strong_foliate_goal := strong_foliate_LRHS.
+
+Ltac foliate := (fun t => ltac:(strong_foliate t; rewrite ?tensor_id; cancel_ids)).
+Ltac foliate_LHS := strong_foliate_LHS.
+Ltac foliate_RHS := strong_foliate_RHS.
+Ltac foliate_LRHS := strong_foliate_LRHS.
 
 Ltac cat_cleanup := repeat (cancel_isos; cancel_ids).
 
-Ltac cat_easy := cat_cleanup; rassoc_LRHS; easy || rewrite !tensor_id; easy.
+Ltac cat_easy := cat_cleanup; try easy; rassoc_LRHS; try easy;
+  rewrite ?tensor_id; try easy; weak_foliate_LRHS; easy.
 
 
 
@@ -1941,7 +1954,7 @@ Tactic Notation "LHS" tactic(tac) := apply_to_LHS tac.
 Tactic Notation "RHS" tactic(tac) := apply_to_RHS tac.
 Tactic Notation "LRHS" tactic(tac) := apply_to_LRHS tac.
 
-Tactic Notation "partners_rw" open_constr(lem) "within" constr(term) :=
+Tactic Notation "assoc_rw" open_constr(lem) "within" constr(term) :=
   let e := fresh in let e' := fresh in 
   epose proof @lem as e;
   repeat (rename e into e'; epose proof (e' _) as e; clear e');
@@ -1961,15 +1974,15 @@ Tactic Notation "partners_rw" open_constr(lem) "within" constr(term) :=
   clear e
   end.
 
-Tactic Notation "partners_rw" open_constr(lem) :=
+Tactic Notation "assoc_rw" open_constr(lem) :=
   match goal with 
   |- (?LHS ≃ ?RHS)%Cat =>
   first [
-    partners_rw lem within LHS 
-  | partners_rw lem within RHS ]
+    assoc_rw lem within LHS 
+  | assoc_rw lem within RHS ]
   end.
 
-Tactic Notation "partners_rw_to_Cat" open_constr(lem) "within" constr(term) :=
+Tactic Notation "assoc_rw_to_Cat" open_constr(lem) "within" constr(term) :=
   let e := fresh in let e' := fresh in 
   epose proof @lem as e;
   to_Cat_in e;
@@ -1991,17 +2004,196 @@ Tactic Notation "partners_rw_to_Cat" open_constr(lem) "within" constr(term) :=
   end.
 
 
-Tactic Notation "partners_rw_to_Cat" open_constr(lem) :=
+Tactic Notation "assoc_rw_to_Cat" open_constr(lem) :=
   match goal with 
   |- (?LHS ≃ ?RHS)%Cat =>
   first [
-    partners_rw_to_Cat lem within LHS 
-  | partners_rw_to_Cat lem within RHS ]
+    assoc_rw_to_Cat lem within LHS 
+  | assoc_rw_to_Cat lem within RHS ]
   end.
 
 
+Section VizualizationExamples.
+
+Context {CC : Type} {cC : Category CC} {cCh : CategoryCoherence cC}
+  {mC : MonoidalCategory cC} {mCh : MonoidalCategoryCoherence mC}
+  {bC : BraidedMonoidalCategory mC} {bCh : BraidedMonoidalCategoryCoherence bC}.
+Local Open Scope Cat_scope.
+
+Lemma weak_foliation_example {A B M N P Q R : CC}
+  (f : A <~> B) (g : B ~> B) (h : N ~> M) (j : P ~> Q)
+  (k : M × Q ~> I × R): 
+  (f ∘ g ∘ f^-1) ⊗ (h ⊗ j ∘ k ∘ λ_ R) ≃
+  f ⊗ (h ⊗ j) ∘ (g ⊗ k ∘ f^-1 ⊗ λ_ R).
+Proof.
+  (* RHS is weak foliation of LHS *)
+  LHS weak_foliate.
+  cat_easy. (* reflexivity *)
+Qed.
+
+Lemma assoc_rw_example {A B C M N : CC}
+  (h : A ~> B) (j: A ~> C) (f : B ~> M) (g : C ~> N)  : 
+  (β_ _, _)^-1 ∘ h ⊗ j ∘ f ⊗ g ∘ β_ _, _
+  ≃ (j ∘ g) ⊗ (h ∘ f).
+Proof. (* 1 *)
+  assoc_rw braiding_natural. (* 2 *)
+  assoc_rw braiding_natural. (* 3 *)
+  (* cat_easy solves this immediately, but explicitly: *)
+  cancel_isos. (* 4 *)
+  RHS weak_foliate. (* 5 *)
+  reflexivity.
+Qed.
+
+Lemma assoc_rw_example_alt {A B C M N : CC}
+  (f : A ~> B) (g : M ~> N)  : 
+  (β_ A, M)^-1 ∘ f ⊗ g ∘ β_ B, N
+  ≃ g ⊗ f.
+Proof. (* 1 *)
+  assoc_rw braiding_natural. (* 2 *)
+  (* cat_easy solves this immediately, but explicitly: *)
+  cancel_isos. (* 3 *)
+  reflexivity.
+Qed.
+
+Lemma associator_viz {A B C M N P : CC}
+  (f : A ~> M) (g : B ~> N) (h : C ~> P) :
+  f ⊗ g ⊗ h ∘ α_ M, N, P ≃ α_ A, B, C ∘ f ⊗ (g ⊗ h).
+Proof.
+  rewrite associator_cohere.
+  easy.
+Qed.
+
+Lemma assoc_lunit_viz {A B M N : CC}
+  (f : A ~> M) (g : B ~> N):
+  (f ∘ (ρ_ _)^-1) ⊗ g ∘ (α_ _, _, _) ∘ id_ _ ⊗ λ_ _ ≃ f ⊗ g.
+Proof.
+Abort.
+
+Lemma assoc_lunit_viz_2 {A B M N : CC}
+  (f : A ~> M) (g : B ~> N) n:
+  ( (ρ_ A)^-1) ⊗ g ∘ (α_ _, _, _) ∘ id_ _ ⊗ λ_ _ ≃ n.
+Proof.
+Abort.
+
+Lemma assoc_lunit_viz_alt {A B C M N P : CC}
+  (f : A ~> M) (g : B ~> N) (h : C ~> P) :
+  (f ∘ (ρ_ _)^-1) ⊗ g ∘ (α_ _, _, _) ≃ f ⊗ (g ∘ (λ_ _)^-1).
+Proof.
+Abort.
+
+Lemma assoc_lunit_viz_alt {A B C M N P : CC}
+  (f : A ~> M) (g : B ~> N) (h : C ~> P) :
+  ((ρ_ A)^-1) ⊗ g ∘ (α_ _, _, _) ≃ id_ _ ⊗ (g ∘ (λ_ _)^-1).
+Proof.
+Abort.
+
+Lemma compose_assoc_viz {A B C D : CC}
+  (f : A ~> B) (g : B ~> C) (h : C ~> D):
+  f ∘ g ∘ h ≃ f ∘ (g ∘ h).
+Abort.
+
+
+
+Lemma accoc_units_viz_new {A B C D : CC} :
+  ((ρ_ A)^-1 ∘ β_ A, I) ⊗ id_ B ∘ (α_ I, A, B ∘ λ_ (A × B)) ≃ id_ (A × B).
+  let ty := type of (mCh.(triangle) A B)
+  in assert (H: ty); [admit |]; clear H.
+  let ty := type of (mCh.(pentagon) A B C D)
+  in assert (H: ty); [admit |]; clear H.
+  let ty := type of (bCh.(hexagon_1) A B C)
+  in assert (H: ty); [> admit |]; clear H.
+  assert nat.
+  Abort.
+
+Lemma accoc_units_viz {A B} :
+  (ρ_ A)^-1 ⊗ id_ B ∘ α_ A, I, B ∘ id_ A ⊗ λ_ B ≃ id_ (A × B).
+  Abort.
+
+
+Lemma assoc_lunit_viz_bad {A B C M N P : CC}
+  (f : A ~> M) (g : B ~> N) (h : C ~> P) :
+  f ⊗ (g ∘ (λ_ _)^-1) ∘ (α_ _, _, _) ^-1 ∘ ρ_ _ ⊗ id_ _ ≃ f ⊗ g.
+Proof.
+Abort.
+
+Lemma laura_1 {A B C D M N P Q: CC} 
+  (f : M × N <~> A × B) (g : M ~> C)
+  (h : N × P ~> Q) n : 
+  f^-1 ⊗ id_ P ∘ α_ M, N, P ∘ g ⊗ h ≃ n.
+Abort.
+
+Lemma mx_viz_thing {n m o p q r : CC}
+  (A : n ~> m) (B : m ~> o)
+  (C : p ~> q) (D : q ~> r):
+  (A ⊗ C) ∘ (B ⊗ D) ≃ (A ∘ B) ⊗ (C ∘ D).
+Abort.
+
+
+Lemma uncle_relation {person : CC}
+  (brother : person ~> person)
+  (parent : person ~> person) :
+  parent ∘ brother ≃ id_ person.
+  Admitted.
+
+
+
+Lemma weak_foliation_example_2 {A B M N P Q R : CC}
+  (f : A <~> B) (g : B ~> B) (h : N ~> M) (j : P ~> Q)
+  (k : M × Q ~> I × R): 
+  (f ∘ g ∘ f^-1) ⊗ (h ⊗ j ∘ k ∘ λ_ R) ≃
+  f ⊗ (h ⊗ j) ∘ g ⊗ k ∘ f^-1 ⊗ λ_ R.
+Proof.
+  LHS weak_foliate.
+  cat_easy.
+  (* LHS foliate.
+  RHS foliate.
+  cat_easy.
+  LHS lassoc.
+  RHS 
+  triangle
+  cat_easy.  *)
+Qed.
+
+Lemma weak_foliation_example_2' {A B M N P Q R : CC}
+  (f : A <~> B) (g : B ~> B) (h : N ~> M)
+  (k : M × Q ~> I × R) n: 
+  (f ∘ g ∘ f^-1) ⊗ (k ∘ λ_ R) ≃
+  n.
+Proof.
+  LHS foliate.
+  Abort.
+
+Lemma foliation_example_test {A B C M N P : CC} 
+  (f : A ~> B) (g : B ~> C) (h : M ~> N) (j : N ~> P) n :
+  (f ∘ g) ⊗ (h ∘ j) ≃ n.
+Proof.
+  LHS foliate.
+  Abort.
+
+
+
+
+
+End VizualizationExamples.
+
 Section Testing.
 Local Open Scope Cat_scope.
+
+Lemma TODO_fix_assoc_rw 
+  {C : Type} {cC : Category C} {cCh : CategoryCoherence cC}
+  {mC : MonoidalCategory cC} {mCh : MonoidalCategoryCoherence mC}
+  {bC : BraidedMonoidalCategory mC} {bCh : BraidedMonoidalCategoryCoherence bC}
+  {A B M N P Q R : C}
+  (h : A ~> B) (f : B ~> M) (g : B ~> N) 
+  (m : Q ~> R) (k : R × N ~> Q) (j : M ~> A) n : 
+  α_ _, _, _ ∘ m ⊗ ((h ∘ f) ⊗ (h ∘ g) ∘ β_ _, _) ∘ (α_ _, _, _)^-1 ∘ k ⊗ j
+  ≃ n.
+Proof.
+  LHS rassoc.
+  
+  Fail assoc_rw braiding_natural. (* ??? *)
+  Abort.
+
 Variables (C : Type) (cC cC' cC'' : Category C)
   (cCh : CategoryCoherence cC) (cC'h : CategoryCoherence cC') (cC''h : CategoryCoherence cC'')
   (mC0   mC1   : @MonoidalCategory C cC) (mC0'  mC1'  : @MonoidalCategory C cC') (mC0'' mC1'' : @MonoidalCategory C cC'')
@@ -2022,41 +2214,56 @@ Existing Instance mC0'.  Existing Instance mC1'.
 Existing Instance mC0''. Existing Instance mC1''.
 
 
+(* Goal (f ⊗ g ⊗ h) ≃ (f ⊗ g ⊗ h). *)
+(* easy. *)
 
 
-Lemma test_weak_fencepost : forall
+(* Goal (f ⊗ (g ⊗ h)) ≃ (f ⊗ (g ⊗ h)). *)
+(* easy. *)
+
+
+(* Goal (f ⊗ (g ⊗ h)) ≃ (f ⊗ (g ⊗ h)). *)
+(* easy. *)
+
+(* Goal (f ∘ g) ⊗ h ≃ f ⊗ h ∘ g ⊗ id_ M. *)
+(* Admitted. *)
+
+(* Goal (f ∘ g) ⊗ h ≃ f ⊗ id_ A ∘ (id_ B ⊗ h ∘ g ⊗ id_ M). *)
+(* Admitted. *)
+
+Lemma test_weak_foliate : forall
   {a b m n o} (f : a ~> b) (g : m ~> n) (h : n ~> o),
   f ⊗ (g ∘ h) ≃ f ⊗ g ∘ (id_ b ⊗ h).
 Proof.
   intros.
   match goal with
-  |- ?T ≃ _ => weak_fencepost T
-    (* let wf := weak_fencepost_form T in
+  |- ?T ≃ _ => weak_foliate T
+    (* let wf := weak_foliate_form T in
     let H := fresh in
-    assert (H : T ≃ wf) by show_equiv_weak_fencepost_form T *)
+    assert (H : T ≃ wf) by show_equiv_weak_foliate_form T *)
     (* setoid_rewrite H *)
   end.
   easy.
 Qed.
 
-Lemma test_strong_fencepost : forall 
+Lemma test_strong_foliate : forall 
   {a b m n o} (f : a ~> b) (g : m ~> n) (h : n ~> o),
   f ⊗ (g ∘ h) ≃ f ⊗ g ∘ (id_ b ⊗ h).
 Proof.
   intros.
   match goal with
-  |- ?T ≃ ?T' => strong_fencepost T; strong_fencepost T'
+  |- ?T ≃ ?T' => strong_foliate T; strong_foliate T'
   end.
   easy.
 Qed.
 
-Lemma test_strong_fencepost_no_id_1 : forall 
+Lemma test_strong_foliate_no_id_1 : forall 
   {a b m n o} (f : a ~> b) (g : m ~> n) (h : n ~> o),
   f ⊗ (g ∘ h) ≃ f ⊗ g ∘ (id_ b ⊗ h).
 Proof.
   intros.
   match goal with
-  |- ?T ≃ ?T' => strong_fencepost_no_id T; strong_fencepost_no_id T'
+  |- ?T ≃ ?T' => strong_foliate_no_id T; strong_foliate_no_id T'
   end.
   easy.
 Qed.
@@ -2065,27 +2272,27 @@ Qed.
 
 
 
-Lemma test_strong_fencepost_no_id_2' : forall 
+Lemma test_strong_foliate_no_id_2' : forall 
   {a b m n o} (f : a ~> b) (g : m ~> n) (h : n ~> o),
   f ⊗ (g ∘ id_ _ ∘ h ∘ id_ _) ⊗ (id_ a ⊗ id_ b) ≃ 
   f ⊗ g ⊗ (id_ a ⊗ id_ b) ∘ ((id_ b ⊗ h) ⊗ (id_ a ⊗ id_ b)).
 Proof.
   intros.
-  do 2 partners_rw right_unit.
-  LHS weak_fencepost.
+  do 2 assoc_rw right_unit.
+  LHS weak_foliate.
   rewrite tensor_id.
   easy.
 Qed.
 
-Lemma test_strong_fencepost_no_id_2 : forall 
+Lemma test_strong_foliate_no_id_2 : forall 
   {a b m n o} (f : a ~> b) (g : m ~> n) (h : n ~> o),
   f ⊗ (g ∘ (id_ _ ∘ h) ∘ (id_ _ ∘ id_ _)) ⊗ (id_ a ⊗ id_ b) ≃ 
   f ⊗ g ⊗ (id_ a ⊗ id_ b) ∘ ((id_ b ⊗ h) ⊗ (id_ a ⊗ id_ b)).
 Proof.
   intros.
   rewrite !right_unit.
-  partners_rw right_unit.
-  LHS weak_fencepost.
+  assoc_rw right_unit.
+  LHS weak_foliate.
   cat_easy.
 Qed.
 
@@ -2163,7 +2370,7 @@ test_partnered_nf f g (id_ _ ∘ id_ _ ∘ id_ _ ∘ f ∘ g ∘ i ∘ id_ _ ∘
 
 
 Local Ltac test_show_unfold_no_id_of_wf f :=
-  let wf := weak_fencepost_form f in
+  let wf := weak_foliate_form f in
   let sf := unfold_tensor_stack_no_id wf in
   (* idtac sf; *)
   let H := fresh in 
@@ -2197,10 +2404,10 @@ test_show_unfold_no_id (id_ B ⊗ g0 ⊗ id_ (A × B))%Cat.
 
 
 Local Ltac test_show_st_of_wk f :=
-  let wf := weak_fencepost_form f in
-  let sf := strong_fencepost_form_of_weak wf in
+  let wf := weak_foliate_form f in
+  let sf := strong_foliate_form_of_weak wf in
   let H := fresh in 
-  assert (H: (wf ≃ sf)%Cat) by (show_equiv_strong_fencepost_form_of_weak wf);
+  assert (H: (wf ≃ sf)%Cat) by (show_equiv_strong_foliate_form_of_weak wf);
   clear H.
 
 test_show_st_of_wk f.
@@ -2259,8 +2466,8 @@ test_show_st_bot ((f ⊗ id_ A ∘ (id_ B ⊗ f0 ∘ id_ B ⊗ g0))) A mC1.
 
 
 Local Ltac test_st_of_wk f :=
-  let wf := weak_fencepost_form f in
-  let sf := strong_fencepost_form_of_weak wf in
+  let wf := weak_foliate_form f in
+  let sf := strong_foliate_form_of_weak wf in
   (* idtac wf "=~=>" sf. *)
   (* For compile: *)
   idtac.
@@ -2290,8 +2497,8 @@ test_ust ((f ⊗ (f ∘ g) ⊗ (f0 ∘ g0))).
 
 Local Ltac test_show_wf f :=
   let H := fresh in 
-  let wf := weak_fencepost_form f in 
-  assert (H: f ≃ wf) by (show_equiv_weak_fencepost_form f);
+  let wf := weak_foliate_form f in 
+  assert (H: f ≃ wf) by (show_equiv_weak_foliate_form f);
   clear H.
 
 test_show_wf f.
@@ -2335,10 +2542,10 @@ test_merge (mC0.(mor_tensor) (mC0.(mor_tensor) f g) (cC.(compose) f0 g0)).
 
 
 Local Ltac test_fence f :=
-  (* let Nf := weak_fencepost_form_debug f in 
-    idtac "fenceposted:" Nf. *)
+  (* let Nf := weak_foliate_form_debug f in 
+    idtac "foliateed:" Nf. *)
   (* For compile: *)
-  let Nf := weak_fencepost_form f in 
+  let Nf := weak_foliate_form f in 
   idtac. 
 
 test_fence ((f ⊗ g ⊗ h) ∘ id_ _).

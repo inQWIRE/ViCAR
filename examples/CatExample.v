@@ -154,7 +154,7 @@ Qed.
 
 Program Definition IdentityFunctor {C} (cC : Category C) 
   {cCh : CategoryCoherence cC} : Functor cC cC :=
-  {| obj_map := id; morphism_map := fun _ _ => id |}.
+  {| obj_map := fun A => A; morphism_map := fun _ _ f => f |}.
 Solve All Obligations with (rewrite ?left_unit, ?right_unit; easy).
 
 Program Definition IdentityNaturalIsomorphism {C D}

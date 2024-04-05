@@ -446,9 +446,15 @@ Section Testing.
 
 (* Import (notations) CategoryAutomation. *)
 
-Delimit Scope Cat_scope with Cat.
+Local Open Scope Cat_scope.
 
-
+Lemma stack_nwire_distribute_r : forall {n m o p} (zx0 : ZX n m) (zx1 : ZX m o),
+(zx0 ⟷ zx1) ↕ n_wire p ∝ (zx0 ↕ n_wire p) ⟷ (zx1 ↕ n_wire p).
+Proof.
+  to_Cat.
+  intros.
+Admitted.
+  
 
 
 
@@ -457,7 +463,7 @@ Lemma test_part_rw : forall {nIn nOut} (zx : ZX nIn 0) (zx1 : ZX 0 nOut),
 Proof.
   intros.
   to_Cat.
-  partners_rw_to_Cat compose_empty_r.
+  assoc_rw_to_Cat compose_empty_r.
   easy.
 Qed.
 
@@ -469,7 +475,7 @@ Lemma test_part_rw_long : forall {nIn nOut}
 Proof.
   intros.
   to_Cat.
-  partners_rw_to_Cat compose_empty_r.
+  assoc_rw_to_Cat compose_empty_r.
   Abort.
 
   
@@ -489,7 +495,10 @@ Lemma test_part_rw_long : forall {nIn nOut}
 Proof.
   intros.
   to_Cat.
-  partners_rw_to_Cat compose_empty_r.
+  set (zx_empty := ⦰).
+  unfold zx_empty.
+
+  assoc_rw_to_Cat compose_empty_r.
   Abort.
 
 Lemma test  :  forall {n m o} (zx0 : ZX n m) (zx1 : ZX m o),
@@ -499,7 +508,7 @@ Proof.
   intros.
   rewrite wire_to_n_wire.
   to_Cat.
-  strong_fencepost_LHS.
+  foliate_LHS.
   Fail easy.
   cat_easy.
 Qed.
@@ -510,7 +519,7 @@ Proof.
   (* setoid_rewrite wire_to_n_wire. *)
   intros.
   to_Cat.
-  strong_fencepost_LHS.
+  foliate_LHS.
   easy. 
 Qed.
 

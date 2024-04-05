@@ -366,6 +366,14 @@ Open Scope matrix_scope.
 
 Delimit Scope matrix_scope with mat.
 
+Lemma matrix_viz_test {n m o p q r}
+  (A : Matrix n m) (B : Matrix m o)
+  (C : Matrix p q) (D : Matrix q r):
+  (A ⊗ C) × (B ⊗ D) ≡ (A × B) ⊗ (C ⊗ D).
+Proof.
+  to_Cat.
+  Abort.
+
 Lemma test {n} : forall (zx : Matrix n n),
   ((λ_ n).(forward) × zx ≡ Matrix.I (S O) ⊗ zx × (ρ_ n).(forward)).
 Proof.
