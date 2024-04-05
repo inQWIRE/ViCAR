@@ -2,7 +2,7 @@
 
 **Vi**sualizing **C**ategories with **A**utomated **R**ewriting in Coq
 
-## ACT Submission: See this tag
+### **ACT Submission: See [this](https://github.com/inQWIRE/ViCaR/releases/tag/act-submission) tag**
 
 ## Building ViCAR
 
