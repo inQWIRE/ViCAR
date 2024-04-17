@@ -12,8 +12,6 @@ jobs:
     strategy:
       matrix:
         coq_version:
-          - '8.14'
-          - '8.15'
           - '8.16'
           - '8.17'
           - '8.18'

@@ -6,9 +6,9 @@
 
 ## Building ViCAR
 
-Tested with Coq 8.14-8.18.
+Currently supports Coq 8.16-8.19.
 
-To build ViCaR, run `make vicar`
+To build ViCaR, run `make vicar`.
 
 
 ## Examples
