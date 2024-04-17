@@ -67,13 +67,15 @@ Lemma hexagon_resultant_1 (A B M : C) :
   id_ B ⊗ β_ M, A ∘ β_ B, (A×M) ∘ associator A M B ∘ id_ A ⊗ (β_ B, M)^-1
   ≃ associator B M A ^-1 ∘ β_ (B × M), A.
 Proof.
-  (* rewrite <- compose_iso_l. *)
   pose proof (hexagon_2 A B M) as hex2.
-  rewrite <- (compose_tensor_iso_r' _ (IdentityIsomorphism _)).
+  replace (id_ A) with (IdentityIsomorphism A ^-1) by easy.
+  rewrite <- (compose_tensor_iso_r' (associator B M A ^-1 ∘ β_ B × M, A) (IdentityIsomorphism A) (β_ B, M)).
   simpl.
   rewrite 2!compose_iso_r.
   rewrite !(assoc).
   rewrite <- compose_iso_l.
+  Check compose_tensor_iso_r.
+  replace (id_ B) with (forward (IdentityIsomorphism B)) by easy.
   rewrite (compose_tensor_iso_r _ (IdentityIsomorphism _)).
   rewrite (assoc), compose_iso_l'.
   symmetry in hex2.
@@ -85,6 +87,7 @@ Proof.
   apply compose_cancel_r.
   pose proof (hexagon_1 B A M) as hex1.
   rewrite assoc, <- compose_iso_l'.
+  replace (id_ M) with (IdentityIsomorphism M ^-1) by easy.
   rewrite <- (compose_tensor_iso_l' _ (IdentityIsomorphism _)).
   simpl.
   rewrite <- 3!(assoc).
@@ -94,6 +97,5 @@ Proof.
 Qed.
 
 End BraidedCoherenceRewrites.
-
 
 Local Close Scope Cat.
