@@ -17,7 +17,7 @@ To install ViCAR through opam, run
 opam pin -y coq-vicar https://github.com/inQWIRE/ViCAR.git
 ```
 
-To use the visualizer, first have [coq-lsp](https://github.com/ejgallego/coq-lsp) installed, then install the VSCode extension found at [https://marketplace.visualstudio.com/items?itemName=inQWIRE.vizcar]. After instantiating the appropriate typeclass you would like to visualize you can run the vizcar command in vscode to activate visualizing. The vizcar plugin only visualizes terms using the ViCAR grammar. To automatically take a term to the ViCAR grammar, use the `categorify` tactic.
+To use the visualizer, first have [coq-lsp](https://github.com/ejgallego/coq-lsp) installed, then install the VSCode extension found at [https://marketplace.visualstudio.com/items?itemName=inQWIRE.vizcar]. After instantiating the appropriate typeclass you would like to visualize you can run the vizcar command in vscode to activate visualizing. The vizcar plugin only visualizes terms using the ViCAR grammar. To automatically take a term with an instantiated typeclass to the ViCAR grammar, use the `to_Cat` tactic.
 
 ## Examples
 
