@@ -2,7 +2,6 @@ Require Import Setoid.
 Require Import Logic.
 Require Import Basics (flip).
 From ViCaR Require Export CategoryTypeclass.
-From ViCaR Require Import RigCategory.
 
 
 Definition reln (A B : Type) : Type := A -> B -> Prop.
@@ -255,11 +254,14 @@ Qed.
 #[export] Instance Rel : Category Type := {
   morphism := reln;
   c_equiv := @reln_equiv;
-  c_equiv_rel := reln_equiv_equivalence;
   compose := @compose_relns;
+  c_identity := @idn;
+}.
+
+#[export] Instance RelC : CategoryCoherence Rel := {
+  c_equiv_rel := reln_equiv_equivalence;
   compose_compat := @compose_relns_compat;
   assoc := @compose_relns_assoc;
-  c_identity := @idn;
   left_unit := @compose_idn_l;
   right_unit := @compose_idn_r;
 }.
@@ -322,12 +324,17 @@ Qed.
 }.
 
 #[export, program] Instance RelMonoidal : MonoidalCategory Rel | 0 := {
-  tensor := ProductRelation;
+  obj_tensor := prod;
+  mor_tensor := @reln_prod;
 	mon_I := ⊤;
   associator := @RelAssociator;
   left_unitor := @RelLeftUnitor;
   right_unitor := @RelRightUnitor;
 }.
+
+#[export, program] Instance RelMonoidalC
+  : MonoidalCategoryCoherence RelMonoidal := {}.
+
 
 #[export, program] Instance RelBraidingIsomorphism {A B} : 
   Isomorphism (A * B) (B * A) := {
@@ -352,22 +359,6 @@ Qed.
 #[export, program] Instance RelSymmetricMonoidal : 
   SymmetricMonoidalCategory RelBraidedMonoidal | 0 := {
 }.
-
-#[export, program] Instance RelCompactClosed 
-  : CompactClosedCategory RelSymmetricMonoidal := {
-  dual := fun A => A;
-  unit := @reln_unit;
-  counit := fun A => flip reln_unit;
-}.
-
-#[export, program] Instance RelDagger : DaggerCategory Rel := {
-  adjoint := fun A B => @flip A B Prop;
-}.
-
-#[export, program] Instance RelDaggerMonoidal 
-  : DaggerMonoidalCategory RelDagger RelMonoidal := {
-}.
-
 
 
 
@@ -432,12 +423,17 @@ Qed.
 }.
 
 #[export, program] Instance RelSumMonoidal : MonoidalCategory Rel | 10 := {
-  tensor := SumRelation;
+  obj_tensor := sum;
+  mor_tensor := @reln_sum;
 	mon_I := ⊥;
   associator := @RelSumAssociator;
   left_unitor := @RelSumLeftUnitor;
   right_unitor := @RelSumRightUnitor;
 }.
+
+#[export, program] Instance RelSumMonoidalC 
+  : MonoidalCategoryCoherence RelSumMonoidal := {}.
+
 
 #[export, program] Instance RelSumBraidingIsomorphism {A B} : 
   Isomorphism (A + B) (B + A) := {
@@ -467,27 +463,6 @@ Qed.
 
 #[export, program] Instance RelSumSymmetricMonoidal : 
   SymmetricMonoidalCategory RelSumBraidedMonoidal | 10 := {
-}.
-
-Lemma not_RelSumCompactClosed :
-  @CompactClosedCategory Type Rel RelSumMonoidal 
-  RelSumBraidedMonoidal RelSumSymmetricMonoidal -> False.
-Proof.
-  intros [].
-  pose proof (triangle_1 ⊤) as Hfalse.
-  simpl in Hfalse.
-  specialize (Hfalse tt tt).
-  specialize (proj2 Hfalse eq_refl).
-  clear Hfalse.
-  solve_relations.
-Qed.
-
-#[export, program] Instance RelSumDagger : DaggerCategory Rel | 10 := {
-  adjoint := fun A B => @flip A B Prop;
-}.
-
-#[export, program] Instance RelSumDaggerMonoidal 
-  : DaggerMonoidalCategory RelSumDagger RelSumMonoidal | 10 := {
 }.
 
 #[export, program] Instance RelLeftDistributivityIsomorphism (A B M : Type) :
@@ -552,142 +527,15 @@ Qed.
   reverse := fun bot => match bot with end;
 }.
 
-#[export, program] Instance RelPreDistr : 
-  PreDistributiveBimonoidalCategory RelSumSymmetricMonoidal
-  RelMonoidal := {
-    left_distr_iso := RelLeftDistributivityIsomorphism;
-    right_distr_iso := RelRightDistributivityIsomorphism;
-    left_distr_natural := @rel_left_distributivity_isomorphism_natural;
-    right_distr_natural := @rel_right_distributivity_isomorphism_natural;
-}.
 
-#[export, program] Instance RelDistrBimonoidal : 
-  DistributiveBimonoidalCategory RelPreDistr := {
-  left_absorbtion_iso := RelLeftAbsorbtion;
-  right_absorbtion_iso := RelRightAbsorbtion;
-}.
+Obligation Tactic := try (hnf; solve_relations).
 
-Obligation Tactic := idtac.
+Require Import CategoryConstructions.
 
-#[export, program] Instance RelSemiCoherent :
-  SemiCoherent_DistributiveBimonoidalCategory RelDistrBimonoidal := {
-  (* condition_I (A B C : Type) := ltac:(abstract(solve_relations));
-  condition_III (A B C : Type) := ltac:(abstract(solve_relations));
-  condition_IV (A B C D : Type) := ltac:(abstract(solve_relations));
-  condition_V (A B C D : Type) := ltac:(abstract(solve_relations));
-  condition_VI (A B C D : Type) := ltac:(abstract(solve_relations));
-  condition_VII (A B C D : Type) := ltac:(abstract(solve_relations));
-  condition_VIII (A B C D : Type) := ltac:(abstract(solve_relations));
-  condition_IX  (A B C D : Type) := ltac:(abstract(solve_relations));
-  condition_X := ltac:(abstract(solve_relations));
-  condition_XI (A B : Type) := ltac:(abstract(solve_relations));
-  condition_XII (A B : Type) := ltac:(abstract(solve_relations));
-  condition_XIII := ltac:(abstract(solve_relations));
-  condition_XIV := ltac:(abstract(solve_relations));
-  condition_XVI (A B : Type) := ltac:(abstract(solve_relations));
-  condition_XVII (A B : Type) := ltac:(abstract(solve_relations));
-  condition_XVIII (A B : Type) := ltac:(abstract(solve_relations));
-  condition_XIX (A B : Type) := ltac:(abstract(solve_relations));
-  condition_XX (A B : Type) := ltac:(abstract(solve_relations));
-  condition_XXI (A B : Type) := ltac:(abstract(solve_relations));
-  condition_XXII (A B : Type) := ltac:(abstract(solve_relations));
-  condition_XXIII (A B : Type) := ltac:(abstract(solve_relations));
-  condition_XXIV (A B : Type) := ltac:(abstract(solve_relations)); *)
-}.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-Next Obligation. hnf; solve_relations. Qed.
-
-Obligation Tactic := (hnf; solve_relations).
-
-#[export, program] Instance RelSemiCoherentBraided :
-  SemiCoherent_BraidedDistributiveBimonoidalCategory RelDistrBimonoidal RelBraidedMonoidal := {
-  (* condition_II (A B C : Type) := ltac:(abstract(solve_relations));
-  condition_XV (A : Type) := ltac:(abstract(solve_relations)); *)
-}.
+Section RelProperties.
 
 Local Open Scope Cat_scope.
-Local Open Scope Obj_scope.
-Generalizable Variable C.
 
-Set Universe Polymorphism.
-
-
-Class CategoryProduct `{cC : Category C} (A B : C) (AB : C) := {
-  p_A : AB ~> A;
-  p_B : AB ~> B;
-  prod_mor : 
-    forall (Q : C) (fA : Q ~> A) (fB : Q ~> B), Q ~> AB;
-  prod_mor_prop: 
-    forall (Q : C) (fA : Q ~> A) (fB : Q ~> B),
-    (prod_mor Q fA fB) ∘ p_A ≃ fA /\
-    (prod_mor Q fA fB) ∘ p_B ≃ fB;
-  prod_mor_unique : 
-    forall (Q : C) (fA : Q ~> A) (fB : Q ~> B) 
-    (fAB' : Q ~> AB), 
-    fA ≃ fAB' ∘ p_A -> fB ≃ fAB' ∘ p_B -> 
-    fAB' ≃ prod_mor Q fA fB
-}.
-
-Arguments CategoryProduct {_} {_}%Cat (_ _ _)%Obj.
-(* Local Notation "'@' AB" := (AB.(prod_AB)) (at level 8) : Cat_scope. *)
-
-
-
-Lemma prod_mor_unique' `{cC : Category C} {A B AB : C} 
-  (HAB : CategoryProduct A B AB) {Q} (fA : Q ~> A) (fB : Q ~> B) : 
-  forall (fAB fAB' : Q ~> AB),
-  fAB ∘ p_A ≃ fA  -> fAB ∘ p_B ≃ fB -> 
-  fAB' ∘ p_A ≃ fA -> fAB' ∘ p_B ≃ fB -> 
-  fAB ≃ fAB'.
-Proof.
-  intros.
-  rewrite (prod_mor_unique Q fA fB) by easy.
-  symmetry;
-  rewrite (prod_mor_unique Q fA fB) by easy.
-  easy.
-Qed.
-
-Obligation Tactic := idtac.
-Program Definition category_product_unique `{cC : Category C} (A B : C) :
-  forall {AB AB'} (HAB : CategoryProduct A B AB) 
-  (HAB' : CategoryProduct A B AB'), Isomorphism AB AB' :=
-  fun AB AB' HAB HAB' =>
-  {|
-    forward := HAB'.(prod_mor) AB p_A p_B;
-    reverse := HAB.(prod_mor) AB' p_A p_B;
-  |}.
-Obligations.
-Next Obligation.
-  split; eapply (prod_mor_unique' _ p_A p_B); rewrite 1?assoc.
-  1,5: rewrite 2!(proj1 (prod_mor_prop _ _ _)); easy.
-  1,4: rewrite 2!(proj2 (prod_mor_prop _ _ _)); easy.
-  all: rewrite left_unit; easy.
-Qed.
-
-Class CartesianMonoidalCategory `(mC : MonoidalCategory C) := {
-  tensor_cartesian : forall (A B : C),
-    CategoryProduct A B (A × B)%Mon;
-}.
 
 #[export, program] Instance RelCartesianMonoidalCategory :
   CartesianMonoidalCategory RelSumMonoidal := {
@@ -701,10 +549,6 @@ Class CartesianMonoidalCategory `(mC : MonoidalCategory C) := {
         end
     |}
   }.
-Obligations.
-Next Obligation.
- solve_relations.
-Qed.
 Next Obligation.
   __setup_solve_relations.
   intros A B Q fA fB fAB'.
@@ -714,98 +558,6 @@ Next Obligation.
   solve_relations.
 Qed.
 
-Module BigPredProd.
-Class CategoryBigProd `{cC : Category C} (J : C -> Prop) (prod_J : C) := {
-  p_i : forall i, J i -> prod_J ~> i;
-  big_prod_mor : 
-    forall (Q : C) (fQ_ : forall i, J i -> Q ~> i), Q ~> prod_J;
-  big_prod_mor_prop: 
-    forall (Q : C) (fQ_ : forall i, J i -> Q ~> i),
-    forall i (Hi : J i), 
-    (big_prod_mor Q fQ_) ∘ p_i i Hi ≃ fQ_ i Hi;
-  big_prod_mor_unique : 
-    forall (Q : C) (fQ_ : forall i, J i -> Q ~> i)
-    (fAB' : Q ~> prod_J), 
-    (forall i (Hi : J i), fQ_ i Hi ≃ fAB' ∘ p_i i Hi) ->
-    fAB' ≃ big_prod_mor Q fQ_
-}.
-
-Lemma big_prod_mor_unique' `{cC : Category C} {J} {pJ : C} 
-  (HJ : CategoryBigProd J pJ) {Q} (fQ_ : forall i, J i -> Q ~> i) : 
-  forall (fAB fAB' : Q ~> pJ),
-  (forall i (Hi : J i), fAB ∘ p_i i Hi ≃ fQ_ i Hi) ->
-  (forall i (Hi : J i), fAB' ∘ p_i i Hi ≃ fQ_ i Hi) ->
-  fAB ≃ fAB'.
-Proof.
-  intros.
-  rewrite (big_prod_mor_unique Q fQ_) by easy.
-  symmetry;
-  rewrite (big_prod_mor_unique Q fQ_) by easy.
-  easy.
-Qed.
-
-Program Definition category_big_prod_unique `{cC : Category C} J :
-  forall {pJ pJ'} (HJ : CategoryBigProd J pJ) (HJ' : CategoryBigProd J pJ'), 
-    Isomorphism pJ pJ' :=
-  fun pJ pJ' HJ HJ' =>
-  {|
-    forward := HJ'.(big_prod_mor) pJ p_i;
-    reverse := HJ.(big_prod_mor) pJ' p_i;
-  |}.
-Obligations.
-Next Obligation.
-  split; eapply (big_prod_mor_unique' _ p_i); rewrite 1?assoc.
-  1,3: intros i Hi; rewrite assoc, 2!(big_prod_mor_prop _ _); easy.
-  all: intros; rewrite left_unit; easy.
-Qed.
-End BigPredProd.
-
-
-Class CategoryBigProd `{cC : Category C} {J : Type} 
-  (obj : J -> C) (prod_J : C) := {
-  p_i : forall i, prod_J ~> obj i;
-  big_prod_mor : 
-    forall (Q : C) (fQ_ : forall i, Q ~> obj i), Q ~> prod_J;
-  big_prod_mor_prop: 
-    forall (Q : C) (fQ_ : forall i, Q ~> obj i),
-    forall i, 
-    (big_prod_mor Q fQ_) ∘ p_i i ≃ fQ_ i;
-  big_prod_mor_unique : 
-    forall (Q : C) (fQ_ : forall i, Q ~> obj i)
-    (fAB' : Q ~> prod_J), 
-    (forall i, fQ_ i ≃ fAB' ∘ p_i i) ->
-    fAB' ≃ big_prod_mor Q fQ_
-}.
-
-Lemma big_prod_mor_unique' `{cC : Category C} {J} {obj : J -> C} {pJ : C} 
-  (HJ : CategoryBigProd obj pJ) {Q} (fQ_ : forall i, Q ~> obj i) :
-  forall (fAB fAB' : Q ~> pJ),
-  (forall i, fAB  ∘ p_i i ≃ fQ_ i) ->
-  (forall i, fAB' ∘ p_i i ≃ fQ_ i) ->
-  fAB ≃ fAB'.
-Proof.
-  intros.
-  rewrite (big_prod_mor_unique Q fQ_) by easy.
-  symmetry;
-  rewrite (big_prod_mor_unique Q fQ_) by easy.
-  easy.
-Qed.
-
-Program Definition category_big_prod_unique `{cC : Category C} {J} {obj : J->C} :
-  forall {pJ pJ'} (HJ : CategoryBigProd obj pJ) (HJ' : CategoryBigProd obj pJ'), 
-    Isomorphism pJ pJ' :=
-  fun pJ pJ' HJ HJ' =>
-  {|
-    forward := HJ'.(big_prod_mor) pJ p_i;
-    reverse := HJ.(big_prod_mor) pJ' p_i;
-  |}.
-Obligations.
-Next Obligation.
-  split; eapply (big_prod_mor_unique' _ p_i); rewrite 1?assoc.
-  1,3: intros i; rewrite assoc, 2!(big_prod_mor_prop _ _); easy.
-  all: intros; rewrite left_unit; easy.
-Qed.
-
 
 Inductive big_sum (J : Type -> Type) :=
   | in_i i (a : J i) : big_sum J.
@@ -813,23 +565,16 @@ Inductive big_sum (J : Type -> Type) :=
 Arguments in_i {_} _ _.
 (* Set Printing Universes. *)
 
-Definition my_f_equal [A B : Type] (f : A -> B) [x y : A] (H : x = y) :
-  f x = f y := 
-  match H in (_ = y') return (f x = f y') with eq_refl => eq_refl end.
-
 Obligation Tactic := Tactics.program_simpl.
 
 #[export, program] Instance RelBigProd (J : Type -> Type) : 
   CategoryBigProd J (big_sum J) := {
     p_i := fun i => fun somei a => match somei with
     | in_i i' a' => exists (H: i = i'), _
-      (* let Hi := my_f_equal J H in
-        match Hi in (_ = Ji') return Ji' with eq_refl => a end = a' *)
     end;
     big_prod_mor := fun Q fQ_ => fun q somei => match somei with
     | in_i i a => fQ_ i q a
     end
-
   }.
 Next Obligation.
   exact (a = a').
@@ -850,7 +595,6 @@ Next Obligation.
 Qed.
 Next Obligation.
   __setup_solve_relations.
-
   intros q [i a].
   rewrite H.
   split.
@@ -863,362 +607,4 @@ Next Obligation.
     easy.
 Qed.
 
-
-(* Section TransitiveClosure.
-
-Local Open Scope Rig_scope.
-
-(* Definition encup {A A' B : Type} (R : reln (A + B) (A' + B)) : reln (A + ⊤) _ (*  (A' + ⊤) *) :=
-  (id_ A ⊞ reln_unit) ∘ (α'_ A, B, B ∘ (R ⊞ id_ B) ∘ associator ∘ (id_ A ⊞ unit †). *)
-
-
-
-(* Definition dec_and_R {A : Type} (R : reln A A) : reln (A * nat) (A * nat) :=
-  fun an bm =>
-    let (a, n) := an in let (b, m) := bm in 
-    R a b /\ (m + 1 = n)%nat. *)
-  
-(* Definition dec : reln nat nat :=
-  fun i j => (i = j + 1)%nat.
-
-
-Definition if_0 : reln nat (⊤ + nat) :=
-  fun i j => match i, j with
-  | O, inl _ => True
-  | S n', inr m => m = *)
-
-Definition dec_if0 : reln nat (⊤ + nat) :=
-  fun i j => match i, j with
-  | O, inl _ => True
-  | S n', inr m => n' = m
-  | _, _ => False
-  end.
-
-(* TODO: generalize? *)
-Definition REPNZ {A : Type}
-  : reln (A * nat) (A + (A * nat)) :=
-  (id_ A ⊠ dec_if0) ∘ δ_ A, ⊤, nat ∘ (ρ_ A ⊞ id_ (A * nat)).
-
-
-(* Note: this is in fact a property of coproducts *)
-Definition join_plus {B : Type} : reln (B + B) B :=
-  fun b_or_b c => match b_or_b with
-  | inl b | inr b => b = c
-  end.
-
-(* Note: I _believe_ we can get this with (categorical) sums and products? *)
-Definition prod_to_sum {A B : Type} : reln (A*B) (A + B) :=
-  fun ab a'_or_b' => match ab, a'_or_b' with
-  | (a, _), inl a' => a = a'
-  | (_, b), inr b' => b = b'
-  end.
-
-Definition repn_top {A : Type} (R : reln A A) 
-  : reln (A * nat + A * nat) (A + (A * nat)) :=
-  join_plus ∘ REPNZ ∘ (id_ A ⊞ (R ⊠ id_ _)).
-
-(* Actually a property of cartesian category: *)
-Definition proj_l {A B : Type} : reln (A * B) A :=
-  fun ab a' => let (a, _) := ab in a = a'.
-
-(* Note: quite suspect! Maybe we get it bc we have all trivial morphisms? *)
-Definition only_l {A B : Type} : reln (A + B) A :=
-  fun a_or_b a' => match a_or_b with
-  | inl a => a = a'
-  | inr b => False
-  end.
-
-(* Q: Given R : A + B ~> A' + B, can we form Rconn : A ~> A'? *)
-
-Definition REPN {A : Type} (R : reln A A) : reln (A * nat) _ := 
-  ρ_ _ ^-1 ∘ (id_ _ ⊠ reln_unit) ∘ α_ _, _, _ 
-  ∘ ((prod_to_sum ∘ repn_top R) ⊠ id_ _) ∘ δ#_ _, _, _ 
-  ∘ (proj_l ⊞ flip reln_unit) ∘ only_l.
-
-Fixpoint compose_n {C} {cC : Category C} (n : nat) 
-  {A : C} (f : A ~> A) : A ~> A :=
-  match n with 
-  | O => id_ A
-  | S n' => compose_n n' f ∘ f
-  end.
-
-Theorem REPN_correct {A : Type} (R : reln A A) : 
-  REPN R ≃ fun an a' => let (a, n) := an in (compose_n n R) a a'.
-Proof.
-  intros [a n]; revert a.
-  induction n.
-  - intros a b. simpl.
-    unfold REPN. 
-    rewrite ?compose_relns_assoc.
-    (* repn_top, only_l, proj_l, 
-      prod_to_sum, join_plus, REPNZ, dec_if0. *)
-    
-    split.
-    + __setup_solve_relations.
-      __process_solve_relations.
-      unfold prod_to_sum, repn_top, proj_l, join_plus, REPNZ, only_l in *.
-      revert H2;
-      __setup_solve_relations.
-      solve_relations.
-
-      solve_relations.
-      solve_relations.
-      __solve_relations_mid_step.
-      __process_solve_relations_step; __process_solve_relations_cleanup_vars; [|easy].
-      __process_solve_relations_step.
-      __process_solve_relations_step; __process_solve_relations_cleanup_vars; [|easy].
-
-
-
-    solve_relations.
-    
-
-
-
-
-Definition anynat : reln ⊤ nat := 
-  fun t n => True.
-
-
-
-Definition anynat_alt : reln ⊤ nat :=
-  reln_unit ∘ proj_l.
-
-Lemma anynat_alt_correct : anynat ≃ anynat_alt.
-Proof.
-  unfold anynat, anynat_alt.
-  solve_relations.
-Qed.
-
-
-Definition if_0 (A : Type) : reln (A * nat) (A + (A * nat)) :=
-  fun an b_or_bm => match an, b_or_bm with
-    | (a, O), inl b => a = b
-    | (a, S n'), inr (b, m) => a = b /\ S n' = m
-    | _, _ => False
-    end.
-
-Definition either (B : Type) : reln (B * B) B :=
-  fun bb' c => let (b, b') := bb' in 
-    b = c \/ b' = c.
-
-Definition transitive_closure_setup {A : Type} (R : reln A A) 
-  : reln A ((A * nat) * (A * nat)) :=
-  right_unitor ^-1 ∘ (id_ A ⊗ anynat) ∘ right_unitor^-1 
-    ∘ (id_ _ ⊗ reln_unit) ∘ associator ^-1 
-    ∘ (either _ ⊗ id_ _).
-
-Definition transitive_closure {A : Type} (R : reln A A) : reln A _ :=
-  transitive_closure_setup R ∘ (R ⊗ dec ⊗ id_ _) ∘
-  (if_0 A ⊗ id_ _) ∘ RelRightDistributivityIsomorphism A (A*nat) (A*nat)
-  ∘ (proj_l ⊞ (flip reln_unit ∘ @reln_unit ⊥ ∘ proj_l))%Rig
-  ∘ RelSumMonoidal.(right_unitor).(forward).
-
-Require Import Lia.
-
-Ltac __solve_relations_mid_step ::= 
-  repeat (intros ?); intros; subst; auto; try lia.
-
-Lemma test_trans_clo : 
-  (transitive_closure (fun i j => (i + 1 = j)%nat)) 2 3.
-Proof.
-  unfold transitive_closure, transitive_closure_setup, either,
-    anynat, dec, proj_l, if_0.
-  __setup_solve_relations.
-  (* straight through, so... *)
-  exists (inl 3); split; [|easy].
-  eexists (inl (_, (_, _))); split; [|reflexivity].
-  eexists ((inl 3, (_, _))); split; [|split; reflexivity].
-  eexists ((_, 0), (_, _)); split; [|split].
-  eexists ((_, _), (_, _)); split; [|split; [split|]; reflexivity].
-  eexists ((_, _), (_, _), (_, _)).
-  split; [|split; [|reflexivity]].
-  eexists ((_, _), ((_, _), (_, _))).
-  split; [|split; [|split]; reflexivity].
-  eexists ((_, _), tt).
-  split; [|split; reflexivity].
-  eexists (_, _).
-  split; [|reflexivity].
-  eexists (_, tt).
-  split; [|split]; reflexivity.
-  left.
-  all: reflexivity.
-  Unshelve. all: constructor.
-Qed.
-
-Lemma test_trans_clo_2 : 
-  (transitive_closure (fun i j => (i + 1 = j)%nat)) 2 1 -> False.
-Proof.
-  unfold transitive_closure, transitive_closure_setup, either,
-    anynat, dec, proj_l, if_0.
-  __setup_solve_relations.
-  intros Hbad.
-  __process_solve_relations.
-  destruct H1.
-  destruct n7; [|easy].
-  inversion H1.
-  lia.
-  destruct n7; [|easy].
-  
-  __process_solve_relations_cleanup_vars.
-  (* straight through, so... *)
-  eexists (inl _); split; [|easy].
-  eexists (inl (_, (_, _))); split; [|reflexivity].
-  eexists ((inl 3, (_, _))); split; [|split; reflexivity].
-  eexists ((_, 0), (_, _)); split; [|split].
-  eexists ((_, _), (_, _)); split; [|split; [split|]; reflexivity].
-  eexists ((_, _), (_, _), (_, _)).
-  split; [|split; [|reflexivity]].
-  eexists ((_, _), ((_, _), (_, _))).
-  split; [|split; [|split]; reflexivity].
-  eexists ((_, _), tt).
-  split; [|split; reflexivity].
-  eexists (_, _).
-  split; [|reflexivity].
-  eexists (_, tt).
-  split; [|split]; reflexivity.
-  left.
-  all: reflexivity.
-  Unshelve. all: constructor.
-Qed.
-
-Lemma test_trans_clo_2 : 
-  (transitive_closure (fun i j => (i + 1 = j)%nat)) 2 4.
-Proof.
-  unfold transitive_closure, transitive_closure_setup, either, anynat, dec.
-  __setup_solve_relations.
-  do 2 (eexists ((_, _), (_, _)); split).
-  2: split; [split|]; reflexivity.
-  eexists ((_, _), (_, _), (_, _)).
-  split; [|split; [|reflexivity]].
-  eexists ((_, _), ((_, _), (_, _))).
-  split; [|split; [|split]; reflexivity].
-  eexists ((_, _), tt).
-  split; [|split; reflexivity].
-  eexists (_, _).
-  split; [|reflexivity].
-  eexists (_, tt).
-  split; [|split]; reflexivity.
-  2: {
-    eexists ((_, _), ((_, _), (_, _))).
-    split; [|split; [|split]; reflexivity].
-    eexists ((_, _), tt).
-    split; [|split; reflexivity].
-    eexists (_, _).
-    split; [|reflexivity].
-    eexists (_, tt).
-    split; [|split]; reflexivity.
-  }
-  left; reflexivity.
-  split; [right|]; reflexivity.
-  Unshelve.
-  all: constructor.
-Qed.
-
-Lemma test_trans_clo_3 : 
-  (transitive_closure (fun i j => (i + 1 = j)%nat)) 2 1.
-Proof.
-  unfold transitive_closure, transitive_closure_setup, either, anynat, dec.
-  __setup_solve_relations.
-  do 2 (eexists ((_, _), (_, _)); split).
-  2: split; [split|]; reflexivity.
-  eexists ((_, _), (_, _), (_, _)).
-  split; [|split; [|reflexivity]].
-  eexists ((_, _), ((_, _), (_, _))).
-  split; [|split; [|split]; reflexivity].
-  eexists ((_, _), tt).
-  split; [|split; reflexivity].
-  eexists (_, _).
-  split; [|reflexivity].
-  eexists (_, tt).
-  split; [|split]; reflexivity.
-  2: {
-    eexists ((_, _), ((_, _), (_, _))).
-    split; [|split; [|split]; reflexivity].
-    eexists ((_, _), tt).
-    split; [|split; reflexivity].
-    eexists (_, _).
-    split; [|reflexivity].
-    eexists (_, tt).
-    split; [|split]; reflexivity.
-  }
-  left; reflexivity.
-  split; [right|]; reflexivity.
-  Unshelve.
-  all: constructor.
-Qed.
-
-
-Definition trans_join (A : Type) : reln (A*A) A :=
-  fun ii' j => let (i, i') := ii' in 
-    i = j \/ i' = j.
-
-Definition trans_split (A : Type) : reln A (A*A) :=
-  fun i jj' => let (j, j') := jj' in i = j /\ i = j'.
-
-Definition trans_clo (A : Type) (R : reln A A) :=
-  (@RelRightUnitor A) ^-1 ∘ (RelMonoidal.(tensor) @@ (id_ A), reln_unit) 
-    ∘ (associator ^-1) ∘ (RelMonoidal.(tensor) @@ trans_join A, id_ A) 
-    ∘ (RelMonoidal.(tensor) @@ R, id_ A) ∘ (RelMonoidal.(tensor) @@ trans_split A, id_ A) 
-    ∘ associator ∘ (RelMonoidal.(tensor) @@ id_ A, flip reln_unit) 
-    ∘ RelMonoidal.(right_unitor).(forward).
-
-Lemma trans_clo_test : (trans_clo nat (fun i j => (i + 1 = j)%nat)) 2 3.
-Proof.
-  unfold trans_clo, trans_join, trans_split.
-  simpl.
-  __setup_solve_relations.
-  exists (3, tt).
-  split; [|easy].
-  eexists (_, (_, _)); split; [|split; reflexivity].
-  eexists ((_, _), _); split; [|split; [|split]; reflexivity].
-  eexists (_, _); split; [|split; [split|]; reflexivity].
-  eexists (2, 3); split; [|easy].
-  eexists ((_, _), _); split; [|split; [left|]; reflexivity].
-  eexists (_, (_, _)); split; [|split; [|split]; reflexivity].
-  eexists (_, tt).
-  easy.
-Qed.
-
-Lemma trans_clo_test_2 : (trans_clo nat (fun i j => (i + 1 = j)%nat)) 2 4.
-Proof.
-  unfold trans_clo, trans_join, trans_split.
-  simpl.
-  unfold compose_relns.
-  __setup_solve_relations.
-  exists (4, tt).
-  split; [|easy].
-  eexists (_, (_, _)); split; [|split; reflexivity].
-  eexists ((_, _), _); split; [|split; [|split]; reflexivity].
-  eexists (_, _); split; [|split; [split|]; reflexivity].
-  eexists (3, 4); split; [|easy].
-  eexists ((_, _), _); split; [|split; [left|]; reflexivity].
-  eexists (_, (_, _)); split; [|split; [|split]; reflexivity].
-  eexists (_, tt).
-  easy.
-Qed.
-
-End TransitiveClosure.
-
-
-
-From ViCaR Require Import CategoryAutomation.
-
-
-Lemma test {A} : forall (f : reln A (A★)%Cat) (g : reln (A★)%Cat A), 
-  ((unit (A:=A) \o (braiding (H:=RelMonoidal) _ A).(forward) \o (f \* g) \o counit) † ~ 
-  (unit (A:=A) \o g \* f \o (braiding (H:=RelMonoidal) A _).(forward) \o counit) †)%Cat.
-Proof.
-  simpl.
-  intros f g.
-  to_Cat.
-  Admitted.
-
-
-Lemma test2 {A B} : forall (f g : reln A B) (h : reln ⊤ A) (i : reln (⊤ * (A*A)) _), 
-  (RelMonoidal.(left_unitor).(forward) \o (idn \o f \* g) ~ i \o f \* g)%Cat.
-Proof.
-  intros f g h i.
-  simpl.
-  to_Cat.
-  Admitted. *)
+End RelProperties.
