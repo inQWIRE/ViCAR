@@ -40,8 +40,8 @@ Class BraidedMonoidalCategory {C : Type} {cC : Category C}
   
   MonoidalCategory_of_BraidedMonoidalCategory := mC;
 }.
-Arguments BraidedMonoidalCategory {_} {_}%_Cat (_)%_Cat.
-Arguments braiding {_} {_}%_Cat {_}%_Cat (_)%_Cat.
+Arguments BraidedMonoidalCategory {_} {_}%Cat (_)%Cat.
+Arguments braiding {_} {_}%Cat {_}%Cat (_)%Cat.
 Notation "'B_' x , y" := (braiding _%Cat x%Obj y%Obj) 
   (at level 20) : Brd_scope.
 
