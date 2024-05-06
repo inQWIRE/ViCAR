@@ -7,6 +7,8 @@ Require Import FunctionalExtensionality.
 
 Section FreeMonoid.
 
+Create HintDb bwarrdb.
+
 Variable (X : Type).
 
 Inductive bw :=
@@ -254,11 +256,9 @@ Definition bwcat : Category bw := {|
   c_identity := arrid;
 |}.
 
-Create HintDb bwarrdb.
-
 Section bwcat_Category.
 
-#[local] Existing Instance bwcat.
+#[local] Existing Instance bwcat | 10.
 
 #[export, program] Instance bwcath : CategoryCoherence bwcat.
 Next Obligation.
@@ -1328,7 +1328,7 @@ Next Obligation.
       rewrite <- 2!compose_iso_r'.
       rewrite !assoc.
       rewrite <- pentagon.
-      partner (α_ realize_bw a, b, c ⁻¹ ⊗ id_ realize_bw d) (α_ realize_bw a, b, c ⊗ id_ realize_bw d).
+      rewrite <- 2!(assoc (α_ realize_bw a, b, c ⁻¹ ⊗ id_ realize_bw d)).
       rewrite <- tensor_compose, iso_inv_l, right_unit, tensor_id, left_unit.
       cancel_isos.
       now rewrite <- tensor_compose, iso_inv_l, left_unit, tensor_id.
@@ -1337,7 +1337,7 @@ Next Obligation.
       rewrite <- 2!compose_iso_r'.
       rewrite !assoc.
       rewrite <- pentagon.
-      partner (α_ realize_bw a, b, c ⁻¹ ⊗ id_ realize_bw d) (α_ realize_bw a, b, c ⊗ id_ realize_bw d).
+      rewrite <- !(assoc (α_ realize_bw a, b, c ⁻¹ ⊗ id_ realize_bw d)).
       rewrite <- tensor_compose, iso_inv_l, right_unit, tensor_id, left_unit.
       cancel_isos.
       now rewrite <- tensor_compose, iso_inv_l, left_unit, tensor_id.
@@ -1367,6 +1367,223 @@ Proof.
   apply monoidal_coherence.
 Qed.
 
+Section MonoidalExpressionNormalForm.
+
+Inductive monarr : bw -> bw -> Type :=
+  | monarrcomp {a b c : bw} (f : monarr a b) (g : monarr b c) : monarr a c
+  | monarrtens {a a' b b'} (f : monarr a a') (g : monarr b b') : monarr (a ⨂ b) (a' ⨂ b')
+  | mongeneric {a b : bw} (f : cC.(morphism) a b) : monarr a b
+  | monarrstruct {a b : bw} (f : bwarr a b) : monarr a b.
+
+Coercion monarrstruct : bwarr >-> monarr.
+Local Notation "a '⟶' b" := (monarr a b) (at level 60) : type_scope.
+
+Reserved Notation "f '≊' g" (at level 70).
+Inductive monarrequiv : forall a b, relation (a ⟶ b) :=
+  | monarr_refl {a b} (f : a ⟶ b) : f ≊ f
+  | monarr_symm {a b} (f g : a ⟶ b) : f ≊ g -> g ≊ f
+  | monarr_trans {a b} (f g h : a ⟶ b) : f ≊ g -> g ≊ h -> f ≊ h
+  
+  | monarr_comp {a b c : bw} (f f' : a ⟶ b) (g g' : b ⟶ c) :
+      f ≊ f' -> g ≊ g' -> monarrcomp f g ≊ monarrcomp f' g'
+  | monarr_assoc {a a' b' b : bw} (f : a ⟶ a') (g : a' ⟶ b') (h : b' ⟶ b) :
+      monarrcomp f (monarrcomp g h) ≊ monarrcomp (monarrcomp f g) h
+  (* | bwarr_lassoc {a a' b' b : bw} (f : a ⟶ a') (g : a' ⟶ b') (h : b' ⟶ b) :
+      monarrcomp (monarrcomp f g) h ≊ monarrcomp f (monarrcomp g h) *)
+  | monarr_lunit {a b} (f : a ⟶ b) : monarrcomp (arrid a) f ≊ f
+  (* | bwarr_lunitr {a b} (f : a ⟶ b) : f ≊ monarrcomp (arrid a) f *)
+  | monarr_runit {a b} (f : a ⟶ b) : monarrcomp f (arrid b) ≊ f
+  (* | bwarr_runitr {a b} (f : a ⟶ b) : f ≊ monarrcomp f (arrid b) *)
+
+  | monarr_tens {a a' b b' : bw} (f f' : a ⟶ a') (g g' : b ⟶ b') :
+    f ≊ f' -> g ≊ g' -> monarrtens f g ≊ monarrtens f' g'
+  | monarr_tens_comp {a b c a' b' c'} 
+    (f : a ⟶ b) (g : b ⟶ c) (f' : a' ⟶ b') (g' : b' ⟶ c') :
+    monarrtens (monarrcomp f g) (monarrcomp f' g') 
+      ≊ monarrcomp (monarrtens f f') (monarrtens g g')
+  | monarr_struct {a b} (f g : bwarr a b) : 
+    (* bwarrequiv a b f g -> *)  (* NOTE: this is given by monoidal coherence! *)
+      f ≊ g
+  | monarr_arrcomp {a b c} (f : bwarr a b) (g : bwarr b c) :
+      monarrcomp f g ≊ arrcomp f g
+  | monarr_arrtens {a a' b b'} (f : bwarr a a') (g : bwarr b b') :
+      monarrtens f g ≊ arrtens f g
+  where "f '≊' g" := (monarrequiv _ _ f g).
+
+Add Parametric Relation (a b : bw) : (monarr a b) (monarrequiv a b)
+  reflexivity proved by monarr_refl
+  symmetry proved by monarr_symm
+  transitivity proved by monarr_trans as monarrequiv_setoid.
+
+Add Parametric Morphism (a b c : bw) : (@monarrcomp a b c)
+  with signature 
+  (monarrequiv a b) ==> (monarrequiv b c) ==> (monarrequiv a c)
+  as monarrcomp_mor.
+Proof. eauto using monarrequiv. Qed.
+
+Add Parametric Morphism (a a' b b' : bw) : (@monarrtens a a' b b')
+  with signature 
+  (monarrequiv a a') ==> (monarrequiv b b') ==> (monarrequiv (a⨂b) (a'⨂b'))
+  as monarrtens_mor.
+Proof. eauto using monarrequiv. Qed.
+
+
+Section monbwcat_Category.
+
+Definition monbwcat : Category bw := {|
+  morphism := monarr;
+  c_equiv := monarrequiv;
+  compose := fun _ _ _ => monarrcomp;
+  c_identity := arrid;
+|}.
+
+#[local] Existing Instance monbwcat | 9.
+
+#[export, program] Instance monbwcath : CategoryCoherence monbwcat.
+Next Obligation.
+split; apply monarrequiv_setoid.
+Qed.
+Obligation Tactic := 
+  Tactics.program_simpl; eauto 4 using monarrequiv with bwarrdb; try easy.
+Solve All Obligations.
+
+#[export, program] Instance monassoc_iso (a b c : bw) 
+  : Isomorphism (a ⨂ b ⨂ c) (a ⨂ (b ⨂ c)) := {
+  forward := monarrstruct (arrinvassoc a b c);
+  reverse := arrassoc a b c;
+}.
+
+#[export, program] Instance monlunitor_iso (a : bw) 
+  : Isomorphism (e ⨂ a) a := {
+  forward := monarrstruct (arrlunitor a);
+  reverse := arrinvlunitor a;
+}.
+
+#[export, program] Instance monrunitor_iso (a : bw) 
+  : Isomorphism (a ⨂ e) a := {
+  forward := arrrunitor a;
+  reverse := arrinvrunitor a;
+}.
+
+#[export] Instance monbwmcat : MonoidalCategory monbwcat | 10 := {
+  obj_tensor := tens;
+  mor_tensor := @monarrtens;
+  associator := monassoc_iso;
+  left_unitor := monlunitor_iso;
+  right_unitor := monrunitor_iso;
+}.
+
+#[export, program] Instance monbwmcath : MonoidalCategoryCoherence bwmcat := {}.
+
+Fixpoint realize_monarr {A B} (h : A ⟶ B) : (realize_bw A ~> realize_bw B) :=
+  match h with
+  | monarrcomp f g => realize_monarr f ∘ realize_monarr g
+  | monarrtens f g => realize_monarr f ⊗ realize_monarr g
+  | mongeneric f => f
+  | monarrstruct f => realize_bwarr f
+  end.
+
+
+#[export, program] Instance GeneralRealizationFunctor : 
+  Functor monbwcat cC := {
+  obj_map := realize_bw;
+  morphism_map := @realize_monarr;
+}.
+Next Obligation.
+  induction H; try reflexivity; simpl.
+  - symmetry; easy.
+  - etransitivity; eauto.
+  - apply compose_compat; auto.
+  - symmetry; apply assoc.
+  - apply left_unit.
+  - apply right_unit.
+  - apply tensor_compat; easy.
+  - apply tensor_compose.
+  - apply monoidal_coherence.
+Qed.
+
+Definition realize_equiv (a b : bw) (f g : a ⟶ b) :=
+  realize_monarr f ≃ realize_monarr g.
+
+Arguments realize_equiv _ _ _ _/.
+
+Local Notation "f '≡' g" := (realize_equiv _ _ f g) (at level 70).
+
+Add Parametric Relation (a b : bw) : (monarr a b) (realize_equiv a b)
+  reflexivity proved by 
+    ltac:(intros ?; simpl; reflexivity)
+  symmetry proved by 
+    ltac:(intros ?; simpl; symmetry; easy)
+  transitivity proved by 
+    ltac:(intros ?; simpl; etransitivity; eauto) 
+    as realize_equiv_setoid.
+
+Add Parametric Morphism (a b c : bw) : (@monarrcomp a b c)
+  with signature 
+  (realize_equiv a b) ==> (realize_equiv b c) ==> (realize_equiv a c)
+  as monarrcomp_mor_real.
+Proof. intros; apply compose_compat; easy. Qed.
+
+Add Parametric Morphism (a a' b b' : bw) : (@monarrtens a a' b b')
+  with signature 
+  (realize_equiv a a') ==> (realize_equiv b b') ==> (realize_equiv (a⨂b) (a'⨂b'))
+  as monarrtens_mor_real.
+Proof. intros; apply tensor_compat; easy. Qed.
+
+Lemma realize_monarr_proper {a b} (f : a ⟶ b) : 
+  f ≡ (mongeneric (realize_monarr f)).
+Proof.
+  induction f; simpl; easy.
+Qed.
+
+Inductive monnormarr (a b : bwnorm) :=
+  | 
+  
+Obligation Tactic := 
+Tactics.program_simpl; eauto 4 using monarrequiv with bwarrdb; try easy.
+
+
+(* Inductive monarrequiv : forall a b, relation (a ⟶ b) :=
+  | monarr_refl {a b} (f : a ⟶ b) : f ≅ f
+  | monarr_symm {a b} (f g : a ⟶ b) : f ≅ g -> g ≅ f
+  | monarr_trans {a b} (f g h : a ⟶ b) : f ≅ g -> g ≅ h -> f ≅ h
+  
+  | monarr_comp {a b c : bw} (f f' : a ⟶ b) (g g' : b ⟶ c) :
+      f ≅ f' -> g ≅ g' -> monarrcomp f g ≅ monarrcomp f' g'
+  | monarr_assoc {a a' b' b : bw} (f : a ⟶ a') (g : a' ⟶ b') (h : b' ⟶ b) :
+      monarrcomp f (monarrcomp g h) ≅ monarrcomp (monarrcomp f g) h
+  (* | bwarr_lassoc {a a' b' b : bw} (f : a ⟶ a') (g : a' ⟶ b') (h : b' ⟶ b) :
+      arrcomp (arrcomp f g) h ≅ arrcomp f (arrcomp g h) *)
+  | monarr_lunit {a b} (f : a ⟶ b) : monarrcomp (arrid a) f ≅ f
+  (* | bwarr_lunitr {a b} (f : a ⟶ b) : f ≅ arrcomp (arrid a) f *)
+  | monarr_runit {a b} (f : a ⟶ b) : monarrcomp f (arrid b) ≅ f
+  (* | bwarr_runitr {a b} (f : a ⟶ b) : f ≅ arrcomp f (arrid b) *)
+
+  | monarr_tens {a a' b b' : bw} (f f' : a ⟶ a') (g g' : b ⟶ b') :
+    f ≅ f' -> g ≅ g' -> monarrtens f g ≅ monarrtens f' g'
+  (* | monarr_tens_id {a b : bw} :
+    monarrtens (arrid a) (arrid b) ≅ arrid (a ⨂ b) *)
+  (* | monarr_tens_idr {a b : bw} :
+    arrid (a ⨂ b) ≅ arrtens (arrid a) (arrid b) *)
+  | monarr_tens_comp {a b c a' b' c'} 
+    (f : a ⟶ b) (g : b ⟶ c) (f' : a' ⟶ b') (g' : b' ⟶ c') :
+    monarrtens (monarrcomp f g) (monarrcomp f' g') ≅ 
+      monarrcomp (monarrtens f f') (monarrtens g g')
+  (* | bwarr_tens_compr {a b c a' b' c'} 
+    (f : a ⟶ b) (g : b ⟶ c) (f' : a' ⟶ b') (g' : b' ⟶ c') :
+    arrcomp (arrtens f f') (arrtens g g') ≅ 
+      arrtens (arrcomp f g) (arrcomp f' g') *)
+    where "f '≅' g" := (monarrequiv _ _ f g). *)
+
+
+Inductive monarrequiv : forall (a b : bw), relation (monarr a b) := 
+  | monarrstructeq {a b : bw} (f g : bwarr a b) :
+      bwarrequiv a b f g -> monarrequiv a b f g
+  | mon.
+
+End MonoidalExpressionNormalForm.
+
+
 Section CoherenceAutomation.
 
 End CoherenceAutomation.
@@ -1377,8 +1594,10 @@ Lemma bwbrac_arr_of_arr_comp {a b c : bw} (f : a ⟶ b) (g : b ⟶ c) :
   (bwbrac_arr_of_arr f2 n)) ≅ bwbrac_arr_of_arr *)
 
 End MonoidalCoherence.
-End FreeMonoid.
 
+
+
+End FreeMonoid.
 
 Section Old_may_reuse_for_UIP_only. 
 
