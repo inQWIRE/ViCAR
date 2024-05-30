@@ -2136,6 +2136,20 @@ Proof.
   easy.
 Qed.
 
+Lemma monarr_norm_equiv_trans' {a b a' b' c d c' d' : bw} 
+  {f : monarr a b} {f' : monarr a' b'} 
+  {g : monarr c d} {g' : monarr c' d'} 
+  (Hf : monarr_norm_equiv f f')
+  (Hg : monarr_norm_equiv g g')
+  (Hfg : monarr_norm_equiv f' g') :
+  monarr_norm_equiv f g.
+Proof.
+  exact (monarr_norm_equiv_trans
+    (monarr_norm_equiv_trans Hf Hfg) 
+    (monarr_norm_equiv_symm _ _ Hg)).
+Qed.
+
+
 Lemma monarr_norm_equiv_comp {a a' a'' b b' b''} 
   (f : monarr a a') (f' : monarr a' a'') 
   (g : monarr b b') (g' : monarr b' b'') : 
@@ -5279,11 +5293,11 @@ Ltac cleanup_monarrlist_list_equiv :=
 
 Definition all_ml_equiv' := all_monarrlist_list_equiv.
 
-Arguments all_ml_equiv' : simpl never.
+#[global] Arguments all_ml_equiv' : simpl never.
 
 Definition comp_compble := compose_monarrlist_list_of_totally_composable.
 
-Arguments comp_compble : simpl never.
+#[global] Arguments comp_compble : simpl never.
 
 Ltac freeze_equiv :=
   change all_monarrlist_list_equiv with all_ml_equiv';
@@ -5787,6 +5801,61 @@ Proof.
     apply shift_left_proper.
 Qed.
 
+Lemma monarrlist_list_op_proper_composable {f} 
+  (Hf : monarrlist_list_op_proper f) {fss} 
+  (H : totally_composable fss) : 
+  totally_composable (f fss).
+Proof.
+  apply monarrlist_list_op_proper_iff in Hf.
+  apply Hf, H.
+Qed.
+
+
+Lemma full_process_monarrlist_list_composable {fss} 
+  (H : totally_composable fss) : 
+  totally_composable (full_process_monarrlist_list fss).
+Proof.
+  apply (monarrlist_list_op_proper_composable 
+    full_process_monarrlist_list_proper H). 
+Qed.
+
+Lemma proper_op_preserves {f} (Hf : monarrlist_list_op_proper f) 
+  {fss} (H : totally_composable fss) :
+  monarr_norm_equiv 
+    (compose_monarrlist_list_of_totally_composable fss H)
+    (compose_monarrlist_list_of_totally_composable (f fss) 
+      (monarrlist_list_op_proper_composable Hf H)).
+Proof.
+  pose proof (proj1 monarrlist_list_op_proper_iff Hf) as [Hc Hprop].
+  erewrite (compose_monarrlist_list_of_totally_composable_indep (f fss)).
+  apply Hprop.
+Qed.
+
+Lemma full_process_monarrlist_list_preserves {fss} 
+  (H : totally_composable fss) :
+  monarr_norm_equiv 
+    (compose_monarrlist_list_of_totally_composable fss H)
+    (compose_monarrlist_list_of_totally_composable 
+      (full_process_monarrlist_list fss) 
+      (full_process_monarrlist_list_composable H)).
+Proof.
+  erewrite (compose_monarrlist_list_of_totally_composable_indep (_ fss)).
+  apply (proper_op_preserves full_process_monarrlist_list_proper).
+Qed.
+
+
+Lemma foliate_correct' {a b : bw} (f : a ⟶ b) :
+  monarr_norm_equiv f 
+    (compose_monarrlist_list_of_totally_composable 
+      (foliate_monarr f) (foliate_monarr_totally_composable f)).
+Proof.
+  rewrite foliate_correct at 3.
+  eapply monarr_norm_equiv_trans;
+  [apply monarr_norm_equiv_struct_r|].
+  apply monarr_norm_equiv_struct_l.
+Qed.
+
+
 
 End VarListNf.
 End monbwcat_Category. 
@@ -6129,20 +6198,27 @@ Ltac quote_to_nat_diagram tm vars mors :=
   | monarrstruct _ ?f => let res := quote_bwarr f vars in 
       constr:(@monarrstruct nat FreeNatCategory FreeNatMonoidalCategory _ _ res)
   | @mongeneric ?X ?cC ?mC ?a ?b ?f => 
+    (* let _ := match goal with |- _ => idtac "generic" end in *)
     let mors' := mongeneric_list_filter_from_to mors a b in
+    (* let _ := match goal with |- _ => idtac "mors'" mors' end in *)
     let tm' := constr:(@monarrlist_arr X cC mC a b tm) in 
+    (* let _ := match goal with |- _ => idtac "tm'" tm' end in *)
     let idx := list_index tm' mors' in 
+    (* let _ := match goal with |- _ => idtac "idx" idx end in *)
     let qa := quote_bw a vars in 
     let qb := quote_bw b vars in 
+    (* let _ := match goal with |- _ => idtac "qa qb" qa qb end in *)
     constr:(@mongeneric nat FreeNatCategory FreeNatMonoidalCategory qa qb idx)
   | monarrcomp _ ?f ?g => 
-    let qf := quote_to_nat_diagram f in
-    let qg := quote_to_nat_diagram g in
-    constr:(monarrcomp nat f g)
+    (* let _ := match goal with |- _ => idtac "comp" end in *)
+    let qf := quote_to_nat_diagram f vars mors in
+    let qg := quote_to_nat_diagram g vars mors in
+    constr:(monarrcomp nat qf qg)
   | monarrtens _ ?f ?g => 
-    let qf := quote_to_nat_diagram f in
-    let qg := quote_to_nat_diagram g in
-    constr:(monarrtens nat f g)
+    (* let _ := match goal with |- _ => idtac "tens" end in *)
+    let qf := quote_to_nat_diagram f vars mors in
+    let qg := quote_to_nat_diagram g vars mors in
+    constr:(monarrtens nat qf qg)
   | _ => fail "monarr to quote not recognized:" tm "(in context of vars:" vars" and mors:" mors")"
   end.
 
@@ -6280,47 +6356,13 @@ Ltac realize_mor_list_of_mors_st X cC mC real_obj vars mors st :=
     let heremors := unwrap_mongeneric_list cC 
       heremorelts (@realize_bw X cC mC (map_bw real_obj qs))
       (@realize_bw X cC mC (map_bw real_obj qt)) in
-    (* let res := u *)
-    let _ := match goal with |- _ => idtac gs gt end in
-    let res := constr:(
+    (* let _ := match goal with |- _ => idtac gs gt end in *)
+    constr:(
     update_natbw_bifunc (fun a b =>
       list (Category.morphism cC 
               (realize_bw X (map_bw real_obj a))
               (realize_bw X (map_bw real_obj b)))
-    ) f qs qt heremors) in
-    (* fun a b : bw nat => 
-    match a as a', b as b' return
-        list (Category.morphism cC 
-              (realize_bw X (map_bw real_obj a'))
-              (realize_bw X (map_bw real_obj b')))
-      with
-    | (var _ 0), (var _ 1) => heremors
-    (* | gs, gt => heremors *)
-    | a'', b'' => f a'' b''
-    end : list (Category.morphism cC 
-    (realize_bw X (map_bw real_obj a))
-    (realize_bw X (map_bw real_obj b)))) in  *)
-    (* let res' := eval cbv delta [gs] in res in  *)
-    let _ := match goal with |- _ => idtac res end in constr:(res)
-    
-    (* match nateqbw a qs, nateqbw b qt with
-      | left Heql, left Heqr => 
-        (* nth_default 
-        (def 
-          (realize_bw X (map_bw real_obj) a) 
-          (realize_bw X (map_bw real_obj) b)) *)
-        cast_mor_list 
-          (fun x y => 
-            Category.morphism cC 
-              (realize_bw X (map_bw real_obj x))
-              (realize_bw X (map_bw real_obj y))) 
-          Heql Heqr 
-          heremors
-      | _, _ => f a b
-      end
-       *)
-      
-    (* in let _ := match goal with |- _ => idtac res end in constr:(res) *)
+    ) f qs qt heremors)
   | _ => fail "bad arguments: realize_mor_list_of_mors_st" X cC mC real_obj mors st
   end.
 
@@ -6372,471 +6414,145 @@ Ltac DiagramRealizer_of_two_terms X cC mC tm1 tm2 mordef :=
   let NL := DiagramListRealizer_of_two_terms X cC mC tm1 tm2 in
   constr:(@NatDiagramRealizer_of_NatDiagramListRealizer_default X cC mC NL mordef).
 
+Ltac monarrequiv_of_nat_quoted X_def :=
+  lazymatch goal with 
+  |- @monarrequiv ?X ?cC ?mC ?a ?b ?f ?g =>
+    (* idtac X cC mC a b; *)
+    let vars := var_list_nodup_two f g in 
+    (* idtac vars; *)
+    let mors := mongenerics_list_nodup_two f g in 
+    (* idtac mors; *)
+    let qa := quote_bw a vars in 
+    let qb := quote_bw b vars in 
+    (* idtac qa qb; *)
+    let qf := quote_to_nat_diagram f vars mors in 
+    let qg := quote_to_nat_diagram g vars mors in 
+    (* idtac qf qg; *)
+    let real_obj := realize_obj_of_vars X (Monoidal.mon_I mC) vars in 
+    let R := DiagramRealizer_of_two_terms X cC mC f g X_def in 
+    (* idtac R; *)
+    let N := R in
+    let qin := qa in
+    let qout := qb in
+    let qLHS := qf in
+    let qRHS := qg in
+    let LHS := constr:(@realize_nat_diagram X cC mC R qin qout qLHS) in
+    let RHS := constr:(@realize_nat_diagram X cC mC R qin qout qRHS) in
+    (* pose R as N;
+    pose qa as qin;
+    pose qb as qout;
+    pose qf as qLHS;
+    pose qg as qRHS;
+    pose (@realize_nat_diagram X cC mC R qin qout qLHS) as LHS;
+    pose (@realize_nat_diagram X cC mC R qin qout qRHS) as RHS; *)
+    change (@monarrequiv X cC mC 
+      (map_bw N.(realize_obj X) qin) (map_bw N.(realize_obj X) qout)
+      LHS RHS); 
+    apply (realize_nat_diagram_mor X R)
+  end.
+
+Ltac foliate :=
+  try apply (monarrequiv_iff_monarr_norm_equiv nat PeanoNat.Nat.eq_dec);
+  apply (monarr_norm_equiv_trans' nat PeanoNat.Nat.eq_dec
+    (foliate_correct' nat PeanoNat.Nat.eq_dec _)
+    (foliate_correct' nat PeanoNat.Nat.eq_dec _)).
+
+Ltac full_process :=
+  lazymatch goal with
+  | [|- monarr_norm_equiv _ _ ?f ?g] =>
+    apply (monarr_norm_equiv_trans' nat PeanoNat.Nat.eq_dec
+      (full_process_monarrlist_list_preserves nat PeanoNat.Nat.eq_dec _)
+      (full_process_monarrlist_list_preserves nat PeanoNat.Nat.eq_dec _))
+  | _ => fail "full_process cannot apply to this goal; try `foliate`"
+  end.
 
 
+Ltac by_foliation :=
+  apply (monarrequiv_iff_monarr_norm_equiv nat PeanoNat.Nat.eq_dec);
+  apply (monarr_norm_equiv_trans' nat PeanoNat.Nat.eq_dec
+    (foliate_correct' nat PeanoNat.Nat.eq_dec _)
+    (foliate_correct' nat PeanoNat.Nat.eq_dec _));
+  apply realize_monarrlist_list_equiv.
 
-Context (x y : X).
-Context (X_def : forall a b : X, Category.morphism cC a b).
+
+Ltac cleanup_monarrlist_list_equiv :=
+  repeat (split; unfold uncurry; try reflexivity + assumption); unfold monarrlistelt_equiv; cbn;
+  try apply monarr_norm_equiv_refl;
+  try (apply monarr_norm_equiv_struct_eq_in; try reflexivity);
+  try (apply monarr_norm_equiv_struct_eq_out; try reflexivity);
+  try (apply monarr_norm_equiv_of_monarrequiv; try assumption + easy);
+  repeat first [apply (monarr_tens _ _ _ _ _ (monarr_refl _ _)) |
+  unshelve (apply (monarr_tens _ _ _ _ _ _ (monarr_refl _ _)))].
+  
+
+Ltac freeze_equiv :=
+  change all_monarrlist_list_equiv with all_ml_equiv';
+  change compose_monarrlist_list_of_totally_composable with comp_compble.
+
+Ltac unfreeze_equiv :=
+  change all_ml_equiv' with all_monarrlist_list_equiv;
+  change comp_compble with compose_monarrlist_list_of_totally_composable.
+
+Section QuotationTesting.
+
+Context (x y x0 y0 x1 y1 x2 y2 : X).
+Context (X_def h0 h1 h2 : forall a b : X, Category.morphism cC a b).
 Context (h : Category.morphism cC x y).
 Goal True.
 let r := quote_monarr_term (monarrstruct X (arrlunitor X (var X x)))
-in idtac r.
-let r := DiagramListRealizer_of_term (monarrstruct X (arrlunitor X (var X x)))
-in idtac r.
+in idtac. (* r. *)
+let r := DiagramListRealizer_of_term (monarrstruct X (arrlunitor X (var X x))) Xdef
+in idtac. (* r. *)
 
-assert (monarrequiv X _ _ (@mongeneric X cC mC (var X x) (var X y) (h))
+Arguments monarrtens {_ _ _ _ _ _ _}.
+Arguments monarrcomp {_ _ _ _ _ _}.
+Arguments mongeneric {_ _ _ _ _}.
+Arguments monarrstruct {_ _ _ _ _}.
+
+assert (monarrequiv X _ _ 
+  (monarrtens
+    (monarrcomp 
+      (@mongeneric X cC mC (var X x) (var X y) (h0 x y))
+      (@mongeneric X cC mC (var X y) (var X x0) (h1 y x0)))
+    (monarrcomp 
+      (@mongeneric X cC mC (var X x1) (var X y1) (h1 x1 y1))
+      (@mongeneric X cC mC (var X y1) (var X x2) (h1 y1 x2))))
+  (monarrcomp
+    (monarrtens 
+      (@mongeneric X cC mC (var X x) (var X y) (h0 x y))
+      (@mongeneric X cC mC (var X x1) (var X y1) (h1 x1 y1)))
+    (monarrtens 
+      (@mongeneric X cC mC (var X y) (var X x0) (h1 y x0))
+      (@mongeneric X cC mC (var X y1) (var X x2) (h1 y1 x2))))).
+1 :{
+  monarrequiv_of_nat_quoted X_def.
+  by_foliation.
+  cleanup_monarrlist_list_equiv.
+}
+
+(* assert (monarrequiv X _ _ (@mongeneric X cC mC (var X x) (var X y) (h))
   (mongeneric X (X_def _ _) )).
+monarrequiv_of_nat_quoted X_def.
 
-(* let g := 2 in 
-let res := uconstr:(fun k:nat => match k with
-| g => 1
-| _ => 0 end)
-in 
-let res' := eval lazy zeta in res in 
-pose res'. *)
+foliate.
+full_process.
+freeze_equiv.
+cbn.
+unfreeze_equiv.
+cleanup_monarrlist_list_equiv.
+apply (monarr_tens _ _ _ _ _ (monarr_refl _ _)).
+by_foliation. 
+(* freeze_equiv. *)
+cbn.
+cleanup_monarrlist_list_equiv. *)
 
-lazymatch goal with 
-|- @monarrequiv ?X ?cC ?mC ?a ?b ?f ?g =>
-  let R := DiagramRealizer_of_two_terms X cC mC f g X_def in 
-  let vars := var_list_nodup_two f g in 
-  let mors := mongenerics_list_nodup_two f g in 
-  let qa := quote_bw a vars in 
-  let qb := quote_bw b vars in 
-  let qf := quote_to_nat_diagram f vars mors in 
-  let qg := quote_to_nat_diagram g vars mors in 
-  idtac qf qg;
-  let real_obj := realize_obj_of_vars X (Monoidal.mon_I mC) vars in 
-  (* assert (f = @realize_nat_diagram X cC mC R qa qb qf) *)
-  change (@monarrequiv X cC mC (map_bw real_obj qa) (map_bw real_obj qb)
-    (@realize_nat_diagram X cC mC R qa qb qf)
-    (@realize_nat_diagram X cC mC R qa qb qg));
-  apply (realize_nat_diagram_mor _ R)
-end.
-
-
-
-Require Import MetaCoq.Template.All.
-Import MCMonadNotation.
-
-cbv.
-
-(* assert ((monarrstruct X (arrlunitor X (var X x))) = (monarrstruct X (arrlunitor X (var X x)))). *)
-let tm := constr:(monarrstruct X (arrlunitor X (var X x))) in
-let q := quote_monarr_term tm in 
-let R := DiagramRealizer_of_term tm X_def in 
-assert (monarrequiv _ _ _ tm tm);
-change tm with (realize_nat_diagram X R q).
-apply realize_nat_diagram_mor.
-
-let tm := constr:(@mongeneric X cC mC (var X x) (var X y) (h)) in
-let mgs := eval cbn in (mongenerics_list tm) in idtac mgs;
-let q := quote_monarr_term tm in idtac q;
-let R := DiagramRealizer_of_term tm f in 
-assert (tm = tm);
-change tm with (realize_nat_diagram X R q).
-
-
-let r := quote_bw (var X x) [x] in idtac r.
-
-
-Ltac extend_monarr_quotation_to N tm :=
-  lazymatch tm with
-  monarr
-
-
-  (* Goal True.
-  Fail let r := list_index 1 [2 ;  4 ;5] in idtac r. *)
-
-Require Import MetaCoq.Template.All.
-Import MCMonadNotation.
-
-Inductive taut : Set :=
-| TautTrue : taut
-| TautAnd : taut -> taut -> taut
-| TautOr : taut -> taut -> taut
-| TautImp : taut -> taut -> taut.
-
-Fixpoint tautReify (t : term) : TemplateMonad taut :=
-  match t with
-  | tInd {| inductive_mind := (MPfile _, "True"%bs); inductive_ind := _ |} _ =>
-      ret TautTrue
-  | tProd _ a b =>
-      a' <- tautReify a ;;
-      b' <- tautReify b ;;
-      ret (TautImp a' b')
-  | tApp (tInd {| inductive_mind := (MPfile _, "and"%bs); inductive_ind := _ |} _) [a ; b] =>
-      a' <- tautReify a ;;
-      b' <- tautReify b ;;
-      ret (TautAnd a' b')
-  | tApp (tInd {| inductive_mind := (MPfile _, "or"%bs); inductive_ind := _ |} _) [a ; b] =>
-      a' <- tautReify a ;;
-      b' <- tautReify b ;;
-      ret (TautOr a' b')
-  | _ => tmFail "No match for term"%bs
-  end.
-
-Fixpoint digramReify (t : term) : TemplateMonad ()
-
-Fixpoint tautDenote (t : taut) : Prop :=
-  match t with
-    | TautTrue => True
-    | TautAnd t1 t2 => tautDenote t1 /\ tautDenote t2
-    | TautOr t1 t2 => tautDenote t1 \/ tautDenote t2
-    | TautImp t1 t2 => tautDenote t1 -> tautDenote t2
-  end.
-
-Theorem tautTrue : forall t, tautDenote t.
-  induction t; simpl; intuition.
+easy.
 Qed.
 
-Ltac obvious :=
-  match goal with
-  | [ |- ?P ] => run_template_program (tmQuote P >>= tmEval all >>= tautReify)
-                   (fun p => exact (tautTrue p))
-  end.
+End QuotationTesting.
 
-Goal True /\ (True \/ True).
-  match goal with | [ |- ?P ] => let r := constr:((tmQuote P) >>= tmEval all) in 
-  idtac r;
-  run_template_program r (fun p => idtac p)
-  end.
-  tmEval
-  run_template_program ()
-  obvious.
+End Quotation.
 
-Lemma NatDiagramRealizer_proper
-
-
-
-
-#[local] Instance FreeNatCategory : Category (bw nat) := {
-  morphism _ _ := nat : Type;
-  c_equiv _ _ := eq;
-  compose _ _ _ := Nat.add;
-  c_identity _ := 0;
-}.
-
-#[local] Program Instance FreeNatCategoryCoherence : 
-  CategoryCoherence FreeNatCategory.
-Next Obligation.
-  split; intros ? **; congruence.
-Qed.
-Next Obligation.
-  lia.
-Qed.
-
-#[local] Program Instance FreeNatMonoidalCategory@{u u1} : 
-  MonoidalCategory FreeNatCategory@{u u1} := {
-  obj_tensor := tens nat;
-  mor_tensor _ _ _ _ := Nat.add;
-  mon_I := e nat;
-  associator _ _ _ := {|forward := 0; reverse := 0|};
-  left_unitor _ := {|forward := 0; reverse := 0|};
-  right_unitor _ := {|forward := 0; reverse := 0|};
-}.
-
-#[local] Program Instance FreeNatMonoidalCategoryCoherence : 
-  MonoidalCategoryCoherence FreeNatMonoidalCategory := {}.
-Next Obligation.
-  lia.
-Qed.
-Next Obligation.
-  lia.
-Qed.
-Next Obligation.
-  lia.
-Qed.
-
-
-
-
-Local Notation N_real := (realize_nat_bw N.(realize_obj)).
-
-Fixpoint realize_nat_bwarr {a b} (f : bwarr nat a b) : N_real a ~> N_real b := 
-  match f with
-  | arrid _ a => id_ (N_real a)
-  | arrassoc _ a b c => α_ (N_real a), N_real b, N_real c ⁻¹
-  | arrinvassoc _ a b c => α_ (N_real a), N_real b, N_real c
-  | arrlunitor _ a => λ_ (N_real a)
-  | arrinvlunitor _ a => λ_ (N_real a) ⁻¹
-  | arrrunitor _ a => ρ_ (N_real a)
-  | arrinvrunitor _ a => ρ_ (N_real a) ⁻¹
-  | arrcomp _ f g => realize_nat_bwarr f ∘ realize_nat_bwarr g
-  | arrtens _ f g => realize_nat_bwarr f ⊗ realize_nat_bwarr g
-  end.
-
-Add Parametric Morphism {a b} : realize_nat_bwarr with signature
-  bwarrequiv nat a b ==> cC.(c_equiv)
-  as realize_nat_bwarr_mor.
-Proof.
-  intros f g H.
-  induction H.
-  - reflexivity.
-  - etransitivity; eassumption.
-  - apply compose_compat; assumption.
-  - simpl; symmetry; apply assoc.
-  - simpl; apply assoc.
-  - apply left_unit.
-  - symmetry; apply left_unit.
-  - apply right_unit.
-  - symmetry; apply right_unit.
-  - apply tensor_compat; assumption.
-  - apply tensor_id.
-  - symmetry; apply tensor_id.
-  - apply tensor_compose.
-  - symmetry; apply tensor_compose.
-  - apply iso_inv_l.
-  - symmetry; apply iso_inv_l.
-  - apply iso_inv_r.
-  - symmetry; apply iso_inv_r.
-  - apply iso_inv_r.
-  - symmetry; apply iso_inv_r.
-  - apply iso_inv_l.
-  - symmetry; apply iso_inv_l.
-  - apply iso_inv_r.
-  - symmetry; apply iso_inv_r.
-  - apply iso_inv_l.
-  - symmetry; apply iso_inv_l.
-  - simpl. 
-    rewrite <- compose_iso_l', <- assoc.
-    rewrite <- compose_iso_r.
-    symmetry.
-    apply associator_cohere.
-  - simpl. 
-    rewrite <- compose_iso_l, <- assoc.
-    rewrite <- compose_iso_r'.
-    apply associator_cohere.
-  - apply left_unitor_cohere.
-  - symmetry; apply left_unitor_cohere.
-  - apply right_unitor_cohere.
-  - symmetry; apply right_unitor_cohere.
-  - simpl.
-    rewrite <- compose_iso_l'.
-    rewrite <- right_unit.
-    rewrite <- compose_iso_l'.
-    rewrite <- assoc.
-    rewrite <- pentagon.
-    rewrite assoc, <- 2!(assoc (id_ _ ⊗ _)).
-    rewrite <- tensor_compose, iso_inv_r, left_unit, tensor_id, left_unit.
-    rewrite assoc, <- (assoc (α_ _,_,_)), iso_inv_r, left_unit.
-    rewrite <- tensor_compose, iso_inv_r, left_unit, tensor_id.
-    easy.
-  - symmetry.
-    simpl.
-    rewrite <- compose_iso_l'.
-    rewrite <- right_unit.
-    rewrite <- compose_iso_l'.
-    rewrite <- assoc.
-    rewrite <- pentagon.
-    rewrite assoc, <- 2!(assoc (id_ _ ⊗ _)).
-    rewrite <- tensor_compose, iso_inv_r, left_unit, tensor_id, left_unit.
-    rewrite assoc, <- (assoc (α_ _,_,_)), iso_inv_r, left_unit.
-    rewrite <- tensor_compose, iso_inv_r, left_unit, tensor_id.
-    easy.
-  - simpl.
-    rewrite <- triangle.
-    rewrite <- assoc, iso_inv_l, left_unit.
-    easy.
-  - symmetry.
-    simpl.
-    rewrite <- triangle.
-    rewrite <- assoc, iso_inv_l, left_unit.
-    easy.
-Qed.
-
-
-
-
-
-
-
-Lemma binary_proper_op_preserves {f} (H : binary_monarrlist_op_proper f) 
-  {fss : list monarrlist} (Hf : totally_composable fss) : 
-  monarr_norm_equiv 
-    (comp_compble fss Hf)
-    (comp_compble (map f fss) (unary_proper_op_totally_composable H Hf)).
-Proof.
-  induction fss; [apply monarr_norm_equiv_refl|]; destruct fss.
-  - apply monarr_norm_equiv_symm.
-    apply (H a).
-  - unfold comp_compble.
-    simpl map.
-    rewrite 2!compose_monarrlist_list_of_totally_composable_cons.
-    apply monarr_norm_equiv_comp_composable;
-    [apply monarr_norm_equiv_symm, (H a)|].
-    erewrite (compose_monarrlist_list_of_totally_composable_indep (f l :: _)).
-    apply IHfss.
-Qed.
-
-
-Lemma foliate_test2 {a b c m n o} (f : bwarr a b) (g : bwarr b c)
-  (h : bwarr m n) (j : bwarr n o) : 
-  (f ◌ g) ⧆ (arrid m ◌ h) ≊ f ⧆ h ◌ g ⧆ arrid n.
-Proof.
-  apply equiv_of_foliate_equiv.
-  freeze_equiv.
-  cbn.
-  etransitivity.
-  symmetry.
-  
-  apply unary_monarrlist_op_proper
-
-
-  
-
-
-
-
-
-
-
-
-
-  
-
-
-
-Inductive monnormarr : bwnorm -> bwnorm -> Type :=
-  | monnorm_id (a : bwnorm) : monnormarr a a
-  | monnorm_monarr {a b : bw} (f : a ⟶ b) 
-    : monnormarr (Nf a) (Nf b).
-
-Definition monnormarr_to_monarr {a b : bwnorm} (f : monnormarr a b) 
-  : monarr a b :=
-  match f with
-  | @monnorm_id a => arrid a
-  | @monnorm_monarr a' b' f => 
-      monarrcomp (monarrcomp
-      (from_Nf_arr a') 
-      f)
-      (to_Nf_arr b')
-  end.
-Inductive monnormstack : list bwnorm -> list bwnorm -> Type :=
-  | monnormstack_nil : monnormstack [] []
-  | monnormstack_cons {s t ins outs} 
-    (f : monnormarr s t) (fs : monnormstack ins outs) :
-      monnormstack (s::ins) (t::outs).
-
-Inductive monnormdiagram : list bwnorm -> list bwnorm -> Type :=
-  | monnormdiag_single {ins outs} (fs : monnormstack ins outs) : 
-      monnormdiagram ins outs
-  | monnormdiag_compose {ins mids outs}
-      (fs : monnormstack ins mids) (fdiag : monnormdiagram mids outs) :
-      monnormdiagram ins outs.
-
-Definition realize_monnormarr {a b} (f : monnormarr a b) : 
-  realize_bw a ~> realize_bw b :=
-  realize_monarr (monnormarr_to_monarr f).
-  (* match f with
-  | monnorm_id a => id_ _
-  | @monnorm_monarr a' b' g => 
-    realize_bwarr (from_Nf_arr a' ∘
-    realize_monarr g ∘
-    to_Nf_arr b'
-  end. *)
-
-Definition bwnorm_flatten (bwns : list bwnorm) : bw :=
-  fold_right (fun a n => tens n (bwnorm_to_bw a)) e bwns.
-
-Fixpoint realize_monnormstack {ins outs} (fs : monnormstack ins outs) : 
-  realize_bw (bwnorm_flatten ins) ~> realize_bw (bwnorm_flatten outs) :=
-  match fs with
-  | monnormstack_nil => c_identity _
-  | monnormstack_cons f' fs' => 
-    realize_monnormstack fs' ⊗ realize_monnormarr f'
-  end.
-
-Fixpoint realize_monnormdiagram {ins outs} (fd : monnormdiagram ins outs) :
-  realize_bw (bwnorm_flatten ins) ~> realize_bw (bwnorm_flatten outs) :=
-  match fd with
-  | monnormdiag_single fs => realize_monnormstack fs
-  | monnormdiag_compose fs fd' => 
-      realize_monnormstack fs ∘ realize_monnormdiagram fd'
-  end.
-
-
-
-Definition merge_left_pair (f g : monarrlistelt) : monarrlistelt * monarrlistelt :=
-  match eqbw (target f') (source g')
-  match f, g with
-  | monarrlist_id a, g => (g, )
-
-Fixpoint merge_left_monarrlist (f g : list monarrlistelt) : 
-  (list monarrlistelt) * (list monarrlistelt).
-  match f, g with
-  | fs, [] => (fs, [])
-  | [], gs => ([], gs)
-  | f'::fs, g'::gs => 
-    match merge_left_monarrlist fs gs with
-    | fs', gs' =>
-      match eqbw (target f') (source g') with
-      | left heq_ts => 
-        match f', g' with
-        | monarrlist_id a, g' => 
-        end
-      | right _ =>
-        (f' :: fs', g' :: gs')
-      end
-  
-Obligation Tactic := 
-Tactics.program_simpl; eauto 4 using monarrequiv with bwarrdb; try easy.
-
-
-(* Inductive monarrequiv : forall a b, relation (a ⟶ b) :=
-  | monarr_refl {a b} (f : a ⟶ b) : f ≅ f
-  | monarr_symm {a b} (f g : a ⟶ b) : f ≅ g -> g ≅ f
-  | monarr_trans {a b} (f g h : a ⟶ b) : f ≅ g -> g ≅ h -> f ≅ h
-  
-  | monarr_comp {a b c : bw} (f f' : a ⟶ b) (g g' : b ⟶ c) :
-      f ≅ f' -> g ≅ g' -> monarrcomp f g ≅ monarrcomp f' g'
-  | monarr_assoc {a a' b' b : bw} (f : a ⟶ a') (g : a' ⟶ b') (h : b' ⟶ b) :
-      monarrcomp f (monarrcomp g h) ≅ monarrcomp (monarrcomp f g) h
-  (* | bwarr_lassoc {a a' b' b : bw} (f : a ⟶ a') (g : a' ⟶ b') (h : b' ⟶ b) :
-      arrcomp (arrcomp f g) h ≅ arrcomp f (arrcomp g h) *)
-  | monarr_lunit {a b} (f : a ⟶ b) : monarrcomp (arrid a) f ≅ f
-  (* | bwarr_lunitr {a b} (f : a ⟶ b) : f ≅ arrcomp (arrid a) f *)
-  | monarr_runit {a b} (f : a ⟶ b) : monarrcomp f (arrid b) ≅ f
-  (* | bwarr_runitr {a b} (f : a ⟶ b) : f ≅ arrcomp f (arrid b) *)
-
-  | monarr_tens {a a' b b' : bw} (f f' : a ⟶ a') (g g' : b ⟶ b') :
-    f ≅ f' -> g ≅ g' -> monarrtens f g ≅ monarrtens f' g'
-  (* | monarr_tens_id {a b : bw} :
-    monarrtens (arrid a) (arrid b) ≅ arrid (a ⨂ b) *)
-  (* | monarr_tens_idr {a b : bw} :
-    arrid (a ⨂ b) ≅ arrtens (arrid a) (arrid b) *)
-  | monarr_tens_comp {a b c a' b' c'} 
-    (f : a ⟶ b) (g : b ⟶ c) (f' : a' ⟶ b') (g' : b' ⟶ c') :
-    monarrtens (monarrcomp f g) (monarrcomp f' g') ≅ 
-      monarrcomp (monarrtens f f') (monarrtens g g')
-  (* | bwarr_tens_compr {a b c a' b' c'} 
-    (f : a ⟶ b) (g : b ⟶ c) (f' : a' ⟶ b') (g' : b' ⟶ c') :
-    arrcomp (arrtens f f') (arrtens g g') ≅ 
-      arrtens (arrcomp f g) (arrcomp f' g') *)
-    where "f '≅' g" := (monarrequiv _ _ f g). *)
-
-
-Inductive monarrequiv : forall (a b : bw), relation (monarr a b) := 
-  | monarrstructeq {a b : bw} (f g : bwarr a b) :
-      bwarrequiv a b f g -> monarrequiv a b f g
-  | mon.
-
-End MonoidalExpressionNormalForm.
-
-
-Section CoherenceAutomation.
-
-End CoherenceAutomation.
-
-(* 
-Lemma bwbrac_arr_of_arr_comp {a b c : bw} (f : a ⟶ b) (g : b ⟶ c) :
-  (arrcomp (bwbrac_arr_of_arr f1 n)
-  (bwbrac_arr_of_arr f2 n)) ≅ bwbrac_arr_of_arr *)
-
-End MonoidalCoherence.
-
-
-
-End FreeMonoid.
 
 Section Old_may_reuse_for_UIP_only. 
 
