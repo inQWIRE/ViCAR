@@ -482,8 +482,8 @@ Qed.
 }.
 Solve All Obligations with easy.
 
-(* Local Notation "'𝒩'" := (DiscreteCategory bwnorm).
-Local Notation "'𝒩h'" := (DiscreteCategoryCoherence bwnorm). *)
+Local Notation "'𝒩'" := (DiscreteCategory bwnorm).
+Local Notation "'𝒩h'" := (DiscreteCategoryCoherence bwnorm).
 
 Fixpoint xi_comp_map_forw (n : bwnorm) (A : bw) {struct A} : 
   n ⨂ A ⟶ ⟦A⟧ n :=
@@ -505,72 +505,490 @@ Proof.
   (arrtens (xi_comp_map_rev n A1) (arrid A2)) ) (arrinvassoc n A1 A2)).
 Defined.
 
-Notation "'UIP' Y" := (forall (y : Y) (H H' : y = y), H = H') (at level 10).
+Notation "'UIP' Y" := (forall (x y : Y) (H H' : x = y), H = H') (at level 10).
 Notation "'DECEQ' Y" := (forall (x y : Y), {x = y} + {x <> y}) (at level 10).
 
-#[export, program] Instance DecDiscreteCategory {N : Type} (iseq : DECEQ N) :
-  Category N := {
-  morphism := fun a b => match (iseq a b) with 
-    | left yes => True 
-    | right no => False
-    end;
-  c_equiv := fun _ _ _ _ => True;
-}.
-Next Obligation.
-  destruct (iseq A B); [destruct (iseq B M) |]; destruct (iseq A M); try constructor + congruence.
-Defined.
-Next Obligation.
-  destruct (iseq A A).
-  constructor.
-  apply n, eq_refl.
+
+
+Context (UIPX: UIP X).
+Context (DECEQX: DECEQ X).
+
+Definition eqbwnorm : DECEQ bwnorm.
+decide equality; apply DECEQX.
 Defined.
 
-#[export, program] Instance DecDiscreteCategoryCoherence {N : Type} 
-  (iseq : DECEQ N) : CategoryCoherence (DecDiscreteCategory iseq) := {}.
-Next Obligation.
-  destruct (iseq A B); easy.
+Definition eqbw : DECEQ bw.
+decide equality; apply DECEQX.
+Defined.
+
+Definition proj1' {A B} (H : A /\ B) : A :=
+  match H with 
+  | conj PA PB => PA
+  end.
+
+Definition proj2' {A B} (H : A /\ B) : B :=
+  match H with 
+  | conj PA PB => PB
+  end.
+
+Section UIP_list.
+
+Import List.ListNotations.
+
+Local Open Scope list_scope.
+
+Definition list_eq_proj_ty (a b : list X) : Prop := 
+  match a, b with
+  | nil, nil => True
+  | x :: a', y :: b' => x = y /\ a' = b'
+  | _, _ => False
+  end.
+
+Definition list_eq_proj {a : list X} : forall {b} (H : a = b), 
+  list_eq_proj_ty a b.
+  refine (
+    match a with
+    | nil => fun b =>
+      match b with
+      | nil => fun _ => Logic.I
+      | y :: b' => fun H => False_ind _ _
+      end
+    | x :: a' => fun b =>
+      match b with 
+      | nil => fun H => False_ind _ _
+      | y :: b' => fun H => 
+        conj
+          (f_equal (fun c => match c with 
+            | nil => x
+            | z :: c' => z
+            end) H)
+          (f_equal (fun c => match c with 
+            | nil => nil
+            | z :: c' => c'
+            end) H)
+      end
+    end);
+    congruence.
+Defined.
+
+Definition list_eq_proj_inv {a : list X} : forall {b} 
+  (H : list_eq_proj_ty a b), a = b :=
+  match a with
+  | nil => fun b => 
+    match b with
+    | nil => fun _ => eq_refl
+    | y :: b' => False_ind _
+    end
+  | x :: a' => fun b => 
+    match b with 
+    | nil => False_ind _
+    | y :: b' => fun H => 
+      eq_trans
+        (f_equal (cons x) (proj2' H))
+        (f_equal (fun z => cons z b') (proj1' H))
+    end
+  end.
+
+Lemma list_nu_linv {a b} (H : a = b) : 
+  list_eq_proj_inv (list_eq_proj H) = H.
+Proof.
+  case H, a; easy.
 Qed.
 
-Context (DECEQX : DECEQ X).
+Lemma list_eq_proj_const_of_UIP_on {a b : list X} (y : X)
+  (HUIP : EqdepFacts.UIP_refl_on_ (list X) b)
+  (H H' : a = y :: b) : 
+  list_eq_proj H = list_eq_proj H'.
+Proof.
+  destruct a; [easy|].
+  simpl.
+  f_equal.
+  - apply UIPX.
+  - pose proof (eq_sym (proj2 (list_eq_proj H))) as Hs.
+    induction Hs.
+    etransitivity;
+    [|symmetry];
+    apply HUIP.
+Qed.
 
-Lemma eqbwnorm : DECEQ bwnorm.
+Lemma UIP_refl_list : EqdepFacts.UIP_refl_ (list X).
+Proof.
+  intros a; induction a; intros H;
+  match goal with
+  |- ?LHS = ?RHS => 
+    rewrite <- (list_nu_linv LHS), <- (list_nu_linv RHS); f_equal
+  end.
+  apply (list_eq_proj_const_of_UIP_on _ IHa).
+Qed.
+
+Lemma UIP_list : UIP (list X).
+Proof.
+  intros a b H H'.
+  pose proof H as Hs;
+  induction Hs.
+  etransitivity;
+  [|symmetry];
+  apply UIP_refl_list.
+Qed.
+End UIP_list.
+
+
+
+
+
+
+Definition bwnorm_norm_e_eq (a : bwnorm) : {a = norm_e} + {~ a = norm_e}.
+destruct a; (left; reflexivity) + (right; congruence).
+Defined.
+
+Definition norm_e_nu {b : bwnorm} : forall {a : bwnorm} (H : a = b), a = b :=
+  match b with 
+  | norm_e => 
+    fun a H => 
+    match bwnorm_norm_e_eq a with
+    | left Heq => Heq
+    | right Hneq => False_ind _ (Hneq H)
+    end
+  | _ => fun a H => H
+  end.
+
+Definition norm_e_nu_inv {b : bwnorm} : forall {a : bwnorm} (H : a = b), a = b := 
+  match b with 
+  | norm_e => fun a H => eq_ind _ (fun a => a = norm_e) H _ eq_refl
+  | _ => fun a H => H
+  end.
+
+Lemma norm_e_nu_linv {a b : bwnorm} (H : a = b) : 
+  norm_e_nu_inv (norm_e_nu H) = H.
+Proof.
+  case H.
+  destruct a; easy.
+Qed.
+
+Lemma norm_e_nu_const {a : bwnorm} (H H' : a = norm_e) : 
+  norm_e_nu H = norm_e_nu H'.
+Proof.
+  unfold norm_e_nu.
+  destruct (bwnorm_norm_e_eq a); easy.
+Qed.
+
+Lemma norm_e_UIP {a : bwnorm} (H H' : a = norm_e) : 
+  H = H'.
+Proof.
+  rewrite <- (norm_e_nu_linv H), <- (norm_e_nu_linv H').
+  f_equal.
+  apply norm_e_nu_const.
+Qed.
+
+Definition bwnorm_rtens_eq_l_r {a b : bwnorm} {x y : X} 
+  (H : norm_rtens a x = norm_rtens b y) :
+  a = b /\ x = y := 
+  conj (f_equal
+    (fun e =>
+    match e with
+    | norm_e => a
+    | norm_rtens n _ => n
+    end) H)
+    (f_equal
+    (fun e : bwnorm =>
+    match e with
+    | norm_e => x
+    | norm_rtens _ x0 => x0
+    end) H).
+
+Definition bwnorm_rtens_eq_l_r_inv {a b : bwnorm} {x y : X} 
+  (H : a = b /\ x = y) :
+  norm_rtens a x = norm_rtens b y :=
+  eq_trans (f_equal (fun a => norm_rtens a x) (proj1' H))
+    (f_equal (norm_rtens b) (proj2' H)).
+  (* f_equal2 norm_rtens (proj1' H) (proj2' H).  *)
+
+Definition bwnorm_eq_proj_type (b a : bwnorm) : Prop :=
+  match b with 
+  | norm_e =>
+    match a with
+    | norm_e => True
+    | norm_rtens a' x =>
+        False
+    end
+  | norm_rtens b' y =>
+    match a with
+    | norm_e => False
+    | norm_rtens a' x =>
+        a' = b' /\ x = y
+    end
+  end.
+
+Definition bwnorm_proj_eq {b : bwnorm} : forall {a : bwnorm} (H : a = b),
+   bwnorm_eq_proj_type b a.
+  refine (
+  match b as _b return forall a (H : a = _b), bwnorm_eq_proj_type _b a with
+  | norm_e => 
+    fun a => match a as _a return forall (H : _a = norm_e), 
+      bwnorm_eq_proj_type norm_e _a with
+    | norm_e => fun _ => Logic.I
+    | norm_rtens a' y' => _
+    end
+  | norm_rtens b' x => 
+    fun a => 
+    match a as _a return forall (H : _a = norm_rtens b' x), 
+      bwnorm_eq_proj_type (norm_rtens b' x) _a with
+    | norm_e => _
+    | norm_rtens a' y' =>
+      bwnorm_rtens_eq_l_r
+    end
+  end);
+  congruence.
+Defined.
+
+Definition bwnorm_proj_eq_inv {b : bwnorm} : forall {a : bwnorm}
+  (H: bwnorm_eq_proj_type b a), a = b :=
+  match b with 
+  | norm_e =>
+    fun a => 
+    match a with
+    | norm_e => fun _ => eq_refl
+    | norm_rtens _ _ => False_ind _
+    end
+  | norm_rtens b' y => 
+    fun a => 
+    match a with 
+    | norm_e => False_ind _
+    | norm_rtens a' y => fun H =>
+      bwnorm_rtens_eq_l_r_inv H
+    end
+  end.
+
+Lemma bwnorm_proj_eq_linv {a b : bwnorm} (H : a = b) : 
+  bwnorm_proj_eq_inv (bwnorm_proj_eq H) = H.
+Proof.
+  case H.
+  destruct a, b; easy.
+Qed.
+
+Lemma bwnorm_proj_eq_const_of_UIP_on {a b : bwnorm} (y : X)
+  (HUIP : EqdepFacts.UIP_refl_on_ bwnorm b)
+  (H H' : a = norm_rtens b y) : 
+  bwnorm_proj_eq H = bwnorm_proj_eq H'.
+Proof.
+  destruct a; [easy|].
+  simpl.
+  unfold bwnorm_rtens_eq_l_r.
+  f_equal; simpl.
+  - pose proof (eq_sym (proj1 (bwnorm_rtens_eq_l_r H))) as Hab.
+    induction Hab.
+    etransitivity; [|symmetry]; apply HUIP.
+  - apply UIPX.
+Qed.
+
+Lemma UIP_on_norm_rtens_of_UIP_on {b : bwnorm} (y : X)
+  (HUIP : EqdepFacts.UIP_refl_on_ bwnorm b) : 
+  EqdepFacts.UIP_refl_on_ bwnorm (norm_rtens b y).
+Proof.
+  intros H.
+  match goal with 
+  |- ?LHS = ?RHS =>
+    rewrite <- (bwnorm_proj_eq_linv LHS), <- (bwnorm_proj_eq_linv RHS)
+  end.
+  f_equal.
+  apply bwnorm_proj_eq_const_of_UIP_on; easy.
+Qed.
+
+Lemma UIP_refl_bwnorm (b : bwnorm) : EqdepFacts.UIP_refl_on_ bwnorm b.
+Proof.
+  induction b.
+  - intros H.
+    apply norm_e_UIP.
+  - apply UIP_on_norm_rtens_of_UIP_on, IHb.
+Qed.
+
+Lemma UIP_bwnorm : UIP bwnorm.
+Proof.
+  intros x y H H'.
+  pose proof H as Hs; induction Hs.
+  etransitivity;
+  [|symmetry]; 
+  apply UIP_refl_bwnorm.
+Qed.
+
+
+Definition nu_e {b : bw} : forall {a : bw} (H : a = b), a = b.
+refine(
+  match b with
+  | e => fun a => 
+    match a with
+    | e => fun _ => eq_refl
+    | _ => fun H => H
+    end
+  | _ => fun _ H => H
+  end);
+  congruence.
+Defined.
+
+Definition nu_e_inv {b : bw} : forall {a : bw} (H : a = b), a = b :=
+  match b with 
+  | e => fun a H => eq_ind _ (fun a => a = e) H _ eq_refl
+  | _ => fun _ H => H
+  end.
+
+
+Lemma nu_e_linv {a b : bw} (H : a = b) : 
+  nu_e_inv (nu_e H) = H.
+Proof.
+  case H.
+  destruct a; easy.
+Qed.
+
+Lemma nu_e_const {a : bw} (H H' : a = e) : 
+  nu_e H = nu_e H'.
+Proof.
+  unfold nu_e.
+  destruct a; easy.
+Qed.
+
+Lemma e_UIP {a : bw} (H H' : a = e) : 
+  H = H'.
+Proof.
+  rewrite <- (nu_e_linv H), <- (nu_e_linv H').
+  f_equal.
+  apply nu_e_const.
+Qed.
+
+Definition bw_eq_proj_type (b a : bw) : Prop :=
+  match b with 
+  | e =>
+    match a with
+    | e => True
+    | var x => False
+    | tens a0 a1 => False
+    end
+  | var y =>
+    match a with
+    | e => False
+    | var x => x = y
+    | tens a0 a1 => False
+    end
+  | tens b0 b1 =>
+    match a with
+    | e => False
+    | var x => False
+    | tens a0 a1 => a0 = b0 /\ a1 = b1
+    end
+  end.
+
+Definition bw_eq_proj {b : bw} : forall {a : bw} (H : a = b), 
+  bw_eq_proj_type b a.
+  refine (
+  match b as _b return forall a, a = _b -> bw_eq_proj_type _b a with
+  | e => fun a =>
+    match a with
+    | e => fun _ => Logic.I
+    | var x => fun H => _
+    | tens a0 a1 => fun H => _
+    end
+  | var y => fun a =>
+    match a as _a return _a = var y -> bw_eq_proj_type (var y) _a with
+    | e => fun H => _
+    | var x => fun H =>
+      f_equal (fun c : bw => 
+        match c with 
+        | e => x
+        | var z => z
+        | tens a' b' => x
+        end) H
+    | tens a0 a1 => fun H => _
+    end
+  | tens b0 b1 => fun a =>
+    match a with
+    | e => fun H => _
+    | var x => fun H => _
+    | tens a0 a1 => fun H => 
+      conj 
+        (f_equal (fun c : bw => 
+          match c with
+          | e => a0
+          | var z => a0
+          | tens a' b' => a'
+          end) H)
+        (f_equal (fun c : bw => 
+          match c with
+          | e => a0
+          | var z => a0
+          | tens a' b' => b'
+          end) H)
+    end
+  end);
+  congruence.
+Defined.
+
+Definition bw_eq_proj_inv {b : bw} : forall {a : bw} 
+  (H : bw_eq_proj_type b a), a = b :=
+  match b with
+  | e => fun a =>
+    match a with
+    | e => fun _ => eq_refl
+    | var x => fun H => False_ind _ H
+    | tens a0 a1 => fun H => False_ind _ H
+    end
+  | var y => fun a => 
+    match a with
+    | e => fun H => False_ind _ H
+    | var x => fun H => f_equal var H
+    | tens a0 a1 => fun H => False_ind _ H
+    end
+  | tens b0 b1 => fun a =>
+    match a with
+    | e => fun H => False_ind _ H
+    | var x => fun H => False_ind _ H
+    | tens a0 a1 => fun H =>     
+      eq_trans (f_equal (fun a => tens a a1) (proj1' H))
+      (f_equal (tens b0) (proj2' H))
+    end
+  end.
+
+Lemma bw_eq_proj_linv {a b : bw} (H : a = b) : 
+  bw_eq_proj_inv (bw_eq_proj H) = H.
+Proof.
+  case H.
+  destruct a, b; easy.
+Qed.
+
+Lemma UIP_refl_bw : EqdepFacts.UIP_refl_ bw.
 Proof.
   intros b.
-  induction b; intros c; induction c.
-  - left; constructor.
-  - right; congruence.
-  - right; congruence.
-  - destruct (IHb c) as [Heq | Hneq].
-    + destruct (DECEQX x x0) as [Hxeq | Hxne].
-      * left; subst; easy.
-      * right; congruence.
-    + right; congruence.
+  induction b.
+  - intros H. 
+    apply e_UIP.
+  - intros H.
+    rewrite <- (bw_eq_proj_linv H), <- (bw_eq_proj_linv eq_refl).
+    f_equal.
+    apply UIPX.
+  - intros H.
+    rewrite <- (bw_eq_proj_linv H), <- (bw_eq_proj_linv eq_refl).
+    f_equal.
+    simpl.
+    f_equal.
+    + apply IHb1.
+    + apply IHb2.
 Qed.
 
-Lemma eqbw : DECEQ bw.
+Lemma UIP_bw : UIP bw.
 Proof.
-  intros b.
-  induction b; intros c; induction c; eauto; try ((left + right); congruence).
-  - destruct (DECEQX x x0); 
-    [left; subst; constructor | right; congruence].
-  - destruct (IHb1 c1); [| right; congruence].
-    destruct (IHb2 c2); [| right; congruence].
-    left; subst; constructor.
+  intros x y H H'.
+  pose proof H as Hs;
+  induction Hs.
+  etransitivity; 
+  [|symmetry];
+  apply UIP_refl_bw.
 Qed.
-
-
-Local Notation "'𝒩'" := (DecDiscreteCategory eqbwnorm).
-Local Notation "'𝒩h'" := (DecDiscreteCategoryCoherence eqbwnorm).
-
-
 
 Lemma Eq_rect_bw : EqdepFacts.Eq_rect_eq bw.
 Proof.
   apply EqdepFacts.Streicher_K__eq_rect_eq, 
   EqdepFacts.UIP_refl__Streicher_K,
   EqdepFacts.UIP__UIP_refl.
-  intros ? ** ?.
-  apply Eqdep_dec.UIP_dec, eqbw.
+  intros x y H H'.
+  apply UIP_bw. 
 Qed.
 
 Lemma Eq_rect_bwnorm : EqdepFacts.Eq_rect_eq bwnorm.
@@ -578,9 +996,10 @@ Proof.
   apply EqdepFacts.Streicher_K__eq_rect_eq, 
   EqdepFacts.UIP_refl__Streicher_K,
   EqdepFacts.UIP__UIP_refl.
-  intros ? ** ?.
-  apply Eqdep_dec.UIP_dec, eqbwnorm.
+  intros x y H H'.
+  apply UIP_bwnorm.
 Qed.
+
 
 #[export, program] Instance norm_bw_bifunc : 
   Bifunctor 𝒩 bwcat bwcat := {
@@ -588,43 +1007,7 @@ Qed.
   morphism_bimap := fun n n' a b neq f => arrtens (arrid n) f
 }.
 Next Obligation.
-  destruct (eqbwnorm n n'); subst; easy.
-Defined.
-Next Obligation.
   rewrite <- Eq_rect_bw.
-  eauto with bwarrdb.
-Qed.
-Next Obligation.
-  repeat match goal with
-  |- context[norm_bw_bifunc_obligation_1 ?a ?b ?c ?d] =>
-    (generalize (norm_bw_bifunc_obligation_1 a b c d))
-  end.
-  simpl.
-  intros HBM HAB HAM.
-  assert (HAB1: A1 = B1) by
-  (destruct (eqbwnorm A1 B1); easy).  
-  assert (HBM1: B1 = M1) by
-  (destruct (eqbwnorm B1 M1); easy).  
-  assert (HAM1: A1 = M1) by
-  (destruct (eqbwnorm A1 M1); subst; easy).
-  inversion HAB; 
-  inversion HBM; 
-  inversion HBM; subst.
-  erewrite <- !Eq_rect_bw.
-  rewrite <- (bwarr_lunitl (arrid M1)) at 1.
-  eauto with bwarrdb.
-Qed.
-Next Obligation.
-  assert (HAB1: A1 = B1) by
-  (destruct (eqbwnorm A1 B1); easy).
-  repeat match goal with
-  |- context[norm_bw_bifunc_obligation_1 ?a ?b ?c ?d] =>
-    (generalize (norm_bw_bifunc_obligation_1 a b c d))
-  end.
-  simpl.
-  intros Heq Heq'.
-  inversion Heq; subst.
-  rewrite <- !Eq_rect_bw.
   eauto with bwarrdb.
 Qed.
 
@@ -638,40 +1021,28 @@ Fixpoint bwbrac_eq_of_arr {a b} (f : a ⟶ b) {struct f} : forall n, ⟦a⟧ n =
     apply IHf2.
 Defined.
 
+Definition Nf_eq_of_arr {a b : bw} (f : bwarr a b) : Nf a = Nf b :=
+  bwbrac_eq_of_arr f norm_e.
+
+Arguments Nf_eq_of_arr {_ _} !f /.
+
 #[export, program] Instance Nf_functor : Functor bwcat 𝒩 := {
   obj_map := Nf;
-  (* morphism_map := fun a b f => (bwbrac_of_bweq a b (bweq_of_arr f) norm_e) *)
+  morphism_map := fun a b f => (bwbrac_of_bweq a b (bweq_of_arr f) norm_e)
 }.
-Next Obligation.
-  destruct (eqbwnorm (Nf A) (Nf B)) as [Heq | Hf].
-  constructor.
-  apply Hf.
-  apply (bwbrac_eq_of_arr X0).
-Defined.
-
 
 
 #[export, program] Instance bwbrac_functor : 
   Functor bwcat (@FunctorCategory _ _ 𝒩 _ 𝒩 _) := {
   obj_map := fun a => {|obj_map := bwbrac a|};
   morphism_map := fun a b f => 
-    {| component_map := fun c => _ |}
+    {| component_map := fun c => _ |};
   (* morphism_map := fun a b f => (bwbrac_of_bweq a b (bweq_of_arr f) norm_e) *)
 }.
 Next Obligation.
-  destruct (eqbwnorm A B) as [Heq | Hne];
-  destruct (eqbwnorm (⟦a⟧ A) (⟦a⟧ B)) as [Heq' | Hne'];
-  subst; congruence + constructor.
+  apply bwbrac_eq_of_arr, f.
 Defined.
-Next Obligation.
-  destruct (eqbwnorm (⟦a⟧ c) (⟦b⟧ c)) as [Heq | Hne]; [|apply Hne].
-  constructor.
-  apply (bwbrac_eq_of_arr f).
-Qed.
 Solve All Obligations with constructor.
-
-
-
 
 Set Universe Polymorphism.
 
@@ -716,9 +1087,8 @@ Definition bwbrac_mor_bimap (n m : bwnorm) (a b : bw)
   (H : 𝒩.(morphism) n m) (f : a ⟶ b) : ⟦a⟧ n ⟶ ⟦b⟧ m.
 Proof.
   simpl in H.
-  destruct (eqbwnorm n m) as [Heq | Hf]; [| destruct H].
-  subst.
-  rewrite <- (bwbrac_eq_of_arr f).
+  rewrite <- (bwbrac_eq_of_arr f m).
+  rewrite <- H.
   apply arrid.
 Defined.
 Arguments bwbrac_mor_bimap _ _ _ _ _ / _.
@@ -731,54 +1101,50 @@ Arguments eq_rect_r [_] [_] _ _ [_] / _.
   morphism_bimap := bwbrac_mor_bimap;
 }.
 Next Obligation.
-  generalize (DecDiscreteCategory_obligation_2 bwnorm eqbwnorm A1).
-  simpl.
-  intros H.
-  destruct (eqbwnorm A1 A1); [|easy].
-  rewrite <- Eq_rect_bwnorm.
-  easy.
-Qed.
-Next Obligation.
-  generalize (DecDiscreteCategory_obligation_1 bwnorm eqbwnorm A1 B1 M1 f1 g1).
-  simpl.
-  intros y.
-  (* assert (HAB2: forall n, ⟦A2⟧ n = ⟦B2⟧ n) by
-    (apply bwbrac_eq_of_arr; easy).
-  assert (HBM2: forall n, ⟦B2⟧ n = ⟦M2⟧ n) by
-    (apply bwbrac_eq_of_arr; easy).
-  assert (HAM2: forall n, ⟦A2⟧ n = ⟦M2⟧ n) by
-    (apply bwbrac_eq_of_arr; eauto using bwarr). *)
-  destruct (eqbwnorm A1 B1) as [HAB | Hf];
-  destruct (eqbwnorm B1 M1) as [HBM | Hf'];
-  destruct (eqbwnorm A1 M1) as [HAM | Hf'']; try congruence;
-  try subst A1; try subst B1; simpl; try easy.
-  rewrite <- !Eq_rect_bwnorm.
-  generalize (bwbrac_eq_of_arr f2 M1) as H1.
-  generalize (bwbrac_eq_of_arr g2 M1) as H1.
-  match goal with
-  |- context[eq_ind ?x ?P ?f ?y ?e] => generalize (eq_ind x P f y e)
+  repeat lazymatch goal with 
+  | |- context[eq_ind _ _ ?Heq] => 
+    lazymatch Heq with
+    | _ _ => generalize Heq
+    end
+  | |- context[eq_ind _ _ _ _ ?Heq] => 
+    lazymatch Heq with
+    | _ _ => generalize Heq
+    end
+  | |- context[eq_rect _ _ _ _ ?Heq] => 
+    lazymatch Heq with
+    | _ _ => generalize Heq
+    end
   end.
-  simpl.
-  intros HAM2 HBM2 HAB2.
-  generalize dependent (⟦A2⟧ M1);
-  intros; subst; simpl.
-  generalize dependent (⟦B2⟧ M1);
-  intros; subst; simpl.
-  rewrite <- Eq_rect_bwnorm.
-  eauto with bwarrdb.
+  repeat match goal with 
+  | |- context[eq_rect (?f ?A)] => generalize (f A)
+  | |- context[eq_rect _ _ _ (?f ?A)] => generalize (f A)
+  end.
+  intros; subst.
+  rewrite <- !Eq_rect_bwnorm.
+  eauto using bwarrequiv.
 Qed.
 Next Obligation.
-  destruct (eqbwnorm A1 B1) as [Heq | Hf]; [|easy].
+  repeat match goal with 
+  | |- context[eq_ind _ _ ?Heq] => 
+    lazymatch Heq with
+    | _ _ => generalize Heq
+    end
+  | |- context[eq_ind _ _ _ _ ?Heq] => 
+    lazymatch Heq with
+    | _ _ => generalize Heq
+    end
+  | |- context[eq_rect _ _ _ _ ?Heq] => 
+    lazymatch Heq with
+    | _ _ => generalize Heq
+    end
+  end.
+  repeat match goal with 
+  | |- context[eq_rect (?f ?A)] => generalize (f A)
+  | |- context[eq_rect _ _ _ (?f ?A)] => generalize (f A)
+  end.
+  intros.
   subst.
   rewrite <- !Eq_rect_bwnorm.
-  repeat match goal with 
-  |- context[eq_rect _ _ _ _ ?H] => generalize H
-  end.
-  match goal with 
-  |- forall H : (?x = ?y), _ => 
-    generalize dependent x; intros; subst
-  end.
-  rewrite <- Eq_rect_bwnorm.
   easy.
 Qed.
 
@@ -1065,6 +1431,11 @@ Next Obligation.
     repeat match goal with 
     |- context[eq_rect _ _ _ _ ?H] => generalize H
     end.
+  Ltac geneqrect_objs :=
+    repeat match goal with 
+    | |- context[eq_rect (?f ?A)] => generalize (f A)
+    | |- context[eq_rect _ _ _ (?f ?A)] => generalize (f A)
+    end.
   Ltac genheadcast :=
     match goal with 
     |- forall H : (?x = ?y), _ => 
@@ -1072,17 +1443,16 @@ Next Obligation.
     end.
   Ltac gencast :=
     geneqrect;
-    genheadcast.
+    try genheadcast.
   geneqrect.
-  destruct (eqbwnorm n m) as [Heq | Hf]; [|easy].
-  subst; simpl; intros.
-  rewrite <- Eq_rect_bw. revert dependent m;
-  induction f; intros m e0 e1.
+
+  revert m;
+  induction f; intros m e0.
   1:{rewrite arrtens_pushout_bot, bwarr_lassoc,
-    (IHf2 m (bwbrac_eq_of_arr f2 m) eq_refl), bwarr_rassoc, 
-    (IHf1 m (bwbrac_eq_of_arr f1 m) eq_refl), bwarr_lassoc.
+    (IHf2 m (bwbrac_eq_of_arr f2 m)), bwarr_rassoc, 
+    (IHf1 m (bwbrac_eq_of_arr f1 m)), bwarr_lassoc.
     apply bwarr_comp; [easy|].
-    clear e1 IHf1 IHf2.
+    clear IHf1 IHf2.
     gencast.
     rewrite <- Eq_rect_bwnorm.
     gencast.
@@ -1090,15 +1460,15 @@ Next Obligation.
     eauto with bwarrdb. }
   1:{ simpl (ξ_ m (a'⨂b')).
     rewrite 3!bwarr_rassoc, bwarr_assoc_natr, (bwarr_lassoc (arrassoc _ _ _)),
-      bwarr_tens_compr, (IHf1 m (bwbrac_eq_of_arr f1 m) eq_refl).
+      bwarr_tens_compr, (IHf1 m (bwbrac_eq_of_arr f1 m)).
     rewrite bwarr_runitl, (bwarr_lunitr f2).
     rewrite bwarr_tens_compl, (arrtens_split_diag _ f2), !bwarr_lassoc.
-    rewrite (IHf2 _ (bwbrac_eq_of_arr f2 _) eq_refl).
+    rewrite (IHf2 _ (bwbrac_eq_of_arr f2 _)).
     simpl.
     rewrite !bwarr_lassoc.
     repeat (apply bwarr_comp; [easy|]).
     geneqrect.
-    clear IHf1 IHf2 e0 e1.
+    clear IHf1 IHf2 e0.
     intros H H' H''; revert H'' H' H.
     simpl.
     genheadcast.
@@ -1168,40 +1538,36 @@ Next Obligation.
     apply bwarr_runitor_tri.
 Qed.
 
-(* #[export, program] Instance  *)
-
 
 #[export, program] Instance Nf_bwcat_functor : Functor bwcat bwcat := {
   obj_map := Nf;
   (* morphism_map := fun a b f => (bwbrac_of_bweq a b (bweq_of_arr f) norm_e) *)
 }.
 Next Obligation.
-  destruct (eqbwnorm (Nf A) (Nf B)) as [Heq | Hf].
-  - rewrite <- Heq.
-    apply arrid.
-  - exfalso; apply Hf, (bwbrac_eq_of_arr X0 norm_e).
+  rewrite <- (Nf_eq_of_arr X0).
+  apply arrid.
 Defined.
 Next Obligation.
   unfold Nf_bwcat_functor_obligation_1.
-  destruct (eqbwnorm (Nf A) (Nf A)); [|easy].
-  rewrite <- Eq_rect_bwnorm.
-  easy.
+  generalize (Nf_eq_of_arr f) as Hf.
+  generalize (Nf_eq_of_arr g) as Hg.
+  generalize (Nf_eq_of_arr (arrcomp f g)) as Hfg.
+  generalize (Nf A).
+  generalize (Nf B).
+  generalize (Nf M).
+  intros.
+  subst.
+  rewrite <- !Eq_rect_bwnorm. 
+  eauto using bwarrequiv.
 Qed.
 Next Obligation.
   unfold Nf_bwcat_functor_obligation_1.
-  pose proof (bwbrac_eq_of_arr f norm_e).
-  pose proof (bwbrac_eq_of_arr g norm_e).
-  destruct (eqbwnorm (Nf A) (Nf B)); [|easy].
-  destruct (eqbwnorm (Nf B) (Nf M)); [|easy].
-  destruct (eqbwnorm (Nf A) (Nf M)); [|congruence].
-  do 3 (gencast;
-  rewrite <- Eq_rect_bwnorm).
-  apply bwarr_lunitr.
-Qed.
-Next Obligation.
-  unfold Nf_bwcat_functor_obligation_1.
-  pose proof (bwbrac_eq_of_arr f norm_e).
-  destruct (eqbwnorm (Nf A) (Nf B)); [|easy].
+  generalize (Nf_eq_of_arr f) as Hf.
+  generalize (Nf_eq_of_arr g) as Hg.
+  generalize (Nf A).
+  generalize (Nf B).
+  intros; subst.
+  rewrite <- !Eq_rect_bwnorm.
   easy.
 Qed.
 
@@ -1234,23 +1600,13 @@ Next Obligation.
   rewrite en; clear en.
   rewrite bwarr_compose_cancel_l_iff.
   unshelve (instantiate (1:=_)).
+  - constructor. 
   - simpl.
-    destruct (eqbwnorm norm_e norm_e); [|easy].
-    constructor.
-  - simpl.
-    destruct (eqbwnorm norm_e norm_e); [|easy].
     unfold Nf_bwcat_functor_obligation_1.
-    rewrite <- Eq_rect_bwnorm.
-    pose proof (bwbrac_eq_of_arr f norm_e).
-    destruct (eqbwnorm (Nf A) (Nf B)); [|easy].
-    clear H e0.
     geneqrect.
-    unfold Nf in *.
-    clear e1.
-    intros.
-    generalize dependent (⟦A⟧ norm_e).
-    intros; subst.
-    rewrite <- !Eq_rect_bwnorm.
+    unfold Nf.
+    intros e0 e1.
+    rewrite (UIP_bwnorm _ _ e0 e1).
     easy.
 Qed.
 
@@ -1267,8 +1623,7 @@ Proof.
     bwarr_compose_cancel_l_iff.
   clear Hf Hg.
   unfold Nf_bwcat_functor_obligation_1.
-  pose proof (bwbrac_eq_of_arr f norm_e) as H.
-  destruct (eqbwnorm (Nf a) (Nf b)); [|easy].
+  rewrite (UIP_bwnorm _ _(Nf_eq_of_arr f) (Nf_eq_of_arr g)).
   easy.
 Qed.
 
@@ -2310,12 +2665,6 @@ Proof.
   destruct (eqbwnorm (Nf a') (Nf b')) as [Hba' | ?]; try reflexivity.
   rewrite Hf', Hg'.
   easy.
-Qed.
-
-Lemma Nf_eq_of_arr {a b : bw} (f : bwarr a b) : Nf a = Nf b.
-Proof.
-  rewrite Nf_eq_iff_bweq.
-  apply bweq_of_arr, f.
 Qed.
 
 Lemma monarr_norm_equiv_struct_l {a b c : bw} (f : bwarr a b) (g : monarr b c) : 
@@ -6482,7 +6831,8 @@ Ltac cleanup_monarrlist_list_equiv :=
   try (apply monarr_norm_equiv_struct_eq_out; try reflexivity);
   try (apply monarr_norm_equiv_of_monarrequiv; try assumption + easy);
   repeat first [apply (monarr_tens _ _ _ _ _ (monarr_refl _ _)) |
-  unshelve (apply (monarr_tens _ _ _ _ _ _ (monarr_refl _ _)))].
+  unshelve (apply (monarr_tens _ _ _ _ _ _ (monarr_refl _ _))) |
+  rewrite !monarr_struct_id].
   
 
 Ltac freeze_equiv :=
@@ -6527,7 +6877,14 @@ assert (monarrequiv X _ _
 1 :{
   monarrequiv_of_nat_quoted X_def.
   by_foliation.
-  cleanup_monarrlist_list_equiv.
+  cleanup_monarrlist_list_equiv;
+  (* eauto using monarrequiv, monarr_struct_id. *)
+  (eapply monarr_trans;
+  [eapply monarrcomp_mor; [|apply monarr_struct_id];
+  eapply monarr_trans;
+  [eapply monarrcomp_mor; [apply monarr_struct_id|apply monarr_refl]|];
+  apply monarr_lunit|
+  apply monarr_runit]).
 }
 
 (* assert (monarrequiv X _ _ (@mongeneric X cC mC (var X x) (var X y) (h))
@@ -6552,502 +6909,3 @@ Qed.
 End QuotationTesting.
 
 End Quotation.
-
-
-Section Old_may_reuse_for_UIP_only. 
-
-(*
-
-
-
-Lemma bwbrac_bwnorm : forall (a : bwnorm), ⟦a⟧ norm_e = a.
-Proof.
-  intros a.
-  induction a; auto.
-  simpl.
-  rewrite IHa.
-  easy.
-Qed.
-
-Require Import Coq.Program.Equality.
-
-Lemma Nf_bwnorm : forall (n : bwnorm), Nf n = n.
-Proof.
-  unfold Nf.
-  intros n; induction n; simpl; rewrite ?IHn; auto.
-Qed.
-
-Lemma bwnorm_eq_of_arr {n m : bwnorm} (i : n ⟶ m) : n = m.
-Proof.
-  pose proof (Nf_functor.(morphism_map) i) as H.
-  rewrite 2!Nf_bwnorm in H.
-  apply H.
-Qed.
-
-(* Lemma bwnorm_selfarr_id : forall (n : bwnorm) (i : n ⟶ n), i ≅ arrid n.
-Lemma bwnorm_arr_thin : forall (n m : bwnorm) (i j : n ⟶ m), i ≅ j.*)
-(* 
-  F : a, n ↦ n ⊗ a
-  G : a, n ↦ ⟦ a ⟧ n 
-*)
-
-
-
-Lemma bwnorm_eq_of_arr_refl {n : bwnorm} (f : n ⟶ n) : 
-  bwnorm_eq_of_arr f = eq_refl.
-Proof.
-  apply Eqdep_dec.UIP_dec, eqbwnorm.
-Qed.
-
-Definition xi_norm_map {a : bw} {n m : bwnorm} (f : n ⟶ m) : ⟦a⟧ n ⟶ ⟦a⟧ m.
-  rewrite <- (bwnorm_eq_of_arr f).
-  apply arrid.
-Defined.
-(* 
-Definition xi_bimap {a b} {n m : bwnorm} 
-  (f : a ⟶ b) (i : n ⟶ m) : ⟦a⟧ n ⟶ ⟦b⟧ m.
-  rewrite <- (bwnorm_eq_of_arr i).
-  apply (bwbrac_arr_of_arr f).
-Defined.
-  
-Lemma xi_bimap_refl {a b} (n : bwnorm) (f : a ⟶ b) (i : n ⟶ n) :
-  xi_bimap f i = bwbrac_arr_of_arr f n.
-Proof.
-  unfold xi_bimap.
-  rewrite bwnorm_eq_of_arr_refl.
-  easy.
-Qed.
-
-Lemma xi_bimap_compose {a b c} {n m o : bwnorm} 
-  (f : a ⟶ b) (g: b ⟶ c) (i : n ⟶ m) (j : m ⟶ o) :
-  xi_bimap f i ○ xi_bimap g j ≅ xi_bimap (f ○ g) (i ○ j).
-Proof.
-  specialize (bwnorm_eq_of_arr i) as Hnm.
-  subst n.
-  specialize (bwnorm_eq_of_arr j) as Hmo.
-  subst m.
-  rewrite 3!xi_bimap_refl.
-  easy.
-Qed.
-
-Lemma xi_bimap_tens {a b a' b'} {n m : bwnorm} 
-  (f : a ⟶ a') (g : b ⟶ b') (i : n ⟶ m) :
-  xi_bimap g (xi_bimap f i) ≅ xi_bimap (f ⊠ g) i.
-Proof.
-  specialize (bwnorm_eq_of_arr i) as Hnm.
-  subst n.
-  rewrite !xi_bimap_refl.
-  simpl.
-  unfold xi_bimap.
-  (* :( )*)
-  rewrite (Eqdep_dec.UIP_dec eqbwnorm 
-    (bwbrac_of_bweq a a' (bweq_of_arr f) m) 
-    (bwnorm_eq_of_arr (bwbrac_arr_of_arr f m))).
-  easy.
-Qed.
-
-
-Lemma xi_bimap_norm_indep {a b} {n m : bwnorm} (f : a ⟶ b) (i i' : n ⟶ m) :
-  xi_bimap f i ≅ xi_bimap f i'.
-Proof.
-  specialize (bwnorm_eq_of_arr i) as Hnm; subst n.
-  rewrite 2!xi_bimap_refl.
-  easy.
-Qed. *)
-
-
-
-(* Lemma xi_bimap_id (a : bw) {n m : bwnorm} (i : n ⟶ m) :
-  xi_bimap (arrid e) i ≅ i.
-Proof.
-  specialize (bwnorm_eq_of_arr i) as Hnm; subst n.
-  rewrite xi_bimap_refl.
-  simpl.
-  unfold xi_bimap.
-  rewrite xi_bimap_refl. *)
-
-(* Lemma xi_norm_natural {n m : bwnorm} (i j : n ) *)
-
-Definition xi_bimap {a b} {n m : bwnorm} 
-  (f : a ⟶ b) (i : n = m) : ⟦a⟧ n ⟶ ⟦b⟧ m.
-  rewrite <- i.
-  apply (bwbrac_arr_of_arr f).
-Defined.
-
-Lemma xi_bimap_refl {a b} (n : bwnorm) (f : a ⟶ b) (i : n = n) :
-  xi_bimap f i ≅ bwbrac_arr_of_arr f n.
-Proof.
-  rewrite (Eqdep_dec.UIP_dec eqbwnorm i eq_refl).
-  easy.
-Qed.
-
-Lemma xi_bimap_refl' {a b} (n : bwnorm) (f : a ⟶ b) (i : n = n) :
-  xi_bimap f i ≅ xi_bimap f eq_refl.
-Proof.
-  rewrite xi_bimap_refl.
-  easy.
-Qed.
-
-Definition bwnorm_arr_of_eq {n m : bwnorm} (H : n = m) : n ⟶ m.
-rewrite <- H.
-apply arrid.
-Defined.
-
-Lemma xi_bimap_compose' {a b c} {n m o : bwnorm} 
-  (f : a ⟶ b) (g : b ⟶ c) (i : n = m) (j : m = o) (k : n = o) :
-  xi_bimap (f ○ g) k ≅ xi_bimap f i ○ xi_bimap g j.
-Proof.
-  subst.
-  rewrite xi_bimap_refl.
-  easy.
-Qed.
-
-Lemma xi_bimap_compose_l {a b c} {n m : bwnorm} 
-  (f : a ⟶ b) (g : b ⟶ c) (i : n = m) :
-  xi_bimap (f ○ g) i ≅ xi_bimap f i ○ xi_bimap g eq_refl.
-Proof.
-  subst. easy.
-Qed.
-
-Lemma xi_bimap_compose_r {a b c} {n m : bwnorm} 
-  (f : a ⟶ b) (g : b ⟶ c) (i : n = m) :
-  xi_bimap (f ○ g) i ≅ xi_bimap f eq_refl ○ xi_bimap g i.
-Proof.
-  subst. easy.
-Qed.
-
-Lemma bwnorm_arr_of_eq_refl (m : bwnorm) : 
-  bwnorm_arr_of_eq (eq_refl (x:=m)) = arrid m.
-Proof.
-  easy.
-Qed.
-
-
-
-(* Lemma bwbrac_eq_of_arr_comp {a b c} (f1 : a ⟶ b) (f2 : b ⟶ c) (n : bwnorm),
-  bwbrac_eq_of_arr (f1 ○ f2) n = 
-
-Lemma bwnorm_arr_of_bwbrac_eq_compose {a b c} (f1 : a ⟶ b) (f2 : b ⟶ c) : 
-  forall n,
-  bwnorm_arr_of_eq (bwbrac_eq_of_arr f1 n)
-  ○ bwnorm_arr_of_eq (bwbrac_eq_of_arr f2 n)
-  ≅ bwnorm_arr_of_eq (bwbrac_eq_of_arr (f1 ○ f2) n).
-Proof.
-  unfold bwnorm_arr_of_eq.
-  intros n.
-  generalize (bwbrac_eq_of_arr f1 n) as Hf1.
-  generalize (bwbrac_eq_of_arr f2 n) as Hf2.
-  simpl bwbrac_eq_of_arr.
-
-
-Lemma xi_bimap_refl'' {a b} (n : bwnorm) (f : a ⟶ b) (i : n = n) :
-  xi_bimap f i ≅ bwnorm_arr_of_eq (bwbrac_eq_of_arr f n).
-Proof.
-  rewrite xi_bimap_refl.
-  induction f; try easy.
-  simpl bwbrac_arr_of_arr.
-  rewrite IHf1, IHf2.
-  simpl.
-  unfold bwbrac_eq_of_arr.
-  simpl.
-  unfold bwbrac_arr_of_arr.
-  s *)
-
-
-Definition nu_map (a : bw) : a ⟶ Nf a :=
-  arrinvlunitor a ○ (xi_comp_map_forw norm_e a).
-
-Definition bwnorm_arr_of_arr {a b} (f : a ⟶ b) : Nf a ⟶ Nf b 
-  := bwbrac_arr_of_arr f norm_e.
-(* induction f; eauto 2 using bwarr.
-unfold Nf in *.
-simpl.
-rewrite <- (bwnorm_eq_of_arr IHf1).
-rewrite <- bwbrac_arr_of_arr *)
-
-(* Lemma nu_map_natural {a b : bw} (f : a ⟶ b) :
-  f ○ nu_map b ≅ nu_map a ○ bwnorm_arr_of_arr f.
-Proof.
-  induction f.
-  - unfold bwnorm_arr_of_arr. simpl.
-    rewrite bwarr_lassoc, IHf2, bwarr_rassoc, IHf1, bwarr_lassoc.
-    easy.
-  - unfold nu_map.
-*)
-
-
-(* Lemma Nf_tens (a b : bw) : Nf (a ⊗ b) = norm_e. *)
-
-Definition bwbrac_assoc (a b c : bw) (n : bwnorm) :
-  ⟦c⟧ (⟦a ⨂ b⟧ n) = ⟦b ⨂ c⟧ (⟦a⟧ n) := eq_refl.
-
-Definition bwbrac_arr_of_bwnorm_arr (a : bw) 
-  {n m : bw} (i : n ⟶ m) : ⟦a⟧ (Nf n) ⟶ ⟦a⟧ (Nf m).
-Proof.
-  clear DECEQX.
-  revert a.
-  induction i; try eauto 2 using bwarr.
-  intros c.
-  unfold Nf.
-  rewrite 2!bwbrac_assoc.
-  eapply arrcomp.
-  - apply IHi1.
-  - simpl.
-    unfold Nf.
-    rewrite <- (bwbrac_eq_of_arr i2). 
-    apply arrid.
-Defined.
-
-Lemma bwnorm_arr_of_arr_id (n : bw) : 
-  bwnorm_arr_of_arr (arrid n) ≅ arrid (Nf n).
-Proof. easy. Qed.
-
-Lemma xi_bwbrac_nat (a b : bw) {n m : bw} (i : n ⟶ m) :
-  bwbrac_arr_of_bwnorm_arr a i ⊠ arrid b
-    ○ (ξ_ (⟦ a ⟧ (⟦ m ⟧ norm_e)) b)
-  ≅ (ξ_ (⟦ a ⟧ (⟦ n ⟧ norm_e)) b)
-    ○ bwbrac_arr_of_bwnorm_arr (a ⨂ b) i.
-Proof.
-  revert a b.
-  dependent induction i; intros a0 b0.
-  - simpl.
-    rewrite arrtens_pushout_top, bwarr_lassoc, IHi2, bwarr_rassoc, IHi1.
-    rewrite bwarr_lassoc. easy.
-  - pose proof (IHi1 (b' ⨂ a0) b0) as e.
-    simpl in e.
-    to_Cat.
-    RHS (fun t => set (rhs := t)).
-    simpl.
-    
-    rewrite <- (bwbrac_assoc a' b' a0) in e.
-    dependent rewrite (bwbrac_assoc a' b' a0).
-    simpl.
-  unfold bwbrac_arr_of_bwnorm_arr.
-
-Lemma xi_natural (a b : bw) (f : a ⟶ b) : forall (n m : bw) (i : n ⟶ m),
-  ((bwnorm_arr_of_arr i) ⊠ f) ○ (ξ_ (Nf m) b)
-  ≅ (ξ_ (Nf n) a) ○ bwbrac_arr_of_arr f (Nf n) ○ bwbrac_arr_of_bwnorm_arr b i.
-Proof.
-  induction f; intros n m i.
-  - simpl.
-    rewrite arrtens_pushin_bot, bwarr_lassoc.
-
-    rewrite <- (bwnorm_arr_of_arr_id n).
-    rewrite IHf2, !bwarr_rassoc, IHf1.
-    simpl.
-    rewrite bwarr_runitl.
-    easy.
-  - simpl (ξ_ (Nf m) (a' ⨂ b')). 
-    rewrite !bwarr_rassoc, bwarr_assoc_natr.
-    rewrite (bwarr_lassoc (arrassoc (Nf n) a b)).
-    rewrite bwarr_tens_compr, IHf1, bwarr_runitl.
-    rewrite arrtens_pushin_top, 2!bwarr_lassoc.
-    pose proof (IHf2 (m ⨂ a') (m ⨂ a')) as e.
-
-    unfold Nf in e;
-    simpl in e.
-    rewrite (arrtens_split_diag _ f2), bwarr_lassoc, 
-      <- (bwnorm_arr_of_arr_id (m ⨂ a')).
-    rewrite (e (arrid _)).
-    clear e.
-
-    rewrite IHf2.
-    bwbrac_arr_of_bwnorm_arr
-    Check (bwbrac_arr_of_bwnorm_arr a' i ⊠ f2 ○ ξ_ (⟦ a' ⟧ (Nf m)) b').
-    evar (gl : ⟦ a' ⟧ (Nf n) ⨂ b ⟶ ⟦ b' ⟧ (⟦ a' ⟧ (Nf m))).
-    assert (bwbrac_arr_of_bwnorm_arr a' i ⊠ f2 ○ ξ_ (⟦ a' ⟧ (Nf m)) b' ≅ gl).
-    + 
-    rewrite IHf2.
-
-    subst.
-    rewrite xi_bimap_refl.
-    rewrite (arrtens_split_diag _ f2),
-      <- (bwnorm_arr_of_eq_refl (⟦a'⟧ m)), bwarr_lassoc.
-    rewrite IHf2.
-    
-    simpl (ξ_ m (a⨂b)).
-
-    rewrite !bwarr_lassoc.
-    repeat (apply bwarr_comp; [easy|]).
-    rewrite bwarr_rassoc.
-    rewrite 3!xi_bimap_refl.
-    simpl (bwbrac_arr_of_arr (_ ⊠ _) _).
-    
-    generalize dependent (⟦a⟧ m).
-    simpl.
-    
-
-    apply xi_bimap_tens.
-  - 
-    revert n m i; induction a; intros n m i;
-    specialize (bwnorm_eq_of_arr i) as Hnm; 
-
-
-Lemma xi_natural (a b : bw) (f : a ⟶ b) : forall (n m : bwnorm) (i : n = m),
-  arrcomp (arrtens (bwnorm_arr_of_eq i) f) (ξ_ m b) 
-  ≅ arrcomp (ξ_ n a) (xi_bimap f i).
-Proof.
-  induction f; intros n m i.
-  - rewrite arrtens_pushout_bot, bwarr_lassoc.
-    rewrite <- (bwnorm_arr_of_eq_refl m).
-    rewrite IHf2, bwarr_rassoc, IHf1, bwarr_lassoc.
-    rewrite xi_bimap_compose_l.
-    easy.
-  - simpl (ξ_ m (a' ⨂ b')). 
-    rewrite !bwarr_rassoc, bwarr_assoc_natr.
-    rewrite (bwarr_lassoc (arrassoc n a b)).
-    rewrite bwarr_tens_compr, IHf1, bwarr_runitl.
-    rewrite arrtens_pushin_top, 2!bwarr_lassoc.
-
-    subst.
-    rewrite xi_bimap_refl.
-    rewrite (arrtens_split_diag _ f2),
-      <- (bwnorm_arr_of_eq_refl (⟦a'⟧ m)), bwarr_lassoc.
-    rewrite IHf2.
-    
-    simpl (ξ_ m (a⨂b)).
-
-    rewrite !bwarr_lassoc.
-    repeat (apply bwarr_comp; [easy|]).
-    rewrite bwarr_rassoc.
-    rewrite 3!xi_bimap_refl.
-    simpl (bwbrac_arr_of_arr (_ ⊠ _) _).
-    
-    generalize dependent (⟦a⟧ m).
-    simpl.
-    
-
-    apply xi_bimap_tens.
-  - 
-    revert n m i; induction a; intros n m i;
-    specialize (bwnorm_eq_of_arr i) as Hnm; 
-    subst n;
-    simpl.
-    (* rewrite xi_bimap_refl.
-    simpl. *)
-    rewrite bwarr_runitor_natr.
-
-
-    rewrite xi_bimap_refl.
-    simpl.
-
-
-Lemma xi_natural (a b : bw) (f : a ⟶ b) : forall (n m : bwnorm) (i : n ⟶ m),
-  arrcomp (arrtens (arrid n) f) (ξ_ m b) 
-  ≅ arrcomp (ξ_ n a) (xi_bimap f i).
-Proof.
-  induction f; intros n m i.
-  - rewrite arrtens_pushout_bot, bwarr_lassoc, IHf2, 
-      bwarr_rassoc, IHf1, bwarr_lassoc.
-    rewrite xi_bimap_compose. 
-    apply (compose_cancel_l (cC:=bwcat)).
-    apply xi_bimap_norm_indep.
-  - simpl (ξ_ m (a' ⨂ b')). 
-    rewrite !bwarr_rassoc, bwarr_assoc_natr.
-    rewrite (bwarr_lassoc (arrassoc n a b)).
-    rewrite bwarr_tens_compr, IHf1, bwarr_runitl.
-    rewrite arrtens_pushin_top, 2!bwarr_lassoc, IHf2.
-    simpl.
-    rewrite !bwarr_lassoc.
-    repeat (apply bwarr_comp; [easy|]).
-    apply xi_bimap_tens.
-  - 
-    revert n m i; induction a; intros n m i;
-    specialize (bwnorm_eq_of_arr i) as Hnm; 
-    subst n;
-    simpl.
-    (* rewrite xi_bimap_refl.
-    simpl. *)
-    rewrite bwarr_runitor_natr.
-
-
-    rewrite xi_bimap_refl.
-    simpl.
-
-    
-    
-
-
-(* F : a ↦ n ⊗ a
-   G : a ↦ ⟦ a ⟧ n *)
-Lemma xi_natural (a b : bw) (f : a ⟶ b) : forall (n : bwnorm) (i : n ⟶ n),
-  arrcomp (arrtens i f) (ξ_ n b) 
-  ≅ arrcomp (ξ_ n a) (bwbrac_arr_of_arr f n).
-Proof.
-  induction f; intros n i.
-  - rewrite arrtens_pushout_bot, bwarr_lassoc, IHf2, 
-      bwarr_rassoc, IHf1, bwarr_lassoc.
-    easy.
-  - simpl (ξ_ n (a' ⨂ b')). 
-    rewrite !bwarr_rassoc.
-    rewrite bwarr_assoc_natr.
-    rewrite (bwarr_lassoc (arrassoc n a b)).
-    rewrite bwarr_tens_compr, IHf1.
-    
-    change @bwarrequiv with (@c_equiv bw bwcat).
-    RHS (fun t => set (rhs := t)).
-    simpl c_equiv.
-
-    rewrite bwarr_runitl.
-    rewrite arrtens_pushout_top, 2!bwarr_lassoc.
-
-    rewrite IHf2.
-    simpl.
-    rewrite !bwarr_lassoc.
-    rewrite 
-    simpl.
-    rewrite arrtens_pushout_bot. 
-    simpl.
-
- 
-
-(* F : a ↦ n ⊗ a
-   G : a ↦ ⟦ a ⟧ n *)
-Lemma xi_natural (a b : bw) (f : a ⟶ b) : forall (n : bwnorm),
-  arrcomp (arrtens (arrid n) f) (ξ_ n b) 
-  ≅ arrcomp (ξ_ n a) (bwbrac_arr_of_arr f n).
-Proof.
-  induction f; intros n.
-  (* 3: eauto 3 with bwarrdb. *)
-  (* 5: eauto 4 with bwarrdb. *)
-  - rewrite arrtens_pushout_bot, bwarr_lassoc, IHf2, 
-      bwarr_rassoc, IHf1, bwarr_lassoc.
-    easy.
-  - simpl (ξ_ n (a' ⨂ b')). 
-    rewrite !bwarr_rassoc.
-    rewrite bwarr_assoc_natr.
-    rewrite (bwarr_lassoc (arrassoc n a b)).
-    rewrite bwarr_tens_compr, IHf1. 
-    
-    change @bwarrequiv with (@c_equiv bw bwcat).
-    RHS (fun t => set (rhs := t)).
-    simpl c_equiv.
-
-    rewrite bwarr_runitl, bwarr_lassoc.
-
-    rewrite IHf2.
-    simpl.
-    rewrite !bwarr_lassoc.
-    rewrite 
-    simpl.
-    rewrite arrtens_pushout_bot. 
-    simpl.
-    
-
-
-    to_Cat.
-
-    change @arrcomp with (@compose bw bwcat) in *.
-
-    rewrite <- (left_unit (id_ n)%Cat).
-    Search "id_" outside CategoryAutomation.
-
-
-
-#[export, program] Instance xi_ni :
-  NaturalIsomorphism 
-
-
-*)
-
-End Old_may_reuse_for_UIP_only.
