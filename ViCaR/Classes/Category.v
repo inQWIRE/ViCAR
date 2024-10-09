@@ -11,6 +11,7 @@ Reserved Notation "f ≃ g" (at level 70). (* \simeq *)
 Reserved Notation "A ≅ B" (at level 70). (* \cong *)
 Reserved Notation "'id_' A" (at level 15).
 
+#[universes(polymorphic=yes,cumulative=yes)] 
 Class Category (C : Type) : Type := {
     morphism : C -> C -> Type
         where "A ~> B" := (morphism A B);
@@ -39,6 +40,7 @@ Notation "f ≃ g" := (c_equiv _%Cat f%Cat g%Cat)
 Notation "f ∘ g" := (compose _%Cat f%Cat g%Cat) 
   (at level 40, g at next level, left associativity) : Cat_scope. (* \circ *)
 
+#[universes(polymorphic=yes,cumulative=yes)] 
 Class CategoryCoherence {C} (cC : Category C) : Type := {
   (* to_base_struct_cat := cC; *)
 
@@ -99,11 +101,13 @@ Qed.
 (** Isomorphism of objects in a category, and equivalent typeclass, with
     parametric equivalence *)
 
+#[universes(polymorphic=yes)] 
 Definition isomorphic {C : Type} {cC : Category C} (A B : C) :=
   exists (f : A ~> B) (g : B ~> A), is_inverse f g.
 
 Arguments isomorphic {_} {_}%Cat (_ _)%Cat.
 
+#[universes(polymorphic=yes,cumulative=yes)] 
 Class Isomorphism {C : Type} {cC : Category C} (A B : C) := {
   forward : A ~> B;
   reverse : B ~> A;
@@ -182,6 +186,7 @@ Add Parametric Relation {C : Type} {cC : Category C}
   as isomorphic_equiv_rel.
 
 (** Functors, including instances as equivalence & isomorphism parametric morphisms *)
+#[universes(polymorphic=yes,cumulative=yes)] 
 Class Functor {C D : Type} (cC: Category C) (cD : Category D) : Type := {
   obj_map : C -> D;
   morphism_map {A B : C} : (A ~> B) -> (obj_map A ~> obj_map B);
@@ -218,7 +223,7 @@ Proof.
 Qed.
 
 
-
+#[universes(polymorphic=yes,cumulative=yes)] 
 Class Bifunctor {C1 C2 D : Type} (cC1: Category C1) 
   (cC2 : Category C2) (cD : Category D) := {
   obj_bimap : C1 -> C2 -> D;
@@ -266,6 +271,7 @@ Proof.
   split; apply id_bimap.
 Qed.
 
+#[universes(polymorphic=yes)] 
 Definition CommuteBifunctor {C1 C2 D : Type} `{cC1 : Category C1} 
   `{cC2 : Category C2} `{cD : Category D} (F : Bifunctor cC1 cC2 cD) 
   : Bifunctor cC2 cC1 cD := {|
@@ -281,6 +287,7 @@ Arguments CommuteBifunctor {_ _ _} {_ _ _}%Cat (_)%Cat /.
 
 
 (** Natural Transformations & Isomorphisms (and the equivalents for Bifunctors) *)
+#[universes(polymorphic=yes,cumulative=yes)] 
 Class NaturalTransformation {C D : Type} `{cC: Category C} `{cD : Category D}
   (F G : Functor cC cD) := {
   component_map (A : C) : F A ~> G A;
@@ -292,6 +299,7 @@ Arguments component_map {_ _} {_ _}%Cat {_ _}%Cat (N)%Cat (_)%Cat : rename.
 Arguments component_map_natural {_ _} {_ _}%Cat {_ _}%Cat 
   {N}%Cat {_ _}%Cat (f)%Cat : rename.
 
+#[universes(polymorphic=yes,cumulative=yes)] 
 Class NaturalIsomorphism {C D : Type} `{cC: Category C} `{cD : Category D}
   (F G : Functor cC cD) := {
   component_iso (A : C) : F A <~> G A;
@@ -313,7 +321,7 @@ Definition NaturalTransformation_of_NaturalIsomorphism {C D : Type}
 |}.
 
 
-
+#[universes(polymorphic=yes,cumulative=yes)] 
 Class NaturalBiTransformation {C1 C2 D : Type} `{cC1 : Category C1} 
   `{cC2 : Category C2} `{cD : Category D} (F G : Bifunctor cC1 cC2 cD) := {
   component_bimap (A1 : C1) (A2 : C2) : F A1 A2 ~> G A1 A2;
@@ -328,6 +336,7 @@ Arguments component_bimap {_ _ _} {_ _ _}%Cat {_ _}%Cat
 Arguments component_bimap_natural {_ _ _} {_ _ _}%Cat {_ _}%Cat 
   {N}%Cat {_ _ _ _}%Cat (f1 f2)%Cat : rename.
 
+#[universes(polymorphic=yes,cumulative=yes)] 
 Class NaturalBiIsomorphism {C1 C2 D : Type} `{cC1 : Category C1} 
   `{cC2 : Category C2} `{cD : Category D} (F G : Bifunctor cC1 cC2 cD) := {
   component_biiso (A1 : C1) (A2 : C2) : F A1 A2 <~> G A1 A2;
@@ -655,8 +664,8 @@ Proof.
   intros; split; symmetry; apply compose_iso_l; easy.
 Qed.
 
-
-#[program] Definition FunctorIsomorphism {C D} {cC : Category C} 
+#[universes(polymorphic=yes), 
+  program] Definition FunctorIsomorphism {C D} {cC : Category C} 
   {cCh : CategoryCoherence cC} {cD : Category D} {cDh : CategoryCoherence cD}
   {A B : C} (F : Functor cC cD) (f : A <~> B) : F A <~> F B := {|
   forward := F @ f;
@@ -667,7 +676,8 @@ Next Obligation.
     (proj2 isomorphism_inverse), 2!id_map; easy.
 Qed.
 
-#[program] Definition BifunctorIsomorphism {C1 C2 D} {cC1 : Category C1} 
+#[universes(polymorphic=yes),
+  program] Definition BifunctorIsomorphism {C1 C2 D} {cC1 : Category C1} 
   {cC1h : CategoryCoherence cC1} {cC2 : Category C2} 
   {cC2h : CategoryCoherence cC2} {cD : Category D} {cDh : CategoryCoherence cD}
   {A1 B1 : C1} {A2 B2 : C2} (F : Bifunctor cC1 cC2 cD) 
