@@ -1,7 +1,7 @@
 Require Import MCDefinitions.
 Require UIP_facts.
-Require MC_Cat_Thy_temp.
-Require CatExample. (* FunctorCategory *)
+Require MCTheory.
+Require CatCategory.
 
 
 Section bw_theory.
@@ -871,8 +871,8 @@ Section bw_thin.
    have UIP but not decidable equality.) *)
 
 Import CategoryTypeclass MCClasses 
-  UIP_facts MC_Cat_Thy_temp.
-Import CatExample (FunctorCategory).
+  UIP_facts MCTheory.
+Import CatCategory (FunctorCategory).
 
 Context {UIPX : UIP X}.
 
@@ -1131,9 +1131,9 @@ Next Obligation.
 Qed.
 
 #[export, program] Instance toNf_natiso : 
-  NaturalIsomorphism (CatExample.IdentityFunctor bwcat) Nf_bwcat_functor := {
+  NaturalIsomorphism (CatCategory.IdentityFunctor bwcat) Nf_bwcat_functor := {
   component_iso := fun a =>
-    CatExample.ComposeIsomorphisms
+    CatCategory.ComposeIsomorphisms
     {| forward := arrinvlunitor a : bwcat.(morphism) _ _; reverse := arrlunitor a |}
     (bwbinat_trans norm_e a)
 }.

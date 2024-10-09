@@ -1,5 +1,5 @@
 From ViCaR Require CategoryTypeclass.
-From Examples Require CatExample. (* FunctorCategory *)
+Require CatCategory. (* FunctorCategory *)
 
 
 
@@ -26,7 +26,7 @@ End DiscreteCategory.
 
 Section Bifunctor_of_FunctorCategoryFunctor.
 
-Import CategoryTypeclass CatExample (FunctorCategory).
+Import CategoryTypeclass CatCategory (FunctorCategory).
 
 Set Universe Polymorphism.
 
