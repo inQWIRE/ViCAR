@@ -11,6 +11,7 @@ Reserved Notation "'λ_' x" (at level 20, no associativity). (* \lambda *)
 Reserved Notation "'ρ_' x" (at level 20, no associativity). (* \rho *)  
 Reserved Notation "'α_' A , B , M" (at level 20, no associativity). (* \alpha *)
 
+#[universes(polymorphic=yes,cumulative=yes)] 
 Class MonoidalCategory {C : Type} (cC : Category C) : Type := {
   obj_tensor : C -> C -> C
     where "x × y" := (obj_tensor x y);
@@ -54,7 +55,7 @@ Notation "'ρ⁻¹_' x" := ((right_unitor x).(reverse))
   (at level 20, no associativity) : Cat_scope. (* \rho \^- \^1 *) 
  *)
 
-
+#[universes(polymorphic=yes,cumulative=yes)] 
 Class MonoidalCategoryCoherence {C : Type} {cC : Category C}
   {cCh : CategoryCoherence cC} (mC : MonoidalCategory cC) : Type := {
   tensor_id (A1 A2 : C) : (id_ A1) ⊗ (id_ A2) ≃ id_ (A1 × A2);
@@ -148,6 +149,62 @@ Proof. intros A B [fAB [fBA [HfAB HfBA]]] M N [fMN [fNM [HfMN HfNM]]].
 Qed.
 
 End TensorBifunctor.
+
+Section InverseCoherences.
+
+Context {C : Type} {cC : Category C} {cCh : CategoryCoherence cC}
+  {mC : MonoidalCategory cC} {mCh : MonoidalCategoryCoherence mC}.
+
+Lemma invassociator_cohere {A B M N P Q : C} (f : A ~> B) 
+  (g : M ~> N) (h : P ~> Q) : 
+  α_ A, M, P ⁻¹ ∘ ((f ⊗ g) ⊗ h)
+  ≃ (f ⊗ (g ⊗ h)) ∘ α_ B, N, Q ⁻¹.
+Proof.
+  rewrite <- compose_iso_l', <- assoc, <- compose_iso_r.
+  symmetry.
+  apply associator_cohere.
+Qed.
+
+Lemma invleft_unitor_cohere {A B : C} (f : A ~> B) : 
+  λ_ A ⁻¹ ∘ (id_ I ⊗ f) ≃ f ∘ λ_ B⁻¹.
+Proof.
+  rewrite <- compose_iso_l', <- assoc, <- compose_iso_r.
+  symmetry.
+  apply left_unitor_cohere.
+Qed.
+
+Lemma invright_unitor_cohere {A B : C} (f : A ~> B) : 
+  ρ_ A ⁻¹ ∘ (f ⊗ id_ I) ≃ f ∘ ρ_ B ⁻¹.
+Proof.
+  rewrite <- compose_iso_l', <- assoc, <- compose_iso_r.
+  symmetry.
+  apply right_unitor_cohere.
+Qed.
+
+Lemma inv_triangle' (A B : C) : 
+  (id_ A ⊗ λ_ B)
+  ≃ α_ A, I, B ^-1 ∘ ρ_ A ⊗ id_ B.
+Proof.
+  rewrite <- compose_iso_l.
+  apply triangle.
+Qed.
+
+Lemma invpentagon (A B M N : C) : 
+  (id_ A ⊗ α_ B, M, N ^-1) ∘ 
+    α_ A, (B × M), N ^-1 ∘ (α_ A, B, M ^-1 ⊗ id_ N)
+  ≃ α_ A, B, (M × N)^-1 ∘ α_ (A × B), M, N ^-1.
+Proof.
+  symmetry. rewrite <- left_unit, <- assoc.
+  rewrite <- 2!compose_iso_r'.
+  rewrite assoc, <- pentagon.
+  rewrite assoc, <- 2!(assoc (_^-1 ⊗ id_ N)), <- tensor_compose.
+  rewrite iso_inv_l, left_unit, tensor_id, left_unit.
+  rewrite assoc, <- (assoc (_^-1)), iso_inv_l, left_unit.
+  now rewrite <- tensor_compose, iso_inv_l, left_unit, tensor_id.
+Qed.
+
+
+End InverseCoherences.
 
 Arguments tensor {_} {_}%Cat (mC)%Cat {_ _}%Cat.
 Arguments TensorIsomorphism {_} {_ mC cCh mCh}%Cat {_ _ _ _}%Cat (_ _)%Cat.
